@@ -7,17 +7,20 @@ expérience rapide et claire pour explorer une bibliothèque locale et lancer la
 
 - **UI desktop Iced** : layout complet (top bar, colonnes, player bar) avec navigation et états.
 - **Scan local** : lecture de dossiers `Artiste/Album` et création d'un catalogue en mémoire.
-- **Lecture audio** : module `player` basé sur `rodio` (non encore relié à l'UI).
+- **Durées audio** : lecture des durées via les métadonnées (crate `lofty`).
+- **Cache** : catalogue sauvegardé dans `.grape_cache.json` pour accélérer les démarrages.
+- **Lecture audio** : module `player` basé sur `rodio` (pas encore relié à l'UI).
 
 ## Stack technique
 
 - Rust (édition 2024)
 - Iced (UI)
 - Rodio (audio)
+- Lofty (métadonnées audio)
 
 ## Structure du dépôt
 
-- `assets/` : visuels et futurs assets (logos, maquettes, captures).
+- `assets/` : visuels et assets UI (logos, fonts, maquettes, captures).
 - `docs/` : documentation produit et technique.
 - `src/` : code applicatif (UI, bibliothèque, player).
 - `tasks/` : tâches, roadmap, analyse UI.
@@ -42,7 +45,12 @@ Library/
       02 - Autre titre.flac
 ```
 
-Les durées et métadonnées détaillées seront ajoutées plus tard.
+Formats supportés pour le scan : `mp3`, `flac`, `wav`, `ogg`, `m4a`.
+
+### Cache local
+
+Après un scan réussi, un fichier `.grape_cache.json` est écrit dans le dossier de la bibliothèque.
+Le cache est invalidé si la date de modification du dossier racine change.
 
 ## Documentation
 
@@ -54,5 +62,5 @@ Les durées et métadonnées détaillées seront ajoutées plus tard.
 ## Feuille de route (résumé)
 
 - Brancher la lecture audio à l'UI
-- Améliorer l'indexation (métadonnées, jaquettes, cache)
+- Améliorer l'indexation (métadonnées, jaquettes, cache plus fin)
 - Ajouter la gestion des playlists

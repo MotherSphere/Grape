@@ -5,14 +5,20 @@ Ce dossier contient le code applicatif Rust du lecteur Grape.
 ## Entrée
 
 - `main.rs`
-  - Charge le `Catalog` depuis un chemin local.
+  - Charge le `Catalog` depuis un chemin local avec cache.
   - Lance l'application Iced via `ui::run`.
 
 ## Modules
 
 - `library.rs`
   - Scan du disque et construction d'un `Catalog`.
-  - Convention simple : dossiers `Artiste/Album` + fichiers audio.
+  - Convention : dossiers `Artiste/Album` + fichiers audio.
+  - Parsing des années/numéros depuis les noms de dossier/fichier.
+- `library/cache.rs`
+  - Cache JSON `.grape_cache.json` à la racine de la bibliothèque.
+  - Invalidation par date de modification du dossier racine.
+- `library/metadata.rs`
+  - Lecture des durées audio via `lofty`.
 - `player.rs`
   - Abstraction de lecture audio (`rodio`).
   - Méthodes : `load`, `play`, `pause`, `seek`.
@@ -26,4 +32,4 @@ Ce dossier contient le code applicatif Rust du lecteur Grape.
 ## Notes
 
 - La lecture audio n'est pas encore câblée à l'UI.
-- Le scan des durées/métadonnées est prévu pour une étape suivante.
+- Les durées sont remplies via les métadonnées quand elles existent.
