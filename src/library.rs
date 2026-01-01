@@ -41,6 +41,7 @@ impl Catalog {
         }
     }
 
+    #[allow(dead_code)]
     pub fn first_track(&self) -> Option<(&Artist, &Album, &Track)> {
         let artist = self.artists.first()?;
         let album = artist.albums.first()?;
