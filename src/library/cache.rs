@@ -59,8 +59,6 @@ fn cache_path(root: &Path) -> PathBuf {
 fn root_modified_secs(root: &Path) -> io::Result<u64> {
     let metadata = fs::metadata(root)?;
     let modified = metadata.modified().unwrap_or(UNIX_EPOCH);
-    let duration = modified
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default();
+    let duration = modified.duration_since(UNIX_EPOCH).unwrap_or_default();
     Ok(duration.as_secs())
 }
