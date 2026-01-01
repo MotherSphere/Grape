@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+#![allow(dead_code)]
+
 use serde::{Deserialize, Serialize};
 
 use crate::player::NowPlaying;

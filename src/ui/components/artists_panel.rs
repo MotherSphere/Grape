@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::ui::message::UiMessage;
 use crate::ui::state::{Artist, SelectionState};
 use crate::ui::style;
