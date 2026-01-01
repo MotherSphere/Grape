@@ -1,9 +1,13 @@
 use crate::library::Catalog;
 use crate::ui::components::albums_grid::AlbumsGrid;
+use crate::ui::components::artists_panel::ArtistsPanel;
 use crate::ui::components::player_bar::PlayerBar;
+use crate::ui::components::songs_panel::SongsPanel;
 use crate::ui::message::{SearchMessage, UiMessage};
-use crate::ui::state::{ActiveTab, Album as UiAlbum, SortOption, UiState};
-use iced::widget::{button, column, container, row, scrollable, text, text_input};
+use crate::ui::state::{
+    ActiveTab, Album as UiAlbum, Artist as UiArtist, SortOption, Track as UiTrack, UiState,
+};
+use iced::widget::{button, column, container, row, text, text_input};
 use iced::{Alignment, Application, Command, Element, Length, Settings, Theme};
 
 pub struct GrapeApp {
@@ -49,6 +53,51 @@ impl GrapeApp {
         albums
     }
 
+    fn artists_from_catalog(&self) -> Vec<UiArtist> {
+        self.catalog
+            .artists
+            .iter()
+            .enumerate()
+            .map(|(id, artist)| UiArtist {
+                id,
+                name: artist.name.clone(),
+            })
+            .collect()
+    }
+
+    fn album_entry_by_id(&self, album_id: usize) -> Option<(&crate::library::Artist, &crate::library::Album)> {
+        let mut id = 0usize;
+        for artist in &self.catalog.artists {
+            for album in &artist.albums {
+                if id == album_id {
+                    return Some((artist, album));
+                }
+                id += 1;
+            }
+        }
+        None
+    }
+
+    fn tracks_for_album(
+        &self,
+        artist: &crate::library::Artist,
+        album: &crate::library::Album,
+    ) -> Vec<UiTrack> {
+        album
+            .tracks
+            .iter()
+            .enumerate()
+            .map(|(id, track)| UiTrack {
+                id,
+                title: track.title.clone(),
+                album: album.title.clone(),
+                artist: artist.name.clone(),
+                track_number: Some(track.number as u32),
+                duration: std::time::Duration::from_secs(track.duration_secs as u64),
+            })
+            .collect()
+    }
+
     fn top_bar(&self) -> Element<UiMessage> {
         let logo = text("Grape").size(22);
         let tabs = row![
@@ -84,26 +133,10 @@ impl GrapeApp {
     }
 
     fn artists_panel(&self) -> Element<UiMessage> {
-        let selection = self
-            .ui
-            .selection
-            .selected_artist
-            .as_ref()
-            .map(|artist| artist.name.as_str())
-            .unwrap_or("None");
-        let content = column![
-            text("Artists").size(16),
-            text("A–Z index"),
-            text(format!("Selected: {selection}")),
-            text("Artists list placeholder"),
-        ]
-        .spacing(8);
-
-        container(scrollable(content))
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .padding(12)
-            .into()
+        let selected_id = self.ui.selection.selected_artist.as_ref().map(|artist| artist.id);
+        let artists = self.artists_from_catalog();
+        let panel = ArtistsPanel::new(artists).with_selection(selected_id);
+        panel.view(&self.ui.selection)
     }
 
     fn albums_panel(&self) -> Element<UiMessage> {
@@ -125,26 +158,25 @@ impl GrapeApp {
     }
 
     fn songs_panel(&self) -> Element<UiMessage> {
-        let selection = self
-            .ui
-            .selection
-            .selected_track
-            .as_ref()
-            .map(|track| track.title.as_str())
-            .unwrap_or("None");
-        let content = column![
-            text("Songs").size(16),
-            text("Album title / artist placeholder"),
-            text(format!("Selected: {selection}")),
-            text("Songs list placeholder"),
-        ]
-        .spacing(8);
-
-        container(scrollable(content))
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .padding(12)
-            .into()
+        let selected_album = self.ui.selection.selected_album.as_ref().and_then(|album| {
+            self.album_entry_by_id(album.id)
+                .map(|(artist, entry)| (artist, entry))
+        });
+        let (album_title, artist_name, tracks) = match selected_album {
+            Some((artist, album)) => (
+                album.title.clone(),
+                artist.name.clone(),
+                self.tracks_for_album(artist, album),
+            ),
+            None => (
+                "Select an album".to_string(),
+                "Pick a track to start".to_string(),
+                Vec::new(),
+            ),
+        };
+        let selected_id = self.ui.selection.selected_track.as_ref().map(|track| track.id);
+        let panel = SongsPanel::new(album_title, artist_name, tracks).with_selection(selected_id);
+        panel.view(&self.ui.selection)
     }
 
     fn player_bar(&self) -> Element<UiMessage> {
