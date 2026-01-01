@@ -30,9 +30,7 @@ pub struct Track {
 
 impl Catalog {
     pub fn empty() -> Self {
-        Self {
-            artists: Vec::new(),
-        }
+        Self { artists: Vec::new() }
     }
 
     pub fn first_track(&self) -> Option<(&Artist, &Album, &Track)> {
@@ -64,11 +62,7 @@ pub fn scan_library(root: impl AsRef<Path>) -> io::Result<Catalog> {
             let tracks = scan_tracks(&album_entry.path())?;
 
             if !tracks.is_empty() {
-                albums.push(Album {
-                    title,
-                    year,
-                    tracks,
-                });
+                albums.push(Album { title, year, tracks });
             }
         }
 
