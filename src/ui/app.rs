@@ -1,6 +1,7 @@
 use crate::library::Catalog;
+use crate::ui::components::albums_grid::AlbumsGrid;
 use crate::ui::message::{PlaybackMessage, SearchMessage, UiMessage};
-use crate::ui::state::{ActiveTab, SortOption, UiState};
+use crate::ui::state::{ActiveTab, Album as UiAlbum, SortOption, UiState};
 use iced::widget::{button, column, container, row, scrollable, text, text_input};
 use iced::{Alignment, Application, Command, Element, Length, Settings, Theme};
 
@@ -26,6 +27,25 @@ impl GrapeApp {
         } else {
             label.to_string()
         }
+    }
+
+    fn albums_from_catalog(&self) -> Vec<UiAlbum> {
+        let mut albums = Vec::new();
+        let mut id = 0usize;
+
+        for artist in &self.catalog.artists {
+            for album in &artist.albums {
+                albums.push(UiAlbum {
+                    id,
+                    title: album.title.clone(),
+                    artist: artist.name.clone(),
+                    year: Some(album.year as u32),
+                });
+                id += 1;
+            }
+        }
+
+        albums
     }
 
     fn top_bar(&self) -> Element<UiMessage> {
@@ -86,40 +106,20 @@ impl GrapeApp {
     }
 
     fn albums_panel(&self) -> Element<UiMessage> {
-        let selection = self
-            .ui
-            .selection
-            .selected_album
-            .as_ref()
-            .map(|album| album.title.as_str())
-            .unwrap_or("None");
         let sort_label = match self.ui.search.sort {
             SortOption::Alphabetical => "A–Z",
             SortOption::ByAlbum => "By album",
         };
-        let sort_controls = row![
-            button(text("A–Z")).on_press(UiMessage::Search(SearchMessage::SortChanged(
-                SortOption::Alphabetical,
-            ))),
-            button(text("By album")).on_press(UiMessage::Search(
-                SearchMessage::SortChanged(SortOption::ByAlbum),
-            )),
-        ]
-        .spacing(8)
-        .align_items(Alignment::Center);
-        let content = column![
-            text("Albums").size(16),
-            text(format!("Sort: {sort_label}")),
-            sort_controls,
-            text(format!("Selected: {selection}")),
-            text("Albums grid placeholder"),
-        ]
-        .spacing(8);
+        let selected_id = self.ui.selection.selected_album.as_ref().map(|album| album.id);
+        let albums = self.albums_from_catalog();
+        let grid_component = AlbumsGrid::new(albums)
+            .with_sort_label(sort_label)
+            .with_selection(selected_id);
+        let grid = grid_component.view();
 
-        container(scrollable(content))
+        container(grid)
             .width(Length::Fill)
             .height(Length::Fill)
-            .padding(12)
             .into()
     }
 
