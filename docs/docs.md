@@ -1,75 +1,65 @@
-# Documentation
+# Documentation Grape
 
-Ce dossier regroupera la documentation du projet Grape.
+Cette documentation couvre l'état actuel du projet, l'architecture et les choix UI.
 
-## Contenu prévu
+## Objectifs produit
 
-- Guide utilisateur
-- Guide de contribution
-- Architecture et décisions techniques
+- Explorer rapidement une bibliothèque locale.
+- Lancer la lecture sans latence visible.
+- Proposer une interface claire et moderne.
 
-## MVP
+## Architecture (vue rapide)
 
-### Fonctionnalités minimales
+- **Entrée** : `src/main.rs`
+  - Charge un catalogue via `library::scan_library`.
+  - Lance l'UI via `ui::run`.
+- **Bibliothèque** : `src/library.rs`
+  - Scan de dossiers, structure `Artist/Album/Track`.
+  - Construction d'un `Catalog` en mémoire.
+- **Lecture audio** : `src/player.rs`
+  - Player `rodio` (load/play/pause/seek).
+  - Pas encore branché à l'UI.
+- **UI** : `src/ui/*`
+  - Iced (layout en 3 colonnes + player bar).
+  - État UI centralisé (`UiState`).
 
-- Navigation artistes → albums avec accès rapide aux pistes.
-- Lecture audio avec commandes play/pause/seek.
-- Indexation locale minimale (scan d'un dossier, extraction des métadonnées essentielles, cache léger).
+## UI : layout et composants
 
-### Périmètre hors MVP
+La maquette actuelle est structurée ainsi :
 
-- Synchronisation cloud, comptes utilisateurs, ou playlists avancées.
-- Égaliseur ou traitement audio sophistiqué.
-- Gestion avancée des métadonnées (édition, téléchargement de jaquettes).
+```
+Top bar  → navigation + recherche
+Colonnes → Artistes | Albums | Titres
+Footer   → player bar (transport + progression)
+```
 
-## Choix UI
+Composants Iced :
 
-### Options évaluées
+- `ArtistsPanel` (`src/ui/components/artists_panel.rs`)
+- `AlbumsGrid` (`src/ui/components/albums_grid.rs`)
+- `SongsPanel` (`src/ui/components/songs_panel.rs`)
+- `PlayerBar` (`src/ui/components/player_bar.rs`)
 
-| Option | Multi-plateforme | Performance | Theming | Accessibilité | Notes |
-| --- | --- | --- | --- | --- | --- |
-| Iced | ✅ (Desktop natif) | ✅ (GPU via wgpu) | ✅ (thèmes personnalisables) | ⚠️ (a11y encore jeune) | API Rust pure, bon fit pour apps desktop natives. |
-| egui | ✅ (Desktop natif) | ✅ (très rapide, immédiate) | ⚠️ (théming simple, custom limité) | ⚠️ (a11y limitée) | Idéal pour outils/UX rapides, moins adapté aux apps grand public. |
-| Tauri | ✅ (Desktop + webview) | ⚠️ (dépend du WebView) | ✅ (CSS) | ✅ (a11y via Web) | UI web, contraintes de packaging webview et bridge Rust. |
+## État UI
 
-### Choix retenu : Iced
+- `ActiveTab` : Artists / Genres / Albums / Folders.
+- `SelectionState` : artiste, album, piste.
+- `PlaybackState` : position, durée, lecture, shuffle, repeat.
+- `SearchState` : query + tri.
 
-**Raisons principales :**
-- UI 100 % Rust, alignée avec la stack existante.
-- Bon compromis entre performance et flexibilité de layout.
-- Maintien de la simplicité du déploiement (pas de webview).
+## Assets
 
-### Impacts
+Le dossier `assets/` est dédié aux éléments visuels (logos, captures, icônes). Il sera
+alimenté au fur et à mesure du design.
 
-- Architecture UI pensée en composants Iced (views + messages) pour les écrans MVP.
-- Nécessité d'un thème maison (couleurs, typographies, spacing) pour une identité visuelle cohérente.
-- Accessibilité à suivre : ajouter des tests manuels et ajustements si besoin.
+## Limitations actuelles
 
-## Structure des écrans MVP
+- Pas de parsing de métadonnées audio (durées à 0).
+- La lecture audio n'est pas reliée à l'UI.
+- Pas de cache persistant pour la bibliothèque.
 
-### Bibliothèque
+## Prochaines étapes suggérées
 
-- **Entrée principale** : liste des artistes.
-- **Second niveau** : liste des albums d'un artiste.
-- **Panneau de détails** : pistes d'un album (durée, numéro de piste).
-- **Actions** : lancer la lecture d'un album ou d'une piste.
-
-### Lecture
-
-- **Zone principale** : titre, artiste, album, jaquette.
-- **Contrôles** : play/pause, seek, précédent/suivant.
-- **Barre de progression** : temps écoulé / durée totale.
-
-### File d'attente
-
-- **Liste ordonnée** des pistes à venir.
-- **Actions** : réordonner, retirer, sauter à une piste.
-- **Indicateur** de la piste en cours de lecture.
-
-## Flow MVP
-
-1. **Arrivée sur la bibliothèque** : l'utilisateur voit la liste des artistes.
-2. **Sélection d'un artiste** : affichage des albums disponibles et de leurs pistes.
-3. **Lancement d'une lecture** : clic sur un album ou une piste pour démarrer la lecture.
-4. **Écran lecture** : affichage du titre en cours, progression, et commandes play/pause.
-5. **Retour bibliothèque** : navigation possible vers d'autres artistes/albums.
+- Brancher les actions UI au module `player`.
+- Ajouter un cache d'indexation (JSON/SQLite).
+- Récupérer les métadonnées et jaquettes.

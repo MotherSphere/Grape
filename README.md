@@ -1,31 +1,58 @@
 # Grape
 
-Grape est un lecteur musique/audio moderne, léger et élégant, inspiré de [Dopamine](https://github.com/digimezzo/dopamine).
-L'objectif est de proposer une expérience fluide pour organiser, parcourir et écouter sa bibliothèque musicale.
+Grape est un lecteur musique/audio desktop en Rust, inspiré par Dopamine. Le projet vise une
+expérience rapide et claire pour explorer une bibliothèque locale et lancer la lecture.
 
-## Idée globale
+## État actuel
 
-- **Gestion de bibliothèque** : indexation rapide des dossiers locaux, mise à jour incrémentale.
-- **Lecture audio** : prise en charge des formats courants (MP3, FLAC, OGG, WAV, etc.).
-- **Interface claire** : navigation par artistes, albums, genres, playlists, recherche.
-- **Playlists** : création, édition, import/export.
-- **Qualité audio** : options de sortie, égaliseur (à planifier).
-- **Performance** : faible consommation mémoire et réactivité.
+- **UI desktop Iced** : layout complet (top bar, colonnes, player bar) avec navigation et états.
+- **Scan local** : lecture de dossiers `Artiste/Album` et création d'un catalogue en mémoire.
+- **Lecture audio** : module `player` basé sur `rodio` (non encore relié à l'UI).
 
 ## Stack technique
 
-- **Langage** : Rust
-- **Build** : Cargo
+- Rust (édition 2024)
+- Iced (UI)
+- Rodio (audio)
 
-## Prérequis
+## Structure du dépôt
 
-- Rust (via `rustup`)
-- Cargo (fourni avec Rust)
+- `assets/` : visuels et futurs assets (logos, maquettes, captures).
+- `docs/` : documentation produit et technique.
+- `src/` : code applicatif (UI, bibliothèque, player).
+- `tasks/` : tâches, roadmap, analyse UI.
 
-## Lancer le projet (placeholder)
+## Démarrage rapide
 
 ```bash
-cargo run
+cargo run -- /chemin/vers/ma/library
 ```
 
-> Ce projet est en phase d'initialisation. Les fonctionnalités seront ajoutées progressivement.
+Si aucun chemin n'est fourni, Grape utilise `./library`.
+
+### Structure attendue de la bibliothèque
+
+Grape scanne une structure simple de dossiers :
+
+```
+Library/
+  Artiste/
+    2003 - Album Name/
+      01 - Titre.mp3
+      02 - Autre titre.flac
+```
+
+Les durées et métadonnées détaillées seront ajoutées plus tard.
+
+## Documentation
+
+- Vue d'ensemble : `docs/docs.md`
+- Source & modules : `src/src.md`
+- Roadmap : `tasks/roadmap/roadmap.md`
+- Analyse UI : `tasks/ui_analysis.md`
+
+## Feuille de route (résumé)
+
+- Brancher la lecture audio à l'UI
+- Améliorer l'indexation (métadonnées, jaquettes, cache)
+- Ajouter la gestion des playlists
