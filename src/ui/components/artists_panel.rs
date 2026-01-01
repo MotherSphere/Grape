@@ -43,7 +43,7 @@ impl ArtistsPanel {
             .map(UiMessage::SelectArtist)
     }
 
-    pub fn view(&self, selection: &SelectionState) -> Element<UiMessage> {
+    pub fn view(&self, selection: &SelectionState) -> Element<'static, UiMessage> {
         let selected_id = selection.selected_artist.as_ref().map(|artist| artist.id);
         let header = text(format!("{} Song artists", self.total_count)).size(16);
         let list_items = self

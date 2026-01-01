@@ -44,7 +44,7 @@ impl SongsPanel {
             .map(UiMessage::SelectTrack)
     }
 
-    pub fn view(&self, selection: &SelectionState) -> Element<UiMessage> {
+    pub fn view(&self, selection: &SelectionState) -> Element<'static, UiMessage> {
         let selected_id = selection.selected_track.as_ref().map(|track| track.id);
         let header = text(format!("{} Songs", self.tracks.len())).size(16);
         let album_info = column![text(self.album.clone()).size(18), text(self.artist.clone())]
