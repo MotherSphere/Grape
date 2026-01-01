@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink, source::Source};
+use tracing::{error, info};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NowPlaying {
@@ -111,11 +112,15 @@ impl Player {
 
     pub fn load(&mut self, path: impl AsRef<Path>) -> Result<(), PlayerError> {
         let path = path.as_ref().to_path_buf();
+        info!(path = %path.display(), "Loading track");
         self.current_track = Some(path.clone());
         self.position = Duration::ZERO;
         self.sink.stop();
         self.sink = Sink::try_new(&self.handle)?;
-        let source = self.decode_source(&path)?;
+        let source = self.decode_source(&path).map_err(|err| {
+            error!(error = %err, path = %path.display(), "Failed to load track");
+            err
+        })?;
         self.sink.append(source);
         self.sink.pause();
         self.state = PlaybackState::Paused;
@@ -123,16 +128,19 @@ impl Player {
     }
 
     pub fn play(&mut self) {
+        info!("Playback start");
         self.sink.play();
         self.state = PlaybackState::Playing;
     }
 
     pub fn pause(&mut self) {
+        info!("Playback pause");
         self.sink.pause();
         self.state = PlaybackState::Paused;
     }
 
     pub fn seek(&mut self, position: Duration) -> Result<(), PlayerError> {
+        info!(position_secs = position.as_secs(), "Seeking");
         let path = self
             .current_track
             .clone()
@@ -140,7 +148,12 @@ impl Player {
         self.position = position;
         self.sink.stop();
         self.sink = Sink::try_new(&self.handle)?;
-        let source = self.decode_source(&path)?.skip_duration(position);
+        let source = self.decode_source(&path)
+            .map_err(|err| {
+                error!(error = %err, path = %path.display(), "Failed to seek");
+                err
+            })?
+            .skip_duration(position);
         self.sink.append(source);
         match self.state {
             PlaybackState::Playing => self.sink.play(),
@@ -158,7 +171,13 @@ impl Player {
     }
 
     fn decode_source(&self, path: &Path) -> Result<Decoder<io::BufReader<File>>, PlayerError> {
-        let file = File::open(path)?;
-        Ok(Decoder::new(io::BufReader::new(file))?)
+        let file = File::open(path).map_err(|err| {
+            error!(error = %err, path = %path.display(), "Failed to open track file");
+            err
+        })?;
+        Decoder::new(io::BufReader::new(file)).map_err(|err| {
+            error!(error = %err, path = %path.display(), "Failed to decode track");
+            err.into()
+        })
     }
 }
