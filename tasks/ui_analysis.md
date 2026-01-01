@@ -10,7 +10,7 @@ chantiers. La plupart des blocs décrits ci-dessous ont déjà des composants Ic
 │ Top bar                                                                      │
 │ - Logo/app icon (gauche)                                                     │
 │ - Tabs navigation: Artists | Genres | Albums | Folders                       │
-│ - Search box (droite) + controls fenêtre                                     │
+│ - Search box + boutons fenêtre (droite)                                      │
 ├───────────────────────┬─────────────────────────────────┬──────────────────┤
 │ Colonne gauche         │ Zone centrale                   │ Colonne droite   │
 │ (Artists list)         │ (Albums grid)                   │ (Songs list)     │
@@ -42,14 +42,20 @@ chantiers. La plupart des blocs décrits ci-dessous ont déjà des composants Ic
 - Lecture : `PlaybackState` (position, durée, shuffle, repeat)
 - Recherche : `SearchState` (query + tri)
 
+## Données affichées
+
+- Les listes proviennent du `Catalog` chargé au démarrage.
+- Les durées des pistes sont lues via `lofty` lorsque disponibles.
+- Les identifiants UI sont générés à partir de l'ordre du catalogue.
+
 ## Écarts actuels vs design cible
 
-- Les durées de pistes sont à `0` (pas de métadonnées).
 - Les actions de lecture ne sont pas branchées au module `player`.
 - Les onglets Genres/Folders sont visibles mais non implémentés.
+- Le tri/recherche n'impacte pas encore les listes.
 
 ## Pistes de travail (prochaines étapes)
 
 1. Connecter la sélection de piste → `player.load` + `player.play`.
-2. Extraire les métadonnées (durée, titre, artiste) lors du scan.
-3. Ajouter un cache d'indexation pour accélérer le démarrage.
+2. Implémenter les interactions de recherche/tri.
+3. Ajouter le chargement des jaquettes et métadonnées enrichies.
