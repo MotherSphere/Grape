@@ -1,5 +1,7 @@
 use crate::ui::message::UiMessage;
-use crate::ui::state::Artist;
+use crate::ui::state::{Artist, SelectionState};
+use iced::widget::{button, column, container, row, scrollable, text};
+use iced::{Alignment, Element, Length};
 
 #[derive(Debug, Clone)]
 pub struct ArtistsPanel {
@@ -39,6 +41,50 @@ impl ArtistsPanel {
             .find(|artist| artist.id == artist_id)
             .cloned()
             .map(UiMessage::SelectArtist)
+    }
+
+    pub fn view(&self, selection: &SelectionState) -> Element<UiMessage> {
+        let selected_id = selection.selected_artist.as_ref().map(|artist| artist.id);
+        let header = text(format!("{} Song artists", self.total_count)).size(16);
+        let list_items = self
+            .artists
+            .iter()
+            .map(|artist| {
+                let is_selected = Some(artist.id) == selected_id;
+                let label = if is_selected {
+                    format!("▸ {}", artist.name)
+                } else {
+                    artist.name.clone()
+                };
+                button(text(label))
+                    .on_press(UiMessage::SelectArtist(artist.clone()))
+                    .width(Length::Fill)
+                    .into()
+            })
+            .collect::<Vec<Element<UiMessage>>>();
+        let list = column(list_items)
+            .spacing(8)
+            .width(Length::Fill)
+            .align_items(Alignment::Start);
+        let scrollable_list = scrollable(list).height(Length::Fill);
+        let index_items = ('A'..='Z')
+            .map(|letter| text(letter.to_string()).size(12).into())
+            .collect::<Vec<Element<UiMessage>>>();
+        let index = column(index_items)
+            .spacing(4)
+            .align_items(Alignment::Center);
+        let body = row![scrollable_list, index]
+            .spacing(12)
+            .height(Length::Fill);
+        let content = column![header, body]
+            .spacing(12)
+            .height(Length::Fill);
+
+        container(content)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .padding(12)
+            .into()
     }
 
     pub fn render(&self) -> String {
