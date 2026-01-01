@@ -155,10 +155,7 @@ mod tests {
         playlist.add(third.clone());
 
         assert!(playlist.reorder(0, 2));
-        assert_eq!(
-            playlist.items,
-            vec![second.clone(), third.clone(), first.clone()]
-        );
+        assert_eq!(playlist.items, vec![second.clone(), third.clone(), first.clone()]);
         assert!(playlist.reorder(1, 1));
         assert!(!playlist.reorder(10, 0));
     }
