@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use std::time::Duration;
 
 use crate::ui::message::{PlaybackMessage, SearchMessage, UiMessage};

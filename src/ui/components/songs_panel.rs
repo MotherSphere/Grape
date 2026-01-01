@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use crate::ui::message::UiMessage;
 use crate::ui::state::{SelectionState, Track};
 use crate::ui::style;

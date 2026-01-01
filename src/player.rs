@@ -1,7 +1,5 @@
 use std::fmt;
 use std::fs::File;
-#![allow(dead_code)]
-
 use std::io;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
