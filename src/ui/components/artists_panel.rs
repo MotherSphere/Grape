@@ -1,6 +1,7 @@
 use crate::ui::message::UiMessage;
 use crate::ui::state::{Artist, SelectionState};
 use crate::ui::style;
+use iced::font::Weight;
 use iced::theme::{Button, Container};
 use iced::widget::{button, column, container, row, scrollable, text};
 use iced::{Alignment, Element, Length};
@@ -50,8 +51,12 @@ impl ArtistsPanel {
         let header = row![
             text(format!("{} Song artists", self.total_count))
                 .size(16)
+                .font(style::font_propo(Weight::Semibold))
                 .style(style::text_primary()),
-            text("A–Z").size(12).style(style::text_muted())
+            text("A–Z")
+                .size(12)
+                .font(style::font_propo(Weight::Light))
+                .style(style::text_muted())
         ]
         .spacing(8)
         .align_items(Alignment::Center);
@@ -63,6 +68,7 @@ impl ArtistsPanel {
                 let avatar = container(
                     text(artist.name.chars().next().unwrap_or('?').to_string())
                         .size(12)
+                        .font(style::font_propo(Weight::Medium))
                         .style(style::text_primary()),
                 )
                 .width(Length::Fixed(24.0))
@@ -73,6 +79,7 @@ impl ArtistsPanel {
                     style::Surface::Avatar,
                 ))));
                 let label = text(artist.name.clone())
+                    .font(style::font_propo(Weight::Medium))
                     .style(style::text_primary())
                     .size(14);
                 let row_content = row![avatar, label]
@@ -99,6 +106,7 @@ impl ArtistsPanel {
             .map(|letter| {
                 text(letter.to_string())
                     .size(11)
+                    .font(style::font_propo(Weight::Light))
                     .style(style::text_muted())
                     .into()
             })

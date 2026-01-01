@@ -1,6 +1,7 @@
 use crate::ui::message::UiMessage;
 use crate::ui::state::Album;
 use crate::ui::style;
+use iced::font::Weight;
 use iced::theme::{Button, Container};
 use iced::widget::{button, column, container, row, scrollable, text};
 use iced::{Alignment, Element, Length};
@@ -61,9 +62,11 @@ impl AlbumsGrid {
         let header = row![
             text(format!("{} Albums", self.albums.len()))
                 .size(16)
+                .font(style::font_propo(Weight::Semibold))
                 .style(style::text_primary()),
             text(format!("{} ", self.sort_label))
                 .size(12)
+                .font(style::font_propo(Weight::Light))
                 .style(style::text_muted())
         ]
         .spacing(8)
@@ -76,20 +79,27 @@ impl AlbumsGrid {
                     .iter()
                     .map(|album| {
                         let is_selected = Some(album.id) == self.selected_album_id;
-                        let cover = container(text("♪").size(26).style(style::text_muted()))
-                            .width(Length::Fixed(120.0))
-                            .height(Length::Fixed(120.0))
-                            .center_x()
-                            .center_y()
-                            .style(Container::Custom(Box::new(style::SurfaceStyle(
-                                style::Surface::AlbumCover,
-                            ))));
+                        let cover = container(
+                            text("♪")
+                                .size(26)
+                                .font(style::font_propo(Weight::Medium))
+                                .style(style::text_muted()),
+                        )
+                        .width(Length::Fixed(120.0))
+                        .height(Length::Fixed(120.0))
+                        .center_x()
+                        .center_y()
+                        .style(Container::Custom(Box::new(
+                            style::SurfaceStyle(style::Surface::AlbumCover),
+                        )));
 
                         let title = text(album.title.clone())
                             .size(14)
+                            .font(style::font_propo(Weight::Medium))
                             .style(style::text_primary());
                         let artist = text(album.artist.clone())
                             .size(12)
+                            .font(style::font_propo(Weight::Light))
                             .style(style::text_muted());
                         let card = column![cover, title, artist]
                             .spacing(6)
