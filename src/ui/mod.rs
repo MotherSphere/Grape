@@ -1,9 +1,11 @@
 pub mod state;
 pub mod components;
 pub mod message;
+pub mod app;
 
 pub use message::{PlaybackMessage, SearchMessage, UiMessage};
 pub use state::{ActiveTab, SortOption};
+pub use app::GrapeApp;
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct TopBar;
@@ -83,4 +85,8 @@ impl MainView {
 
 pub fn main_view() -> MainView {
     MainView::new()
+}
+
+pub fn run(catalog: crate::library::Catalog) -> iced::Result {
+    GrapeApp::run(catalog)
 }
