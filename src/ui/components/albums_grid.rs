@@ -50,7 +50,7 @@ impl AlbumsGrid {
             .map(UiMessage::SelectAlbum)
     }
 
-    pub fn view(self) -> Element<UiMessage> {
+    pub fn view(self) -> Element<'static, UiMessage> {
         let cover_width = 6usize;
         let cover_height = 3usize;
         let header = text(format!("Sort: {}", self.sort_label)).size(14);
