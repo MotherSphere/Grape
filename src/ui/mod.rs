@@ -1,4 +1,5 @@
 pub mod state;
+pub mod components;
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct TopBar;
