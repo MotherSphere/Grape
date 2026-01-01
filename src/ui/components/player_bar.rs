@@ -1,0 +1,125 @@
+use crate::ui::state::{PlaybackState, RepeatMode};
+
+#[derive(Debug, Clone)]
+pub struct PlayerBar {
+    artwork: String,
+    title: String,
+    artist: String,
+    playback: PlaybackState,
+    volume: u8,
+    queue_active: bool,
+}
+
+impl PlayerBar {
+    pub fn new(title: impl Into<String>, artist: impl Into<String>) -> Self {
+        Self {
+            artwork: "██".to_string(),
+            title: title.into(),
+            artist: artist.into(),
+            playback: PlaybackState::default(),
+            volume: 70,
+            queue_active: false,
+        }
+    }
+
+    pub fn with_artwork(mut self, artwork: impl Into<String>) -> Self {
+        self.artwork = artwork.into();
+        self
+    }
+
+    pub fn with_playback(mut self, playback: PlaybackState) -> Self {
+        self.playback = playback;
+        self
+    }
+
+    pub fn with_volume(mut self, volume: u8) -> Self {
+        self.volume = volume.min(100);
+        self
+    }
+
+    pub fn with_queue(mut self, queue_active: bool) -> Self {
+        self.queue_active = queue_active;
+        self
+    }
+
+    pub fn render(&self) -> String {
+        let left = format!("[{}] {} — {}", self.artwork, self.title, self.artist);
+        let controls = format!(
+            "{} ⏮ {} ⏭ {}",
+            shuffle_icon(self.playback.shuffle),
+            play_pause_icon(self.playback.is_playing),
+            repeat_icon(self.playback.repeat),
+        );
+        let elapsed = format_duration(self.playback.position);
+        let duration = format_duration(self.playback.duration);
+        let bar = build_progress_bar(self.playback.position, self.playback.duration, 24);
+        let audio_icons = format!("{} {}", volume_icon(self.volume), queue_icon(self.queue_active));
+
+        vec![
+            left,
+            controls,
+            format!("{} {} {}   {}", elapsed, bar, duration, audio_icons),
+        ]
+        .join("\n")
+    }
+}
+
+fn shuffle_icon(active: bool) -> &'static str {
+    if active {
+        "🔀"
+    } else {
+        "↔"
+    }
+}
+
+fn play_pause_icon(is_playing: bool) -> &'static str {
+    if is_playing {
+        "⏸"
+    } else {
+        "▶"
+    }
+}
+
+fn repeat_icon(mode: RepeatMode) -> &'static str {
+    match mode {
+        RepeatMode::Off => "🔁",
+        RepeatMode::One => "🔂",
+        RepeatMode::All => "🔁",
+    }
+}
+
+fn volume_icon(volume: u8) -> &'static str {
+    match volume {
+        0 => "🔇",
+        1..=33 => "🔈",
+        34..=66 => "🔉",
+        _ => "🔊",
+    }
+}
+
+fn queue_icon(active: bool) -> &'static str {
+    if active {
+        "📄"
+    } else {
+        "📃"
+    }
+}
+
+fn build_progress_bar(position: std::time::Duration, duration: std::time::Duration, width: usize) -> String {
+    if width == 0 {
+        return String::new();
+    }
+    let total = duration.as_secs_f32();
+    let current = position.as_secs_f32().min(total);
+    let ratio = if total > 0.0 { current / total } else { 0.0 };
+    let filled = ((ratio * width as f32).round() as usize).min(width);
+    let empty = width.saturating_sub(filled);
+    format!("{}{}", "━".repeat(filled), "─".repeat(empty))
+}
+
+fn format_duration(duration: std::time::Duration) -> String {
+    let total_seconds = duration.as_secs();
+    let minutes = total_seconds / 60;
+    let seconds = total_seconds % 60;
+    format!("{}:{:02}", minutes, seconds)
+}
