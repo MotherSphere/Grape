@@ -146,6 +146,8 @@ pub enum ButtonKind {
     AlbumCard { selected: bool },
     Control,
     Icon,
+    Overlay,
+    Logo,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -230,12 +232,34 @@ impl button::StyleSheet for ButtonStyle {
                 },
                 ..Default::default()
             },
+            ButtonKind::Overlay => button::Appearance {
+                background: Some(Background::Color(Color::TRANSPARENT)),
+                text_color: text_muted(),
+                border: Border {
+                    radius: 0.0.into(),
+                    width: 0.0,
+                    color: Color::TRANSPARENT,
+                },
+                ..Default::default()
+            },
+            ButtonKind::Logo => button::Appearance {
+                background: Some(Background::Color(Color::TRANSPARENT)),
+                text_color: text_primary(),
+                border: Border {
+                    radius: 8.0.into(),
+                    width: 0.0,
+                    color: Color::TRANSPARENT,
+                },
+                ..Default::default()
+            },
         }
     }
 
     fn hovered(&self, style: &Theme) -> button::Appearance {
         let mut appearance = self.active(style);
-        appearance.background = Some(Background::Color(bg_hover()));
+        if !matches!(self.0, ButtonKind::Overlay | ButtonKind::Logo) {
+            appearance.background = Some(Background::Color(bg_hover()));
+        }
         appearance
     }
 }
