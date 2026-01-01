@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use std::path::PathBuf;
 use std::time::Duration;
 
 use crate::ui::message::{PlaybackMessage, SearchMessage, UiMessage};
@@ -40,6 +41,7 @@ pub struct Track {
     pub artist: String,
     pub track_number: Option<u32>,
     pub duration: Duration,
+    pub path: PathBuf,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -74,13 +76,6 @@ pub struct PlaybackState {
 impl PlaybackState {
     pub fn update(&mut self, message: PlaybackMessage) {
         match message {
-            PlaybackMessage::TogglePlayPause => {
-                self.is_playing = !self.is_playing;
-            }
-            PlaybackMessage::NextTrack | PlaybackMessage::PreviousTrack => {
-                self.position = Duration::ZERO;
-                self.is_playing = true;
-            }
             PlaybackMessage::ToggleShuffle => {
                 self.shuffle = !self.shuffle;
             }
@@ -91,6 +86,9 @@ impl PlaybackState {
                     RepeatMode::One => RepeatMode::Off,
                 };
             }
+            PlaybackMessage::TogglePlayPause
+            | PlaybackMessage::NextTrack
+            | PlaybackMessage::PreviousTrack => {}
         }
     }
 }

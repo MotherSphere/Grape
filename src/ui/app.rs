@@ -1,9 +1,10 @@
 use crate::library::Catalog;
+use crate::player::{PlaybackState as PlayerPlaybackState, Player};
 use crate::ui::components::albums_grid::AlbumsGrid;
 use crate::ui::components::artists_panel::ArtistsPanel;
 use crate::ui::components::player_bar::PlayerBar;
 use crate::ui::components::songs_panel::SongsPanel;
-use crate::ui::message::{SearchMessage, UiMessage};
+use crate::ui::message::{PlaybackMessage, SearchMessage, UiMessage};
 use crate::ui::state::{
     ActiveTab, Album as UiAlbum, Artist as UiArtist, SortOption, Track as UiTrack, UiState,
 };
@@ -12,9 +13,12 @@ use iced::font::Weight;
 use iced::theme::{Button, Container, TextInput};
 use iced::widget::{button, column, container, row, text, text_input};
 use iced::{Alignment, Application, Command, Element, Length, Settings, Theme};
+use std::time::Duration;
+use tracing::error;
 
 pub struct GrapeApp {
     catalog: Catalog,
+    player: Option<Player>,
     ui: UiState,
 }
 
@@ -131,6 +135,7 @@ impl GrapeApp {
                 artist: artist.name.clone(),
                 track_number: Some(track.number as u32),
                 duration: std::time::Duration::from_secs(track.duration_secs as u64),
+                path: track.path.clone(),
             })
             .collect()
     }
@@ -326,6 +331,56 @@ impl GrapeApp {
             .with_queue(false)
             .view()
     }
+
+    fn handle_track_selection(&mut self, track: &UiTrack) {
+        let Some(player) = &mut self.player else {
+            return;
+        };
+        if let Err(err) = player.load(&track.path) {
+            error!(error = %err, path = %track.path.display(), "Failed to load track");
+            return;
+        }
+        player.play();
+    }
+
+    fn handle_playback_message(&mut self, message: &PlaybackMessage) {
+        let Some(player) = &mut self.player else {
+            return;
+        };
+        match message {
+            PlaybackMessage::TogglePlayPause => match player.state() {
+                PlayerPlaybackState::Playing => player.pause(),
+                PlayerPlaybackState::Paused | PlayerPlaybackState::Stopped => player.play(),
+            },
+            PlaybackMessage::NextTrack | PlaybackMessage::PreviousTrack => {
+                if let Err(err) = player.seek(Duration::ZERO) {
+                    error!(error = %err, "Failed to seek to start");
+                } else {
+                    player.play();
+                }
+            }
+            PlaybackMessage::ToggleShuffle | PlaybackMessage::CycleRepeat => {}
+        }
+    }
+
+    fn sync_playback_state(&mut self) {
+        let (is_playing, position) = match &self.player {
+            Some(player) => (
+                matches!(player.state(), PlayerPlaybackState::Playing),
+                player.position(),
+            ),
+            None => (false, Duration::ZERO),
+        };
+        self.ui.playback.is_playing = is_playing;
+        self.ui.playback.position = position;
+        self.ui.playback.duration = self
+            .ui
+            .selection
+            .selected_track
+            .as_ref()
+            .map(|track| track.duration)
+            .unwrap_or(Duration::ZERO);
+    }
 }
 
 impl Application for GrapeApp {
@@ -335,9 +390,17 @@ impl Application for GrapeApp {
     type Flags = Catalog;
 
     fn new(flags: Self::Flags) -> (Self, Command<Self::Message>) {
+        let player = match Player::new() {
+            Ok(player) => Some(player),
+            Err(err) => {
+                error!(error = %err, "Failed to initialize audio player");
+                None
+            }
+        };
         (
             Self {
                 catalog: flags,
+                player,
                 ui: UiState::default(),
             },
             Command::none(),
@@ -349,7 +412,17 @@ impl Application for GrapeApp {
     }
 
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
+        match &message {
+            UiMessage::SelectTrack(track) => {
+                self.handle_track_selection(track);
+            }
+            UiMessage::Playback(playback_message) => {
+                self.handle_playback_message(playback_message);
+            }
+            _ => {}
+        }
         self.ui.update(message);
+        self.sync_playback_state();
         Command::none()
     }
 
