@@ -4,6 +4,7 @@ use crate::ui::components::albums_grid::AlbumsGrid;
 use crate::ui::components::anchored_overlay::AnchoredOverlay;
 use crate::ui::components::artists_panel::ArtistsPanel;
 use crate::ui::components::player_bar::PlayerBar;
+use crate::ui::components::playlist_view::PlaylistView;
 use crate::ui::components::songs_panel::SongsPanel;
 use crate::ui::message::{PlaybackMessage, SearchMessage, UiMessage};
 use crate::ui::state::{
@@ -501,6 +502,10 @@ impl GrapeApp {
             .map(|track| track.duration)
             .unwrap_or(Duration::ZERO);
     }
+
+    fn playlist_view(&self) -> Element<'_, UiMessage> {
+        PlaylistView::view()
+    }
 }
 
 impl Application for GrapeApp {
@@ -539,6 +544,12 @@ impl Application for GrapeApp {
             UiMessage::Playback(playback_message) => {
                 self.handle_playback_message(playback_message);
             }
+            UiMessage::OpenPlaylist => {
+                self.ui.playlist_open = true;
+            }
+            UiMessage::ClosePlaylist => {
+                self.ui.playlist_open = false;
+            }
             _ => {}
         }
         self.ui.update(message);
@@ -547,6 +558,10 @@ impl Application for GrapeApp {
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
+        if self.ui.playlist_open {
+            return self.playlist_view();
+        }
+
         let content = row![
             container(self.artists_panel())
                 .width(Length::FillPortion(2))
@@ -580,22 +595,35 @@ impl Application for GrapeApp {
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        if !self.ui.menu_open {
-            return Subscription::none();
+        let mut subscriptions = Vec::new();
+
+        if self.ui.menu_open {
+            subscriptions.push(event::listen_with(|event, status| match event {
+                event::Event::Keyboard(keyboard::Event::KeyPressed { key, .. })
+                    if matches!(key, keyboard::Key::Named(keyboard::key::Named::Escape)) =>
+                {
+                    Some(UiMessage::CloseMenu)
+                }
+                event::Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left))
+                    if status == event::Status::Ignored =>
+                {
+                    Some(UiMessage::CloseMenu)
+                }
+                _ => None,
+            }));
         }
 
-        event::listen_with(|event, status| match event {
-            event::Event::Keyboard(keyboard::Event::KeyPressed { key, .. })
-                if matches!(key, keyboard::Key::Named(keyboard::key::Named::Escape)) =>
-            {
-                Some(UiMessage::CloseMenu)
-            }
-            event::Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left))
-                if status == event::Status::Ignored =>
-            {
-                Some(UiMessage::CloseMenu)
-            }
-            _ => None,
-        })
+        if self.ui.playlist_open {
+            subscriptions.push(event::listen_with(|event, _status| match event {
+                event::Event::Keyboard(keyboard::Event::KeyPressed { key, .. })
+                    if matches!(key, keyboard::Key::Named(keyboard::key::Named::Escape)) =>
+                {
+                    Some(UiMessage::ClosePlaylist)
+                }
+                _ => None,
+            }));
+        }
+
+        Subscription::batch(subscriptions)
     }
 }
