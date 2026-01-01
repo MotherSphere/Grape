@@ -3,7 +3,9 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-use crate::ui::message::{PlaybackMessage, SearchMessage, UiMessage};
+use crate::player::NowPlaying;
+use crate::playlist::Playlist;
+use crate::ui::message::{PlaybackMessage, PlaylistMessage, SearchMessage, UiMessage};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ActiveTab {
@@ -124,15 +126,27 @@ impl SearchState {
     }
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UiState {
     pub active_tab: ActiveTab,
     pub selection: SelectionState,
     pub playback: PlaybackState,
     pub search: SearchState,
+    pub playlist: Playlist,
+    pub playlist_name_draft: String,
 }
 
 impl UiState {
+    fn now_playing_from_track(track: &Track) -> NowPlaying {
+        NowPlaying {
+            artist: track.artist.clone(),
+            album: track.album.clone(),
+            title: track.title.clone(),
+            duration_secs: track.duration.as_secs() as u32,
+            path: track.path.clone(),
+        }
+    }
+
     pub fn update(&mut self, message: UiMessage) {
         match message {
             UiMessage::TabSelected(tab) => {
@@ -153,9 +167,44 @@ impl UiState {
             UiMessage::Playback(message) => {
                 self.playback.update(message);
             }
+            UiMessage::Playlist(message) => match message {
+                PlaylistMessage::NameChanged(name) => {
+                    self.playlist_name_draft = name;
+                }
+                PlaylistMessage::Create => {
+                    let trimmed = self.playlist_name_draft.trim();
+                    let name = if trimmed.is_empty() {
+                        "New Playlist"
+                    } else {
+                        trimmed
+                    };
+                    self.playlist = Playlist::empty(name.to_string());
+                }
+                PlaylistMessage::AddTrack(track) => {
+                    let entry = Self::now_playing_from_track(&track);
+                    self.playlist.add(entry);
+                }
+                PlaylistMessage::RemoveTrack(index) => {
+                    self.playlist.remove(index);
+                }
+            },
             UiMessage::Search(message) => {
                 self.search.update(message);
             }
+        }
+    }
+}
+
+impl Default for UiState {
+    fn default() -> Self {
+        let playlist = Playlist::empty("Queue");
+        Self {
+            active_tab: ActiveTab::default(),
+            selection: SelectionState::default(),
+            playback: PlaybackState::default(),
+            search: SearchState::default(),
+            playlist_name_draft: playlist.name.clone(),
+            playlist,
         }
     }
 }
