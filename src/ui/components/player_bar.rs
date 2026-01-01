@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use crate::ui::message::{PlaybackMessage, UiMessage};
 use crate::ui::state::{PlaybackState, RepeatMode};
 use crate::ui::style;

@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use crate::ui::message::UiMessage;
 use crate::ui::state::Album;
 use crate::ui::style;
