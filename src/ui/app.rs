@@ -1,6 +1,7 @@
 use crate::library::Catalog;
 use crate::player::{PlaybackState as PlayerPlaybackState, Player};
 use crate::ui::components::albums_grid::AlbumsGrid;
+use crate::ui::components::anchored_overlay::AnchoredOverlay;
 use crate::ui::components::artists_panel::ArtistsPanel;
 use crate::ui::components::player_bar::PlayerBar;
 use crate::ui::components::songs_panel::SongsPanel;
@@ -12,7 +13,8 @@ use crate::ui::style;
 use iced::font::Weight;
 use iced::theme::{Button, Container, TextInput};
 use iced::widget::{button, column, container, row, text, text_input};
-use iced::{Alignment, Application, Command, Element, Length, Settings, Theme};
+use iced::{event, keyboard, mouse, Alignment, Application, Command, Element, Length, Settings};
+use iced::{Subscription, Theme};
 use std::time::Duration;
 use tracing::error;
 
@@ -242,6 +244,34 @@ impl GrapeApp {
         ]
         .spacing(8)
         .align_items(Alignment::Center);
+        let logo_button = button(logo)
+            .style(Button::Custom(Box::new(style::ButtonStyle(
+                style::ButtonKind::Icon,
+            ))))
+            .padding([2, 6])
+            .on_press(UiMessage::ToggleLogoMenu);
+        let logo_menu = container(
+            column![
+                text("Bibliothèque")
+                    .size(13)
+                    .font(style::font_propo(Weight::Medium))
+                    .style(style::text_primary()),
+                text("Préférences")
+                    .size(13)
+                    .font(style::font_propo(Weight::Medium))
+                    .style(style::text_primary()),
+            ]
+            .spacing(6),
+        )
+        .padding([8, 12])
+        .style(Container::Custom(Box::new(style::SurfaceStyle(
+            style::Surface::Panel,
+        ))));
+        let logo_widget: Element<'_, UiMessage> = if self.ui.menu_open {
+            AnchoredOverlay::new(logo_button, logo_menu).into()
+        } else {
+            logo_button.into()
+        };
         let tabs = row![
             button(
                 text(self.tab_label(ActiveTab::Artists, "Artists"))
@@ -308,7 +338,7 @@ impl GrapeApp {
         .align_items(Alignment::Center);
 
         let layout = row![
-            container(logo).width(Length::Shrink),
+            container(logo_widget).width(Length::Shrink),
             container(tabs).width(Length::Fill).center_x(),
             container(search).width(Length::Shrink)
         ]
@@ -539,5 +569,25 @@ impl Application for GrapeApp {
 
     fn theme(&self) -> Theme {
         Theme::Dark
+    }
+
+    fn subscription(&self) -> Subscription<Self::Message> {
+        if !self.ui.menu_open {
+            return Subscription::none();
+        }
+
+        event::listen_with(|event, status| match event {
+            event::Event::Keyboard(keyboard::Event::KeyPressed { key, .. })
+                if matches!(key, keyboard::Key::Named(keyboard::key::Named::Escape)) =>
+            {
+                Some(UiMessage::CloseMenu)
+            }
+            event::Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left))
+                if status == event::Status::Ignored =>
+            {
+                Some(UiMessage::CloseMenu)
+            }
+            _ => None,
+        })
     }
 }
