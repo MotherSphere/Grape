@@ -9,7 +9,6 @@ pub enum UiMessage {
     SelectAlbum(Album),
     SelectTrack(Track),
     Playback(PlaybackMessage),
-    Playlist(PlaylistMessage),
     Search(SearchMessage),
 }
 
@@ -26,12 +25,4 @@ pub enum PlaybackMessage {
 pub enum SearchMessage {
     QueryChanged(String),
     SortChanged(SortOption),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum PlaylistMessage {
-    NameChanged(String),
-    Create,
-    AddTrack(Track),
-    RemoveTrack(usize),
 }

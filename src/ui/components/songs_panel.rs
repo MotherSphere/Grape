@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::ui::message::{PlaylistMessage, UiMessage};
+use crate::ui::message::UiMessage;
 use crate::ui::state::{SelectionState, Track};
 use crate::ui::style;
 use iced::font::Weight;
@@ -106,27 +106,14 @@ impl SongsPanel {
                     .spacing(12)
                     .align_items(Alignment::Center)
                     .width(Length::Fill);
-                let add_button =
-                    button(text("＋").size(14).font(style::font_propo(Weight::Medium)))
-                        .style(Button::Custom(Box::new(style::ButtonStyle(
-                            style::ButtonKind::Icon,
-                        ))))
-                        .on_press(UiMessage::Playlist(PlaylistMessage::AddTrack(
-                            track.clone(),
-                        )));
 
-                let select_button = button(row_content)
+                button(row_content)
                     .style(Button::Custom(Box::new(style::ButtonStyle(
                         style::ButtonKind::ListItem {
                             selected: is_selected,
                         },
                     ))))
                     .on_press(UiMessage::SelectTrack(track.clone()))
-                    .width(Length::Fill);
-
-                row![select_button, add_button]
-                    .spacing(8)
-                    .align_items(Alignment::Center)
                     .width(Length::Fill)
                     .into()
             })

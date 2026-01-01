@@ -151,8 +151,7 @@ impl Player {
         self.position = position;
         self.sink.stop();
         self.sink = Sink::try_new(&self.handle)?;
-        let source = self
-            .decode_source(&path)
+        let source = self.decode_source(&path)
             .map_err(|err| {
                 error!(error = %err, path = %path.display(), "Failed to seek");
                 err
