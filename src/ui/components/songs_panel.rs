@@ -1,6 +1,5 @@
 use crate::ui::message::UiMessage;
 use crate::ui::state::{SelectionState, Track};
-use crate::ui::style;
 use iced::widget::{button, column, container, row, scrollable, text};
 use iced::{Alignment, Element, Length};
 
@@ -47,48 +46,42 @@ impl SongsPanel {
 
     pub fn view(&self, selection: &SelectionState) -> Element<'static, UiMessage> {
         let selected_id = selection.selected_track.as_ref().map(|track| track.id);
-        let header = row![
-            text(format!("{} Songs", self.tracks.len()))
-                .size(16)
-                .style(style::TEXT_PRIMARY),
-            text("By album").size(12).style(style::TEXT_MUTED)
-        ]
-        .spacing(8)
-        .align_items(Alignment::Center);
-        let album_info = column![
-            text(self.album.clone()).size(18).style(style::TEXT_PRIMARY),
-            text(self.artist.clone()).size(12).style(style::TEXT_MUTED)
-        ]
-        .spacing(4)
-        .align_items(Alignment::Start);
+        let header = text(format!("{} Songs", self.tracks.len())).size(16);
+        let album_info = column![text(self.album.clone()).size(18), text(self.artist.clone())]
+            .spacing(4)
+            .align_items(Alignment::Start);
         let list_items = self
             .tracks
             .iter()
             .enumerate()
             .map(|(index, track)| {
                 let is_selected = Some(track.id) == selected_id;
-                let number = track.track_number.unwrap_or((index + 1) as u32).to_string();
-                let number_label = text(number).size(12).style(style::TEXT_MUTED);
-                let title = text(track.title.clone())
-                    .size(14)
-                    .style(style::TEXT_PRIMARY);
-                let artist = text(track.artist.clone()).size(12).style(style::TEXT_MUTED);
-                let details = column![title, artist]
+                let number = track
+                    .track_number
+                    .unwrap_or((index + 1) as u32)
+                    .to_string();
+                let number_label = text(number).size(14);
+                let title = if is_selected {
+                    format!("▸ {}", track.title)
+                } else {
+                    track.title.clone()
+                };
+                let artist = if is_selected {
+                    format!("▸ {}", track.artist)
+                } else {
+                    track.artist.clone()
+                };
+                let details = column![text(title), text(artist).size(12)]
                     .spacing(2)
                     .width(Length::Fill)
                     .align_items(Alignment::Start);
-                let duration = text(format_duration(track.duration))
-                    .size(12)
-                    .style(style::TEXT_MUTED);
+                let duration = text(format_duration(track.duration)).size(14);
                 let row_content = row![number_label, details, duration]
                     .spacing(12)
                     .align_items(Alignment::Center)
                     .width(Length::Fill);
 
                 button(row_content)
-                    .style(style::ButtonStyle(style::ButtonKind::ListItem {
-                        selected: is_selected,
-                    }))
                     .on_press(UiMessage::SelectTrack(track.clone()))
                     .width(Length::Fill)
                     .into()
@@ -107,7 +100,6 @@ impl SongsPanel {
             .width(Length::Fill)
             .height(Length::Fill)
             .padding(12)
-            .style(style::SurfaceStyle(style::Surface::Panel))
             .into()
     }
 

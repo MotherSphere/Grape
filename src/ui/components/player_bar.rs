@@ -1,6 +1,5 @@
 use crate::ui::message::{PlaybackMessage, UiMessage};
 use crate::ui::state::{PlaybackState, RepeatMode};
-use crate::ui::style;
 use iced::widget::{button, column, container, progress_bar, row, text};
 use iced::{Alignment, Element, Length};
 
@@ -75,67 +74,41 @@ impl PlayerBar {
             volume,
             queue_active,
         } = self;
-        let cover = container(text(artwork).size(18).style(style::TEXT_MUTED))
-            .width(Length::Fixed(42.0))
-            .height(Length::Fixed(42.0))
-            .center_x()
-            .center_y()
-            .style(style::SurfaceStyle(style::Surface::AlbumCover));
         let left = row![
-            cover,
-            column![
-                text(title).size(14).style(style::TEXT_PRIMARY),
-                text(artist).size(12).style(style::TEXT_MUTED)
-            ]
-            .spacing(4)
-            .align_items(Alignment::Start)
+            text(format!("[{}]", artwork)).size(18),
+            column![text(title).size(16), text(artist).size(12)]
+                .spacing(4)
+                .align_items(Alignment::Start)
         ]
-        .spacing(12)
+        .spacing(8)
         .align_items(Alignment::Center)
         .width(Length::FillPortion(3));
 
         let controls = row![
             button(text(shuffle_icon(playback.shuffle)))
-                .style(style::ButtonStyle(style::ButtonKind::Icon))
                 .on_press(UiMessage::Playback(PlaybackMessage::ToggleShuffle)),
-            button(text("⏮"))
-                .style(style::ButtonStyle(style::ButtonKind::Control))
-                .on_press(UiMessage::Playback(PlaybackMessage::PreviousTrack)),
+            button(text("⏮")).on_press(UiMessage::Playback(PlaybackMessage::PreviousTrack)),
             button(text(play_pause_icon(playback.is_playing)))
-                .style(style::ButtonStyle(style::ButtonKind::Control))
                 .on_press(UiMessage::Playback(PlaybackMessage::TogglePlayPause)),
-            button(text("⏭"))
-                .style(style::ButtonStyle(style::ButtonKind::Control))
-                .on_press(UiMessage::Playback(PlaybackMessage::NextTrack)),
+            button(text("⏭")).on_press(UiMessage::Playback(PlaybackMessage::NextTrack)),
             button(text(repeat_icon(playback.repeat)))
-                .style(style::ButtonStyle(style::ButtonKind::Icon))
                 .on_press(UiMessage::Playback(PlaybackMessage::CycleRepeat)),
         ]
-        .spacing(10)
+        .spacing(8)
         .align_items(Alignment::Center)
         .width(Length::FillPortion(4));
 
         let elapsed = format_duration(playback.position);
         let duration = format_duration(playback.duration);
-        let progress = progress_bar(
-            0.0..=1.0,
-            progress_ratio(playback.position, playback.duration),
-        )
-        .width(Length::Fill);
-        let progress_row = row![
-            text(elapsed).size(12).style(style::TEXT_MUTED),
-            progress,
-            text(duration).size(12).style(style::TEXT_MUTED)
-        ]
-        .spacing(8)
-        .align_items(Alignment::Center)
-        .width(Length::Fill);
-        let audio_icons = row![
-            text(volume_icon(volume)).style(style::TEXT_MUTED),
-            text(queue_icon(queue_active)).style(style::TEXT_MUTED)
-        ]
-        .spacing(8)
-        .align_items(Alignment::Center);
+        let progress = progress_bar(0.0..=1.0, progress_ratio(playback.position, playback.duration))
+            .width(Length::Fill);
+        let progress_row = row![text(elapsed), progress, text(duration)]
+            .spacing(8)
+            .align_items(Alignment::Center)
+            .width(Length::Fill);
+        let audio_icons = row![text(volume_icon(volume)), text(queue_icon(queue_active))]
+            .spacing(8)
+            .align_items(Alignment::Center);
         let right = column![progress_row, audio_icons]
             .spacing(6)
             .align_items(Alignment::End)
@@ -147,9 +120,8 @@ impl PlayerBar {
             .width(Length::Fill);
 
         container(content)
-            .padding([10, 16])
+            .padding(12)
             .width(Length::Fill)
-            .style(style::SurfaceStyle(style::Surface::PlayerBar))
             .into()
     }
 
@@ -164,11 +136,7 @@ impl PlayerBar {
         let elapsed = format_duration(self.playback.position);
         let duration = format_duration(self.playback.duration);
         let bar = build_progress_bar(self.playback.position, self.playback.duration, 24);
-        let audio_icons = format!(
-            "{} {}",
-            volume_icon(self.volume),
-            queue_icon(self.queue_active)
-        );
+        let audio_icons = format!("{} {}", volume_icon(self.volume), queue_icon(self.queue_active));
 
         vec![
             left,
@@ -180,11 +148,19 @@ impl PlayerBar {
 }
 
 fn shuffle_icon(active: bool) -> &'static str {
-    if active { "🔀" } else { "↔" }
+    if active {
+        "🔀"
+    } else {
+        "↔"
+    }
 }
 
 fn play_pause_icon(is_playing: bool) -> &'static str {
-    if is_playing { "⏸" } else { "▶" }
+    if is_playing {
+        "⏸"
+    } else {
+        "▶"
+    }
 }
 
 fn repeat_icon(mode: RepeatMode) -> &'static str {
@@ -205,7 +181,11 @@ fn volume_icon(volume: u8) -> &'static str {
 }
 
 fn queue_icon(active: bool) -> &'static str {
-    if active { "📄" } else { "📃" }
+    if active {
+        "📄"
+    } else {
+        "📃"
+    }
 }
 
 fn progress_ratio(position: std::time::Duration, duration: std::time::Duration) -> f32 {
@@ -217,11 +197,7 @@ fn progress_ratio(position: std::time::Duration, duration: std::time::Duration) 
     (current / total).clamp(0.0, 1.0)
 }
 
-fn build_progress_bar(
-    position: std::time::Duration,
-    duration: std::time::Duration,
-    width: usize,
-) -> String {
+fn build_progress_bar(position: std::time::Duration, duration: std::time::Duration, width: usize) -> String {
     if width == 0 {
         return String::new();
     }

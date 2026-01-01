@@ -7,7 +7,6 @@ use crate::ui::message::{SearchMessage, UiMessage};
 use crate::ui::state::{
     ActiveTab, Album as UiAlbum, Artist as UiArtist, SortOption, Track as UiTrack, UiState,
 };
-use crate::ui::style;
 use iced::widget::{button, column, container, row, text, text_input};
 use iced::{Alignment, Application, Command, Element, Length, Settings, Theme};
 
@@ -27,8 +26,12 @@ impl GrapeApp {
         <Self as Application>::run(settings)
     }
 
-    fn tab_label(&self, _tab: ActiveTab, label: &str) -> String {
-        label.to_string()
+    fn tab_label(&self, tab: ActiveTab, label: &str) -> String {
+        if self.ui.active_tab == tab {
+            format!("{label} •")
+        } else {
+            label.to_string()
+        }
     }
 
     fn albums_from_catalog(&self) -> Vec<UiAlbum> {
@@ -62,10 +65,7 @@ impl GrapeApp {
             .collect()
     }
 
-    fn album_entry_by_id(
-        &self,
-        album_id: usize,
-    ) -> Option<(&crate::library::Artist, &crate::library::Album)> {
+    fn album_entry_by_id(&self, album_id: usize) -> Option<(&crate::library::Artist, &crate::library::Album)> {
         let mut id = 0usize;
         for artist in &self.catalog.artists {
             for album in &artist.albums {
@@ -99,48 +99,24 @@ impl GrapeApp {
     }
 
     fn top_bar(&self) -> Element<UiMessage> {
-        let logo_mark = container(text("G").size(18).style(style::TEXT_PRIMARY))
-            .padding([6, 10])
-            .style(style::SurfaceStyle(style::Surface::Avatar));
-        let logo = row![logo_mark, text("Grape").size(20).style(style::TEXT_PRIMARY)]
-            .spacing(8)
-            .align_items(Alignment::Center);
+        let logo = text("Grape").size(22);
         let tabs = row![
             button(text(self.tab_label(ActiveTab::Artists, "Artists")))
-                .style(style::ButtonStyle(style::ButtonKind::Tab {
-                    selected: self.ui.active_tab == ActiveTab::Artists,
-                }))
                 .on_press(UiMessage::TabSelected(ActiveTab::Artists)),
             button(text(self.tab_label(ActiveTab::Genres, "Genres")))
-                .style(style::ButtonStyle(style::ButtonKind::Tab {
-                    selected: self.ui.active_tab == ActiveTab::Genres,
-                }))
                 .on_press(UiMessage::TabSelected(ActiveTab::Genres)),
             button(text(self.tab_label(ActiveTab::Albums, "Albums")))
-                .style(style::ButtonStyle(style::ButtonKind::Tab {
-                    selected: self.ui.active_tab == ActiveTab::Albums,
-                }))
                 .on_press(UiMessage::TabSelected(ActiveTab::Albums)),
             button(text(self.tab_label(ActiveTab::Folders, "Folders")))
-                .style(style::ButtonStyle(style::ButtonKind::Tab {
-                    selected: self.ui.active_tab == ActiveTab::Folders,
-                }))
                 .on_press(UiMessage::TabSelected(ActiveTab::Folders)),
         ]
-        .spacing(12)
+        .spacing(16)
         .align_items(Alignment::Center);
         let search_input = text_input("Search...", &self.ui.search.query)
-            .style(style::SearchInput)
             .on_input(|value| UiMessage::Search(SearchMessage::QueryChanged(value)));
-        let search = row![
-            search_input,
-            button(text("≡")).style(style::ButtonStyle(style::ButtonKind::Icon)),
-            button(text("—")).style(style::ButtonStyle(style::ButtonKind::Icon)),
-            button(text("▢")).style(style::ButtonStyle(style::ButtonKind::Icon)),
-            button(text("✕")).style(style::ButtonStyle(style::ButtonKind::Icon))
-        ]
-        .spacing(8)
-        .align_items(Alignment::Center);
+        let search = row![search_input, text("⎯ ☐ ✕")]
+            .spacing(12)
+            .align_items(Alignment::Center);
 
         let layout = row![
             container(logo).width(Length::Shrink),
@@ -151,19 +127,13 @@ impl GrapeApp {
         .align_items(Alignment::Center);
 
         container(layout)
-            .padding([10, 16])
+            .padding(12)
             .width(Length::Fill)
-            .style(style::SurfaceStyle(style::Surface::TopBar))
             .into()
     }
 
     fn artists_panel(&self) -> Element<UiMessage> {
-        let selected_id = self
-            .ui
-            .selection
-            .selected_artist
-            .as_ref()
-            .map(|artist| artist.id);
+        let selected_id = self.ui.selection.selected_artist.as_ref().map(|artist| artist.id);
         let artists = self.artists_from_catalog();
         let panel = ArtistsPanel::new(artists).with_selection(selected_id);
         panel.view(&self.ui.selection)
@@ -174,12 +144,7 @@ impl GrapeApp {
             SortOption::Alphabetical => "A–Z",
             SortOption::ByAlbum => "By album",
         };
-        let selected_id = self
-            .ui
-            .selection
-            .selected_album
-            .as_ref()
-            .map(|album| album.id);
+        let selected_id = self.ui.selection.selected_album.as_ref().map(|album| album.id);
         let albums = self.albums_from_catalog();
         let grid = AlbumsGrid::new(albums)
             .with_sort_label(sort_label)
@@ -209,12 +174,7 @@ impl GrapeApp {
                 Vec::new(),
             ),
         };
-        let selected_id = self
-            .ui
-            .selection
-            .selected_track
-            .as_ref()
-            .map(|track| track.id);
+        let selected_id = self.ui.selection.selected_track.as_ref().map(|track| track.id);
         let panel = SongsPanel::new(album_title, artist_name, tracks).with_selection(selected_id);
         panel.view(&self.ui.selection)
     }
@@ -233,12 +193,7 @@ impl GrapeApp {
                     .as_ref()
                     .map(|album| (album.title.clone(), album.artist.clone()))
             })
-            .unwrap_or_else(|| {
-                (
-                    "No track selected".to_string(),
-                    "Pick a track to play".to_string(),
-                )
-            });
+            .unwrap_or_else(|| ("No track selected".to_string(), "Pick a track to play".to_string()));
 
         PlayerBar::new(title, artist)
             .with_playback(self.ui.playback)
@@ -275,32 +230,17 @@ impl Application for GrapeApp {
 
     fn view(&self) -> Element<Self::Message> {
         let content = row![
-            container(self.artists_panel())
-                .width(Length::FillPortion(2))
-                .height(Length::Fill),
-            container(self.albums_panel())
-                .width(Length::FillPortion(5))
-                .height(Length::Fill),
-            container(self.songs_panel())
-                .width(Length::FillPortion(3))
-                .height(Length::Fill),
+            self.artists_panel(),
+            self.albums_panel(),
+            self.songs_panel()
         ]
         .spacing(16)
         .height(Length::Fill);
 
-        let layout = column![self.top_bar(), content, self.player_bar()]
-            .spacing(16)
-            .padding(16)
-            .height(Length::Fill);
-
-        container(layout)
-            .width(Length::Fill)
+        column![self.top_bar(), content, self.player_bar()]
+            .spacing(12)
+            .padding(12)
             .height(Length::Fill)
-            .style(style::SurfaceStyle(style::Surface::AppBackground))
             .into()
-    }
-
-    fn theme(&self) -> Theme {
-        Theme::Dark
     }
 }

@@ -1,6 +1,5 @@
 use crate::ui::message::UiMessage;
 use crate::ui::state::Album;
-use crate::ui::style;
 use iced::widget::{button, column, container, row, scrollable, text};
 use iced::{Alignment, Element, Length};
 
@@ -36,12 +35,7 @@ impl AlbumsGrid {
         self
     }
 
-    pub fn with_layout(
-        mut self,
-        columns: usize,
-        scroll_offset: usize,
-        viewport_rows: usize,
-    ) -> Self {
+    pub fn with_layout(mut self, columns: usize, scroll_offset: usize, viewport_rows: usize) -> Self {
         self.columns = columns.max(1);
         self.scroll_offset = scroll_offset;
         self.viewport_rows = viewport_rows.max(1);
@@ -57,16 +51,9 @@ impl AlbumsGrid {
     }
 
     pub fn view(self) -> Element<'static, UiMessage> {
-        let header = row![
-            text(format!("{} Albums", self.albums.len()))
-                .size(16)
-                .style(style::TEXT_PRIMARY),
-            text(format!("{} ", self.sort_label))
-                .size(12)
-                .style(style::TEXT_MUTED)
-        ]
-        .spacing(8)
-        .align_items(Alignment::Center);
+        let cover_width = 6usize;
+        let cover_height = 3usize;
+        let header = text(format!("Sort: {}", self.sort_label)).size(14);
         let rows = self
             .albums
             .chunks(self.columns)
@@ -75,26 +62,32 @@ impl AlbumsGrid {
                     .iter()
                     .map(|album| {
                         let is_selected = Some(album.id) == self.selected_album_id;
-                        let cover = container(text("♪").size(26).style(style::TEXT_MUTED))
-                            .width(Length::Fixed(120.0))
-                            .height(Length::Fixed(120.0))
-                            .center_x()
-                            .center_y()
-                            .style(style::SurfaceStyle(style::Surface::AlbumCover));
+                        let cover_char = if is_selected { '▓' } else { '█' };
+                        let cover_line = cover_char.to_string().repeat(cover_width);
+                        let mut cover_lines = Vec::with_capacity(cover_height);
+                        for _ in 0..cover_height {
+                            cover_lines.push(text(cover_line.clone()).into());
+                        }
+                        let cover = column(cover_lines)
+                            .spacing(2)
+                            .align_items(Alignment::Center);
 
-                        let title = text(album.title.clone())
-                            .size(14)
-                            .style(style::TEXT_PRIMARY);
-                        let artist = text(album.artist.clone()).size(12).style(style::TEXT_MUTED);
-                        let card = column![cover, title, artist]
-                            .spacing(6)
+                        let title = if is_selected {
+                            format!("▸ {}", album.title)
+                        } else {
+                            album.title.clone()
+                        };
+                        let artist = if is_selected {
+                            format!("▸ {}", album.artist)
+                        } else {
+                            album.artist.clone()
+                        };
+                        let card = column![cover, text(title), text(artist)]
+                            .spacing(4)
                             .align_items(Alignment::Center)
                             .width(Length::Fill);
 
                         button(card)
-                            .style(style::ButtonStyle(style::ButtonKind::AlbumCard {
-                                selected: is_selected,
-                            }))
                             .on_press(UiMessage::SelectAlbum(album.clone()))
                             .width(Length::FillPortion(1))
                             .into()
@@ -102,14 +95,14 @@ impl AlbumsGrid {
                     .collect::<Vec<Element<UiMessage>>>();
 
                 row(cells)
-                    .spacing(16)
+                    .spacing(12)
                     .align_items(Alignment::Start)
                     .width(Length::Fill)
                     .into()
             })
             .collect::<Vec<Element<UiMessage>>>();
         let grid = column(rows)
-            .spacing(20)
+            .spacing(16)
             .width(Length::Fill)
             .align_items(Alignment::Start);
         let content = column![header, grid]
@@ -121,7 +114,6 @@ impl AlbumsGrid {
             .width(Length::Fill)
             .height(Length::Fill)
             .padding(12)
-            .style(style::SurfaceStyle(style::Surface::Panel))
             .into()
     }
 
@@ -143,7 +135,10 @@ impl AlbumsGrid {
         lines.push(format!("Tri: {}", self.sort_label));
 
         let rows = self.albums.chunks(self.columns).collect::<Vec<_>>();
-        let visible_rows = rows.iter().skip(scroll_offset).take(self.viewport_rows);
+        let visible_rows = rows
+            .iter()
+            .skip(scroll_offset)
+            .take(self.viewport_rows);
 
         for row in visible_rows {
             let cells = row
@@ -154,7 +149,10 @@ impl AlbumsGrid {
             for line_idx in 0..cell_height {
                 let mut line = String::new();
                 for (col, cell) in cells.iter().enumerate() {
-                    let content = cell.get(line_idx).map(String::as_str).unwrap_or("");
+                    let content = cell
+                        .get(line_idx)
+                        .map(String::as_str)
+                        .unwrap_or("");
                     line.push_str(&format!("{:<width$}", content, width = cell_width));
                     if col + 1 < self.columns {
                         line.push_str("  ");
