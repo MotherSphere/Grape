@@ -131,7 +131,6 @@ pub struct UiState {
     pub playback: PlaybackState,
     pub search: SearchState,
     pub menu_open: bool,
-    pub playlist_open: bool,
 }
 
 impl UiState {
@@ -163,10 +162,6 @@ impl UiState {
             }
             UiMessage::OpenPlaylist => {
                 self.menu_open = false;
-                self.playlist_open = true;
-            }
-            UiMessage::ClosePlaylist => {
-                self.playlist_open = false;
             }
             UiMessage::CloseMenu => {
                 self.menu_open = false;
