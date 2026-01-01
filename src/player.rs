@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink, source::Source};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NowPlaying {
     pub artist: String,
     pub album: String,
