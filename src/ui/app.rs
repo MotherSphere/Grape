@@ -250,16 +250,24 @@ impl GrapeApp {
             ))))
             .padding([2, 6])
             .on_press(UiMessage::ToggleLogoMenu);
+        let menu_button = |label, message| {
+            button(
+                text(label)
+                    .size(13)
+                    .font(style::font_propo(Weight::Medium))
+                    .style(style::text_primary()),
+            )
+            .style(Button::Custom(Box::new(style::ButtonStyle(
+                style::ButtonKind::ListItem { selected: false },
+            ))))
+            .padding([4, 8])
+            .on_press(message)
+        };
         let logo_menu = container(
             column![
-                text("Bibliothèque")
-                    .size(13)
-                    .font(style::font_propo(Weight::Medium))
-                    .style(style::text_primary()),
-                text("Préférences")
-                    .size(13)
-                    .font(style::font_propo(Weight::Medium))
-                    .style(style::text_primary()),
+                menu_button("Bibliothèque", UiMessage::CloseMenu),
+                menu_button("Playlist", UiMessage::OpenPlaylist),
+                menu_button("Préférences", UiMessage::CloseMenu),
             ]
             .spacing(6),
         )
