@@ -13,13 +13,11 @@ pub struct GrapeApp {
 
 impl GrapeApp {
     pub fn run(catalog: Catalog) -> iced::Result {
-        Self::run_with(catalog, Settings::default())
+        Self::run_with(catalog, Settings::<Catalog>::default())
     }
 
     pub fn run_with(catalog: Catalog, settings: Settings<Catalog>) -> iced::Result {
-        let mut settings = settings;
-        settings.flags = catalog;
-        GrapeApp::run(settings)
+        GrapeApp::run(settings.with_flags(catalog))
     }
 
     fn top_bar(&self) -> Element<Message> {

@@ -3,7 +3,7 @@ pub mod components;
 pub mod message;
 pub mod app;
 
-pub use message::{SearchMessage, UiMessage};
+pub use message::{PlaybackMessage, SearchMessage, UiMessage};
 pub use state::{ActiveTab, SortOption};
 pub use app::GrapeApp;
 
