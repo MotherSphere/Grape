@@ -3,7 +3,6 @@ use crate::player::{PlaybackState as PlayerPlaybackState, Player};
 use crate::ui::components::albums_grid::AlbumsGrid;
 use crate::ui::components::artists_panel::ArtistsPanel;
 use crate::ui::components::player_bar::PlayerBar;
-use crate::ui::components::playlist_panel::PlaylistPanel;
 use crate::ui::components::songs_panel::SongsPanel;
 use crate::ui::message::{PlaybackMessage, SearchMessage, UiMessage};
 use crate::ui::state::{
@@ -11,10 +10,9 @@ use crate::ui::state::{
 };
 use crate::ui::style;
 use iced::font::Weight;
-use iced::keyboard;
 use iced::theme::{Button, Container, TextInput};
-use iced::widget::{Space, button, column, container, row, stack, text, text_input};
-use iced::{Alignment, Application, Command, Element, Event, Length, Settings, Theme};
+use iced::widget::{button, column, container, row, text, text_input};
+use iced::{Alignment, Application, Command, Element, Length, Settings, Theme};
 use std::time::Duration;
 use tracing::error;
 
@@ -76,7 +74,11 @@ impl GrapeApp {
 
     fn normalized_query(&self) -> Option<String> {
         let query = self.ui.search.query.trim().to_lowercase();
-        if query.is_empty() { None } else { Some(query) }
+        if query.is_empty() {
+            None
+        } else {
+            Some(query)
+        }
     }
 
     fn albums_from_catalog(&self) -> Vec<UiAlbum> {
@@ -231,21 +233,15 @@ impl GrapeApp {
         .style(Container::Custom(Box::new(style::SurfaceStyle(
             style::Surface::Avatar,
         ))));
-        let logo = button(
-            row![
-                logo_mark,
-                text("Grape")
-                    .size(20)
-                    .font(style::font_propo(Weight::Semibold))
-                    .style(style::text_primary())
-            ]
-            .spacing(8)
-            .align_items(Alignment::Center),
-        )
-        .style(Button::Custom(Box::new(style::ButtonStyle(
-            style::ButtonKind::Logo,
-        ))))
-        .on_press(UiMessage::ToggleLogoMenu);
+        let logo = row![
+            logo_mark,
+            text("Grape")
+                .size(20)
+                .font(style::font_propo(Weight::Semibold))
+                .style(style::text_primary())
+        ]
+        .spacing(8)
+        .align_items(Alignment::Center);
         let tabs = row![
             button(
                 text(self.tab_label(ActiveTab::Artists, "Artists"))
@@ -414,80 +410,8 @@ impl GrapeApp {
         PlayerBar::new(title, artist)
             .with_playback(self.ui.playback)
             .with_volume(72)
-            .with_queue(!self.ui.playlist.items.is_empty())
+            .with_queue(false)
             .view()
-    }
-
-    fn logo_menu_overlay(&self) -> Element<'_, UiMessage> {
-        let dismiss = button(Space::new(Length::Fill, Length::Fill))
-            .style(Button::Custom(Box::new(style::ButtonStyle(
-                style::ButtonKind::Overlay,
-            ))))
-            .on_press(UiMessage::CloseOverlays);
-        let playlist_button = button(
-            text("Playlist")
-                .size(14)
-                .font(style::font_propo(Weight::Medium)),
-        )
-        .style(Button::Custom(Box::new(style::ButtonStyle(
-            style::ButtonKind::ListItem { selected: false },
-        ))))
-        .on_press(UiMessage::OpenPlaylistWindow);
-        let menu = container(column![playlist_button].spacing(4))
-            .padding(8)
-            .style(Container::Custom(Box::new(style::SurfaceStyle(
-                style::Surface::Panel,
-            ))));
-
-        let menu_container = container(menu)
-            .padding([52, 16, 16, 16])
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .align_x(Alignment::Start)
-            .align_y(Alignment::Start);
-
-        stack![dismiss, menu_container].into()
-    }
-
-    fn playlist_window_overlay(&self) -> Element<'_, UiMessage> {
-        let dismiss = button(Space::new(Length::Fill, Length::Fill))
-            .style(Button::Custom(Box::new(style::ButtonStyle(
-                style::ButtonKind::Overlay,
-            ))))
-            .on_press(UiMessage::CloseOverlays);
-        let close_button = button(text("✕").size(14).font(style::font_propo(Weight::Medium)))
-            .style(Button::Custom(Box::new(style::ButtonStyle(
-                style::ButtonKind::Icon,
-            ))))
-            .on_press(UiMessage::CloseOverlays);
-        let header = row![
-            text("Playlist")
-                .size(18)
-                .font(style::font_propo(Weight::Semibold))
-                .style(style::text_primary()),
-            Space::new(Length::Fill, Length::Shrink),
-            close_button
-        ]
-        .align_items(Alignment::Center);
-        let content = PlaylistPanel::new(
-            self.ui.playlist.name.clone(),
-            self.ui.playlist_name_draft.clone(),
-            self.ui.playlist.items.clone(),
-        )
-        .view();
-        let window = container(column![header, content].spacing(12))
-            .padding(16)
-            .width(Length::FillPortion(6))
-            .height(Length::FillPortion(7))
-            .style(Container::Custom(Box::new(style::SurfaceStyle(
-                style::Surface::Panel,
-            ))));
-        let centered = container(window)
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .center_x()
-            .center_y();
-        stack![dismiss, centered].into()
     }
 
     fn handle_track_selection(&mut self, track: &UiTrack) {
@@ -603,39 +527,17 @@ impl Application for GrapeApp {
             .spacing(16)
             .padding(16)
             .height(Length::Fill);
-        let base = container(layout)
+
+        container(layout)
             .width(Length::Fill)
             .height(Length::Fill)
             .style(Container::Custom(Box::new(style::SurfaceStyle(
                 style::Surface::AppBackground,
             ))))
-            .into();
-
-        let mut layers = vec![base];
-        if self.ui.logo_menu_open {
-            layers.push(self.logo_menu_overlay());
-        }
-        if self.ui.playlist_window_open {
-            layers.push(self.playlist_window_overlay());
-        }
-
-        stack(layers).into()
+            .into()
     }
 
     fn theme(&self) -> Theme {
         Theme::Dark
-    }
-
-    fn subscription(&self) -> iced::Subscription<Self::Message> {
-        if !(self.ui.logo_menu_open || self.ui.playlist_window_open) {
-            return iced::Subscription::none();
-        }
-        iced::subscription::events().map(|event| match event {
-            Event::Keyboard(keyboard::Event::KeyPressed {
-                key: keyboard::Key::Named(keyboard::key::Named::Escape),
-                ..
-            }) => UiMessage::CloseOverlays,
-            _ => UiMessage::Noop,
-        })
     }
 }
