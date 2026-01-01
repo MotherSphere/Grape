@@ -66,9 +66,17 @@ impl PlayerBar {
     }
 
     pub fn view(self) -> Element<'static, UiMessage> {
+        let PlayerBar {
+            artwork,
+            title,
+            artist,
+            playback,
+            volume,
+            queue_active,
+        } = self;
         let left = row![
-            text(format!("[{}]", self.artwork)).size(18),
-            column![text(self.title).size(16), text(self.artist).size(12)]
+            text(format!("[{}]", artwork)).size(18),
+            column![text(title).size(16), text(artist).size(12)]
                 .spacing(4)
                 .align_items(Alignment::Start)
         ]
@@ -77,28 +85,28 @@ impl PlayerBar {
         .width(Length::FillPortion(3));
 
         let controls = row![
-            button(text(shuffle_icon(self.playback.shuffle)))
-                .on_press(self.toggle_shuffle_message()),
-            button(text("⏮")).on_press(self.previous_track_message()),
-            button(text(play_pause_icon(self.playback.is_playing)))
-                .on_press(self.toggle_play_pause_message()),
-            button(text("⏭")).on_press(self.next_track_message()),
-            button(text(repeat_icon(self.playback.repeat)))
-                .on_press(self.cycle_repeat_message()),
+            button(text(shuffle_icon(playback.shuffle)))
+                .on_press(UiMessage::Playback(PlaybackMessage::ToggleShuffle)),
+            button(text("⏮")).on_press(UiMessage::Playback(PlaybackMessage::PreviousTrack)),
+            button(text(play_pause_icon(playback.is_playing)))
+                .on_press(UiMessage::Playback(PlaybackMessage::TogglePlayPause)),
+            button(text("⏭")).on_press(UiMessage::Playback(PlaybackMessage::NextTrack)),
+            button(text(repeat_icon(playback.repeat)))
+                .on_press(UiMessage::Playback(PlaybackMessage::CycleRepeat)),
         ]
         .spacing(8)
         .align_items(Alignment::Center)
         .width(Length::FillPortion(4));
 
-        let elapsed = format_duration(self.playback.position);
-        let duration = format_duration(self.playback.duration);
-        let progress = progress_bar(0.0..=1.0, progress_ratio(self.playback.position, self.playback.duration))
+        let elapsed = format_duration(playback.position);
+        let duration = format_duration(playback.duration);
+        let progress = progress_bar(0.0..=1.0, progress_ratio(playback.position, playback.duration))
             .width(Length::Fill);
         let progress_row = row![text(elapsed), progress, text(duration)]
             .spacing(8)
             .align_items(Alignment::Center)
             .width(Length::Fill);
-        let audio_icons = row![text(volume_icon(self.volume)), text(queue_icon(self.queue_active))]
+        let audio_icons = row![text(volume_icon(volume)), text(queue_icon(queue_active))]
             .spacing(8)
             .align_items(Alignment::Center);
         let right = column![progress_row, audio_icons]
