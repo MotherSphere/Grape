@@ -11,6 +11,7 @@ pub enum UiMessage {
     Playback(PlaybackMessage),
     Search(SearchMessage),
     ToggleLogoMenu,
+    OpenPlaylist,
     CloseMenu,
 }
 

@@ -160,6 +160,9 @@ impl UiState {
             UiMessage::ToggleLogoMenu => {
                 self.menu_open = !self.menu_open;
             }
+            UiMessage::OpenPlaylist => {
+                self.menu_open = false;
+            }
             UiMessage::CloseMenu => {
                 self.menu_open = false;
             }
