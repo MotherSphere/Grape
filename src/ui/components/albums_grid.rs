@@ -1,7 +1,5 @@
 use crate::ui::message::UiMessage;
 use crate::ui::state::Album;
-use iced::widget::{button, column, container, row, scrollable, text};
-use iced::{Alignment, Element, Length};
 
 #[derive(Debug, Clone)]
 pub struct AlbumsGrid {
@@ -48,72 +46,6 @@ impl AlbumsGrid {
             .find(|album| album.id == album_id)
             .cloned()
             .map(UiMessage::SelectAlbum)
-    }
-
-    pub fn view(&self) -> Element<UiMessage> {
-        let cover_width = 6usize;
-        let cover_height = 3usize;
-        let header = text(format!("Sort: {}", self.sort_label)).size(14);
-        let rows = self
-            .albums
-            .chunks(self.columns)
-            .map(|chunk| {
-                let cells = chunk
-                    .iter()
-                    .map(|album| {
-                        let is_selected = Some(album.id) == self.selected_album_id;
-                        let cover_char = if is_selected { '▓' } else { '█' };
-                        let cover_line = cover_char.to_string().repeat(cover_width);
-                        let mut cover_lines = Vec::with_capacity(cover_height);
-                        for _ in 0..cover_height {
-                            cover_lines.push(text(cover_line.clone()).into());
-                        }
-                        let cover = column(cover_lines)
-                            .spacing(2)
-                            .align_items(Alignment::Center);
-
-                        let title = if is_selected {
-                            format!("▸ {}", album.title)
-                        } else {
-                            album.title.clone()
-                        };
-                        let artist = if is_selected {
-                            format!("▸ {}", album.artist)
-                        } else {
-                            album.artist.clone()
-                        };
-                        let card = column![cover, text(title), text(artist)]
-                            .spacing(4)
-                            .align_items(Alignment::Center)
-                            .width(Length::Fill);
-
-                        button(card)
-                            .on_press(UiMessage::SelectAlbum(album.clone()))
-                            .width(Length::FillPortion(1))
-                            .into()
-                    })
-                    .collect::<Vec<Element<UiMessage>>>();
-
-                row(cells)
-                    .spacing(12)
-                    .align_items(Alignment::Start)
-                    .width(Length::Fill)
-            })
-            .collect::<Vec<_>>();
-        let grid = column(rows)
-            .spacing(16)
-            .width(Length::Fill)
-            .align_items(Alignment::Start);
-        let content = column![header, grid]
-            .spacing(12)
-            .width(Length::Fill)
-            .align_items(Alignment::Start);
-
-        container(scrollable(content))
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .padding(12)
-            .into()
     }
 
     pub fn render(&self) -> String {
