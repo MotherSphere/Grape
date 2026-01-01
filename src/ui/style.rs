@@ -1,5 +1,25 @@
+use iced::font::{Family, Weight};
 use iced::widget::{button, container, text_input};
-use iced::{Background, Border, Color, Theme};
+use iced::{Background, Border, Color, Font, Theme};
+
+pub const FONT_PROPO: &str = "JetBrainsMono Nerd Font Propo";
+pub const FONT_MONO: &str = "JetBrainsMono Nerd Font Mono";
+
+pub fn font_propo(weight: Weight) -> Font {
+    Font {
+        family: Family::Name(FONT_PROPO),
+        weight,
+        ..Font::DEFAULT
+    }
+}
+
+pub fn font_mono(weight: Weight) -> Font {
+    Font {
+        family: Family::Name(FONT_MONO),
+        weight,
+        ..Font::DEFAULT
+    }
+}
 
 pub fn bg_dark() -> Color {
     Color::from_rgb8(0x12, 0x12, 0x12)

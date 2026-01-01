@@ -1,6 +1,7 @@
 use crate::ui::message::UiMessage;
 use crate::ui::state::{SelectionState, Track};
 use crate::ui::style;
+use iced::font::Weight;
 use iced::theme::{Button, Container};
 use iced::widget::{button, column, container, row, scrollable, text};
 use iced::{Alignment, Element, Length};
@@ -51,17 +52,23 @@ impl SongsPanel {
         let header = row![
             text(format!("{} Songs", self.tracks.len()))
                 .size(16)
+                .font(style::font_propo(Weight::Semibold))
                 .style(style::text_primary()),
-            text("By album").size(12).style(style::text_muted())
+            text("By album")
+                .size(12)
+                .font(style::font_propo(Weight::Light))
+                .style(style::text_muted())
         ]
         .spacing(8)
         .align_items(Alignment::Center);
         let album_info = column![
             text(self.album.clone())
                 .size(18)
+                .font(style::font_propo(Weight::Medium))
                 .style(style::text_primary()),
             text(self.artist.clone())
                 .size(12)
+                .font(style::font_propo(Weight::Light))
                 .style(style::text_muted())
         ]
         .spacing(4)
@@ -73,12 +80,17 @@ impl SongsPanel {
             .map(|(index, track)| {
                 let is_selected = Some(track.id) == selected_id;
                 let number = track.track_number.unwrap_or((index + 1) as u32).to_string();
-                let number_label = text(number).size(12).style(style::text_muted());
+                let number_label = text(number)
+                    .size(12)
+                    .font(style::font_mono(Weight::Medium))
+                    .style(style::text_muted());
                 let title = text(track.title.clone())
                     .size(14)
+                    .font(style::font_propo(Weight::Medium))
                     .style(style::text_primary());
                 let artist = text(track.artist.clone())
                     .size(12)
+                    .font(style::font_propo(Weight::Light))
                     .style(style::text_muted());
                 let details = column![title, artist]
                     .spacing(2)
@@ -86,6 +98,7 @@ impl SongsPanel {
                     .align_items(Alignment::Start);
                 let duration = text(format_duration(track.duration))
                     .size(12)
+                    .font(style::font_mono(Weight::Medium))
                     .style(style::text_muted());
                 let row_content = row![number_label, details, duration]
                     .spacing(12)

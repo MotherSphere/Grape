@@ -1,6 +1,7 @@
 use crate::ui::message::{PlaybackMessage, UiMessage};
 use crate::ui::state::{PlaybackState, RepeatMode};
 use crate::ui::style;
+use iced::font::Weight;
 use iced::theme::{Button, Container};
 use iced::widget::{button, column, container, progress_bar, row, text};
 use iced::{Alignment, Element, Length};
@@ -76,19 +77,30 @@ impl PlayerBar {
             volume,
             queue_active,
         } = self;
-        let cover = container(text(artwork).size(18).style(style::text_muted()))
-            .width(Length::Fixed(42.0))
-            .height(Length::Fixed(42.0))
-            .center_x()
-            .center_y()
-            .style(Container::Custom(Box::new(style::SurfaceStyle(
-                style::Surface::AlbumCover,
-            ))));
+        let cover = container(
+            text(artwork)
+                .size(18)
+                .font(style::font_propo(Weight::Medium))
+                .style(style::text_muted()),
+        )
+        .width(Length::Fixed(42.0))
+        .height(Length::Fixed(42.0))
+        .center_x()
+        .center_y()
+        .style(Container::Custom(Box::new(style::SurfaceStyle(
+            style::Surface::AlbumCover,
+        ))));
         let left = row![
             cover,
             column![
-                text(title).size(14).style(style::text_primary()),
-                text(artist).size(12).style(style::text_muted())
+                text(title)
+                    .size(14)
+                    .font(style::font_propo(Weight::Medium))
+                    .style(style::text_primary()),
+                text(artist)
+                    .size(12)
+                    .font(style::font_propo(Weight::Light))
+                    .style(style::text_muted())
             ]
             .spacing(4)
             .align_items(Alignment::Start)
@@ -98,27 +110,29 @@ impl PlayerBar {
         .width(Length::FillPortion(3));
 
         let controls = row![
-            button(text(shuffle_icon(playback.shuffle)))
+            button(text(shuffle_icon(playback.shuffle)).font(style::font_propo(Weight::Medium)),)
                 .style(Button::Custom(Box::new(style::ButtonStyle(
                     style::ButtonKind::Icon,
                 ))))
                 .on_press(UiMessage::Playback(PlaybackMessage::ToggleShuffle)),
-            button(text("⏮"))
+            button(text("⏮").font(style::font_propo(Weight::Medium)))
                 .style(Button::Custom(Box::new(style::ButtonStyle(
                     style::ButtonKind::Control,
                 ))))
                 .on_press(UiMessage::Playback(PlaybackMessage::PreviousTrack)),
-            button(text(play_pause_icon(playback.is_playing)))
-                .style(Button::Custom(Box::new(style::ButtonStyle(
-                    style::ButtonKind::Control,
-                ))))
-                .on_press(UiMessage::Playback(PlaybackMessage::TogglePlayPause)),
-            button(text("⏭"))
+            button(
+                text(play_pause_icon(playback.is_playing)).font(style::font_propo(Weight::Medium)),
+            )
+            .style(Button::Custom(Box::new(style::ButtonStyle(
+                style::ButtonKind::Control,
+            ))))
+            .on_press(UiMessage::Playback(PlaybackMessage::TogglePlayPause)),
+            button(text("⏭").font(style::font_propo(Weight::Medium)))
                 .style(Button::Custom(Box::new(style::ButtonStyle(
                     style::ButtonKind::Control,
                 ))))
                 .on_press(UiMessage::Playback(PlaybackMessage::NextTrack)),
-            button(text(repeat_icon(playback.repeat)))
+            button(text(repeat_icon(playback.repeat)).font(style::font_propo(Weight::Medium)))
                 .style(Button::Custom(Box::new(style::ButtonStyle(
                     style::ButtonKind::Icon,
                 ))))
@@ -136,16 +150,26 @@ impl PlayerBar {
         )
         .width(Length::Fill);
         let progress_row = row![
-            text(elapsed).size(12).style(style::text_muted()),
+            text(elapsed)
+                .size(12)
+                .font(style::font_mono(Weight::Medium))
+                .style(style::text_muted()),
             progress,
-            text(duration).size(12).style(style::text_muted())
+            text(duration)
+                .size(12)
+                .font(style::font_mono(Weight::Medium))
+                .style(style::text_muted())
         ]
         .spacing(8)
         .align_items(Alignment::Center)
         .width(Length::Fill);
         let audio_icons = row![
-            text(volume_icon(volume)).style(style::text_muted()),
-            text(queue_icon(queue_active)).style(style::text_muted())
+            text(volume_icon(volume))
+                .font(style::font_propo(Weight::Medium))
+                .style(style::text_muted()),
+            text(queue_icon(queue_active))
+                .font(style::font_propo(Weight::Medium))
+                .style(style::text_muted())
         ]
         .spacing(8)
         .align_items(Alignment::Center);

@@ -8,6 +8,7 @@ use crate::ui::state::{
     ActiveTab, Album as UiAlbum, Artist as UiArtist, SortOption, Track as UiTrack, UiState,
 };
 use crate::ui::style;
+use iced::font::Weight;
 use iced::theme::{Button, Container, TextInput};
 use iced::widget::{button, column, container, row, text, text_input};
 use iced::{Alignment, Application, Command, Element, Length, Settings, Theme};
@@ -19,13 +20,48 @@ pub struct GrapeApp {
 
 impl GrapeApp {
     pub fn run(catalog: Catalog) -> iced::Result {
-        <Self as Application>::run(Settings::with_flags(catalog))
+        <Self as Application>::run(Self::apply_font_settings(Settings::with_flags(catalog)))
     }
 
     pub fn run_with(catalog: Catalog, settings: Settings<Catalog>) -> iced::Result {
         let mut settings = settings;
         settings.flags = catalog;
-        <Self as Application>::run(settings)
+        <Self as Application>::run(Self::apply_font_settings(settings))
+    }
+
+    fn apply_font_settings(mut settings: Settings<Catalog>) -> Settings<Catalog> {
+        settings.fonts = vec![
+            include_bytes!(
+                "../../assets/fonts/JetBrainsMonoFont/JetBrainsMonoNerdFontPropo-Light.ttf"
+            )
+            .into(),
+            include_bytes!(
+                "../../assets/fonts/JetBrainsMonoFont/JetBrainsMonoNerdFontPropo-Regular.ttf"
+            )
+            .into(),
+            include_bytes!(
+                "../../assets/fonts/JetBrainsMonoFont/JetBrainsMonoNerdFontPropo-Medium.ttf"
+            )
+            .into(),
+            include_bytes!(
+                "../../assets/fonts/JetBrainsMonoFont/JetBrainsMonoNerdFontPropo-SemiBold.ttf"
+            )
+            .into(),
+            include_bytes!(
+                "../../assets/fonts/JetBrainsMonoFont/JetBrainsMonoNerdFontPropo-Bold.ttf"
+            )
+            .into(),
+            include_bytes!(
+                "../../assets/fonts/JetBrainsMonoFont/JetBrainsMonoNerdFontMono-Regular.ttf"
+            )
+            .into(),
+            include_bytes!(
+                "../../assets/fonts/JetBrainsMonoFont/JetBrainsMonoNerdFontMono-Medium.ttf"
+            )
+            .into(),
+        ];
+        settings.default_font = style::font_propo(Weight::Normal);
+        settings
     }
 
     fn tab_label(&self, _tab: ActiveTab, label: &str) -> String {
@@ -100,46 +136,66 @@ impl GrapeApp {
     }
 
     fn top_bar(&self) -> Element<UiMessage> {
-        let logo_mark = container(text("G").size(18).style(style::text_primary()))
-            .padding([6, 10])
-            .style(Container::Custom(Box::new(style::SurfaceStyle(
-                style::Surface::Avatar,
-            ))));
+        let logo_mark = container(
+            text("G")
+                .size(18)
+                .font(style::font_propo(Weight::Bold))
+                .style(style::text_primary()),
+        )
+        .padding([6, 10])
+        .style(Container::Custom(Box::new(style::SurfaceStyle(
+            style::Surface::Avatar,
+        ))));
         let logo = row![
             logo_mark,
-            text("Grape").size(20).style(style::text_primary())
+            text("Grape")
+                .size(20)
+                .font(style::font_propo(Weight::Semibold))
+                .style(style::text_primary())
         ]
         .spacing(8)
         .align_items(Alignment::Center);
         let tabs = row![
-            button(text(self.tab_label(ActiveTab::Artists, "Artists")))
-                .style(Button::Custom(Box::new(style::ButtonStyle(
-                    style::ButtonKind::Tab {
-                        selected: self.ui.active_tab == ActiveTab::Artists,
-                    },
-                ))))
-                .on_press(UiMessage::TabSelected(ActiveTab::Artists)),
-            button(text(self.tab_label(ActiveTab::Genres, "Genres")))
-                .style(Button::Custom(Box::new(style::ButtonStyle(
-                    style::ButtonKind::Tab {
-                        selected: self.ui.active_tab == ActiveTab::Genres,
-                    },
-                ))))
-                .on_press(UiMessage::TabSelected(ActiveTab::Genres)),
-            button(text(self.tab_label(ActiveTab::Albums, "Albums")))
-                .style(Button::Custom(Box::new(style::ButtonStyle(
-                    style::ButtonKind::Tab {
-                        selected: self.ui.active_tab == ActiveTab::Albums,
-                    },
-                ))))
-                .on_press(UiMessage::TabSelected(ActiveTab::Albums)),
-            button(text(self.tab_label(ActiveTab::Folders, "Folders")))
-                .style(Button::Custom(Box::new(style::ButtonStyle(
-                    style::ButtonKind::Tab {
-                        selected: self.ui.active_tab == ActiveTab::Folders,
-                    },
-                ))))
-                .on_press(UiMessage::TabSelected(ActiveTab::Folders)),
+            button(
+                text(self.tab_label(ActiveTab::Artists, "Artists"))
+                    .font(style::font_propo(Weight::Medium)),
+            )
+            .style(Button::Custom(Box::new(style::ButtonStyle(
+                style::ButtonKind::Tab {
+                    selected: self.ui.active_tab == ActiveTab::Artists,
+                },
+            ))))
+            .on_press(UiMessage::TabSelected(ActiveTab::Artists)),
+            button(
+                text(self.tab_label(ActiveTab::Genres, "Genres"))
+                    .font(style::font_propo(Weight::Medium)),
+            )
+            .style(Button::Custom(Box::new(style::ButtonStyle(
+                style::ButtonKind::Tab {
+                    selected: self.ui.active_tab == ActiveTab::Genres,
+                },
+            ))))
+            .on_press(UiMessage::TabSelected(ActiveTab::Genres)),
+            button(
+                text(self.tab_label(ActiveTab::Albums, "Albums"))
+                    .font(style::font_propo(Weight::Medium)),
+            )
+            .style(Button::Custom(Box::new(style::ButtonStyle(
+                style::ButtonKind::Tab {
+                    selected: self.ui.active_tab == ActiveTab::Albums,
+                },
+            ))))
+            .on_press(UiMessage::TabSelected(ActiveTab::Albums)),
+            button(
+                text(self.tab_label(ActiveTab::Folders, "Folders"))
+                    .font(style::font_propo(Weight::Medium)),
+            )
+            .style(Button::Custom(Box::new(style::ButtonStyle(
+                style::ButtonKind::Tab {
+                    selected: self.ui.active_tab == ActiveTab::Folders,
+                },
+            ))))
+            .on_press(UiMessage::TabSelected(ActiveTab::Folders)),
         ]
         .spacing(12)
         .align_items(Alignment::Center);
@@ -148,18 +204,18 @@ impl GrapeApp {
             .on_input(|value| UiMessage::Search(SearchMessage::QueryChanged(value)));
         let search = row![
             search_input,
-            button(text("≡")).style(Button::Custom(Box::new(style::ButtonStyle(
-                style::ButtonKind::Icon,
-            )))),
-            button(text("—")).style(Button::Custom(Box::new(style::ButtonStyle(
-                style::ButtonKind::Icon,
-            )))),
-            button(text("▢")).style(Button::Custom(Box::new(style::ButtonStyle(
-                style::ButtonKind::Icon,
-            )))),
-            button(text("✕")).style(Button::Custom(Box::new(style::ButtonStyle(
-                style::ButtonKind::Icon,
-            ))))
+            button(text("≡").font(style::font_propo(Weight::Medium))).style(Button::Custom(
+                Box::new(style::ButtonStyle(style::ButtonKind::Icon))
+            ),),
+            button(text("—").font(style::font_propo(Weight::Medium))).style(Button::Custom(
+                Box::new(style::ButtonStyle(style::ButtonKind::Icon))
+            ),),
+            button(text("▢").font(style::font_propo(Weight::Medium))).style(Button::Custom(
+                Box::new(style::ButtonStyle(style::ButtonKind::Icon))
+            ),),
+            button(text("✕").font(style::font_propo(Weight::Medium))).style(Button::Custom(
+                Box::new(style::ButtonStyle(style::ButtonKind::Icon))
+            ),)
         ]
         .spacing(8)
         .align_items(Alignment::Center);
