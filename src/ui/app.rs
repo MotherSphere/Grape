@@ -72,6 +72,15 @@ impl GrapeApp {
         label.to_string()
     }
 
+    fn normalized_query(&self) -> Option<String> {
+        let query = self.ui.search.query.trim().to_lowercase();
+        if query.is_empty() {
+            None
+        } else {
+            Some(query)
+        }
+    }
+
     fn albums_from_catalog(&self) -> Vec<UiAlbum> {
         let mut albums = Vec::new();
         let mut id = 0usize;
@@ -91,6 +100,36 @@ impl GrapeApp {
         albums
     }
 
+    fn filtered_albums_from_catalog(&self) -> Vec<UiAlbum> {
+        let mut albums = self.albums_from_catalog();
+        if let Some(query) = self.normalized_query() {
+            albums.retain(|album| {
+                album.title.to_lowercase().contains(&query)
+                    || album.artist.to_lowercase().contains(&query)
+            });
+        }
+        match self.ui.search.sort {
+            SortOption::Alphabetical => {
+                albums.sort_by(|a, b| {
+                    a.title
+                        .to_lowercase()
+                        .cmp(&b.title.to_lowercase())
+                        .then_with(|| a.artist.to_lowercase().cmp(&b.artist.to_lowercase()))
+                });
+            }
+            SortOption::ByAlbum => {
+                albums.sort_by(|a, b| {
+                    a.artist
+                        .to_lowercase()
+                        .cmp(&b.artist.to_lowercase())
+                        .then_with(|| a.title.to_lowercase().cmp(&b.title.to_lowercase()))
+                        .then_with(|| a.year.cmp(&b.year))
+                });
+            }
+        }
+        albums
+    }
+
     fn artists_from_catalog(&self) -> Vec<UiArtist> {
         self.catalog
             .artists
@@ -101,6 +140,15 @@ impl GrapeApp {
                 name: artist.name.clone(),
             })
             .collect()
+    }
+
+    fn filtered_artists_from_catalog(&self) -> Vec<UiArtist> {
+        let mut artists = self.artists_from_catalog();
+        if let Some(query) = self.normalized_query() {
+            artists.retain(|artist| artist.name.to_lowercase().contains(&query));
+        }
+        artists.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+        artists
     }
 
     fn album_entry_by_id(
@@ -138,6 +186,40 @@ impl GrapeApp {
                 path: track.path.clone(),
             })
             .collect()
+    }
+
+    fn filtered_tracks_for_album(
+        &self,
+        artist: &crate::library::Artist,
+        album: &crate::library::Album,
+    ) -> Vec<UiTrack> {
+        let mut tracks = self.tracks_for_album(artist, album);
+        if let Some(query) = self.normalized_query() {
+            tracks.retain(|track| {
+                track.title.to_lowercase().contains(&query)
+                    || track.artist.to_lowercase().contains(&query)
+                    || track.album.to_lowercase().contains(&query)
+            });
+        }
+        match self.ui.search.sort {
+            SortOption::Alphabetical => {
+                tracks.sort_by(|a, b| {
+                    a.title
+                        .to_lowercase()
+                        .cmp(&b.title.to_lowercase())
+                        .then_with(|| a.track_number.cmp(&b.track_number))
+                });
+            }
+            SortOption::ByAlbum => {
+                tracks.sort_by(|a, b| {
+                    a.track_number
+                        .unwrap_or(u32::MAX)
+                        .cmp(&b.track_number.unwrap_or(u32::MAX))
+                        .then_with(|| a.title.to_lowercase().cmp(&b.title.to_lowercase()))
+                });
+            }
+        }
+        tracks
     }
 
     fn top_bar(&self) -> Element<'_, UiMessage> {
@@ -249,7 +331,7 @@ impl GrapeApp {
             .selected_artist
             .as_ref()
             .map(|artist| artist.id);
-        let artists = self.artists_from_catalog();
+        let artists = self.filtered_artists_from_catalog();
         let panel = ArtistsPanel::new(artists).with_selection(selected_id);
         panel.view(&self.ui.selection)
     }
@@ -265,7 +347,7 @@ impl GrapeApp {
             .selected_album
             .as_ref()
             .map(|album| album.id);
-        let albums = self.albums_from_catalog();
+        let albums = self.filtered_albums_from_catalog();
         let grid = AlbumsGrid::new(albums)
             .with_sort_label(sort_label)
             .with_selection(selected_id)
@@ -286,7 +368,7 @@ impl GrapeApp {
             Some((artist, album)) => (
                 album.title.clone(),
                 artist.name.clone(),
-                self.tracks_for_album(artist, album),
+                self.filtered_tracks_for_album(artist, album),
             ),
             None => (
                 "Select an album".to_string(),
