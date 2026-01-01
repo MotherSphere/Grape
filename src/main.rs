@@ -5,6 +5,8 @@ mod ui;
 
 use std::path::PathBuf;
 
+use crate::library::Catalog;
+
 fn main() {
     let library_root = std::env::args()
         .nth(1)
