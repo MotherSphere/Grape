@@ -10,8 +10,6 @@ pub enum UiMessage {
     SelectTrack(Track),
     Playback(PlaybackMessage),
     Search(SearchMessage),
-    ToggleLogoMenu,
-    CloseMenu,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
