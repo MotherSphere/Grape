@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::ui::state::{ActiveTab, Album, Artist, SortOption, Track};
 
 #[derive(Debug, Clone, PartialEq)]
