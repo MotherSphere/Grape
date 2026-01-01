@@ -1,5 +1,7 @@
 use crate::ui::message::{PlaybackMessage, UiMessage};
 use crate::ui::state::{PlaybackState, RepeatMode};
+use iced::widget::{button, column, container, progress_bar, row, text};
+use iced::{Alignment, Element, Length};
 
 #[derive(Debug, Clone)]
 pub struct PlayerBar {
@@ -63,6 +65,58 @@ impl PlayerBar {
         UiMessage::Playback(PlaybackMessage::CycleRepeat)
     }
 
+    pub fn view(self) -> Element<'static, UiMessage> {
+        let left = row![
+            text(format!("[{}]", self.artwork)).size(18),
+            column![text(self.title).size(16), text(self.artist).size(12)]
+                .spacing(4)
+                .align_items(Alignment::Start)
+        ]
+        .spacing(8)
+        .align_items(Alignment::Center)
+        .width(Length::FillPortion(3));
+
+        let controls = row![
+            button(text(shuffle_icon(self.playback.shuffle)))
+                .on_press(self.toggle_shuffle_message()),
+            button(text("⏮")).on_press(self.previous_track_message()),
+            button(text(play_pause_icon(self.playback.is_playing)))
+                .on_press(self.toggle_play_pause_message()),
+            button(text("⏭")).on_press(self.next_track_message()),
+            button(text(repeat_icon(self.playback.repeat)))
+                .on_press(self.cycle_repeat_message()),
+        ]
+        .spacing(8)
+        .align_items(Alignment::Center)
+        .width(Length::FillPortion(4));
+
+        let elapsed = format_duration(self.playback.position);
+        let duration = format_duration(self.playback.duration);
+        let progress = progress_bar(0.0..=1.0, progress_ratio(self.playback.position, self.playback.duration))
+            .width(Length::Fill);
+        let progress_row = row![text(elapsed), progress, text(duration)]
+            .spacing(8)
+            .align_items(Alignment::Center)
+            .width(Length::Fill);
+        let audio_icons = row![text(volume_icon(self.volume)), text(queue_icon(self.queue_active))]
+            .spacing(8)
+            .align_items(Alignment::Center);
+        let right = column![progress_row, audio_icons]
+            .spacing(6)
+            .align_items(Alignment::End)
+            .width(Length::FillPortion(5));
+
+        let content = row![left, controls, right]
+            .spacing(20)
+            .align_items(Alignment::Center)
+            .width(Length::Fill);
+
+        container(content)
+            .padding(12)
+            .width(Length::Fill)
+            .into()
+    }
+
     pub fn render(&self) -> String {
         let left = format!("[{}] {} — {}", self.artwork, self.title, self.artist);
         let controls = format!(
@@ -124,6 +178,15 @@ fn queue_icon(active: bool) -> &'static str {
     } else {
         "📃"
     }
+}
+
+fn progress_ratio(position: std::time::Duration, duration: std::time::Duration) -> f32 {
+    let total = duration.as_secs_f32();
+    if total <= 0.0 {
+        return 0.0;
+    }
+    let current = position.as_secs_f32().min(total);
+    (current / total).clamp(0.0, 1.0)
 }
 
 fn build_progress_bar(position: std::time::Duration, duration: std::time::Duration, width: usize) -> String {
