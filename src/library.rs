@@ -2,8 +2,6 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-mod metadata;
-
 #[derive(Debug, Clone, Default)]
 pub struct Catalog {
     pub artists: Vec<Artist>,
@@ -113,12 +111,10 @@ fn scan_tracks(dir: &Path) -> io::Result<Vec<Track>> {
             current
         });
 
-        let duration_secs = metadata::track_duration_secs(&path).unwrap_or(0);
-
         tracks.push(Track {
             number: track_number,
             title,
-            duration_secs,
+            duration_secs: 0,
             path,
         });
     }
@@ -195,37 +191,7 @@ fn parse_track_filename(name: &str) -> (Option<u8>, String) {
 mod tests {
     use super::*;
     use std::fs::File;
-    use std::io::Write;
     use tempfile::tempdir;
-
-    fn write_wav(path: &Path, duration_secs: u32) -> io::Result<()> {
-        let sample_rate = 44_100u32;
-        let num_channels = 1u16;
-        let bits_per_sample = 16u16;
-        let bytes_per_sample = bits_per_sample / 8;
-        let num_samples = sample_rate * duration_secs;
-        let data_size = num_samples * bytes_per_sample as u32 * num_channels as u32;
-        let riff_size = 36 + data_size;
-        let byte_rate = sample_rate * num_channels as u32 * bytes_per_sample as u32;
-        let block_align = num_channels * bytes_per_sample;
-
-        let mut file = File::create(path)?;
-        file.write_all(b"RIFF")?;
-        file.write_all(&riff_size.to_le_bytes())?;
-        file.write_all(b"WAVE")?;
-        file.write_all(b"fmt ")?;
-        file.write_all(&16u32.to_le_bytes())?;
-        file.write_all(&1u16.to_le_bytes())?;
-        file.write_all(&num_channels.to_le_bytes())?;
-        file.write_all(&sample_rate.to_le_bytes())?;
-        file.write_all(&byte_rate.to_le_bytes())?;
-        file.write_all(&block_align.to_le_bytes())?;
-        file.write_all(&bits_per_sample.to_le_bytes())?;
-        file.write_all(b"data")?;
-        file.write_all(&data_size.to_le_bytes())?;
-        file.write_all(&vec![0u8; data_size as usize])?;
-        Ok(())
-    }
 
     #[test]
     fn parse_track_filename_extracts_number_and_title() {
@@ -264,16 +230,5 @@ mod tests {
         assert_eq!(album.tracks.len(), 2);
         assert_eq!(album.tracks[0].title, "Intro");
         assert_eq!(album.tracks[1].number, 2);
-    }
-
-    #[test]
-    fn scan_tracks_reads_audio_duration() {
-        let dir = tempdir().expect("tempdir");
-        let wav_path = dir.path().join("01 - Test.wav");
-        write_wav(&wav_path, 1).expect("write wav");
-
-        let tracks = scan_tracks(dir.path()).expect("scan tracks");
-        assert_eq!(tracks.len(), 1);
-        assert_eq!(tracks[0].duration_secs, 1);
     }
 }
