@@ -1,13 +1,28 @@
 mod library;
-mod mock_catalog;
 mod player;
 mod playlist;
 
 use crate::library::Catalog;
 use crate::player::{NowPlaying, PlayerState};
+use std::path::PathBuf;
 
 fn main() {
-    let catalog = mock_catalog::build_mock_catalog();
+    let library_root = std::env::args()
+        .nth(1)
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("library"));
+
+    let catalog = match library::scan_library(&library_root) {
+        Ok(catalog) => catalog,
+        Err(err) => {
+            eprintln!(
+                "Erreur lors du scan de {:?}: {err}. Utilisation d'une bibliothèque vide.",
+                library_root
+            );
+            Catalog::empty()
+        }
+    };
+
     let player_state = build_player_state(&catalog);
 
     render_library(&catalog);
@@ -16,12 +31,15 @@ fn main() {
 }
 
 fn build_player_state(catalog: &Catalog) -> PlayerState {
-    let now_playing = catalog.first_track().map(|(artist, album, track)| NowPlaying {
-        artist: artist.name.clone(),
-        album: album.title.clone(),
-        title: track.title.clone(),
-        duration_secs: track.duration_secs,
-    });
+    let now_playing = catalog
+        .first_track()
+        .map(|(artist, album, track)| NowPlaying {
+            artist: artist.name.clone(),
+            album: album.title.clone(),
+            title: track.title.clone(),
+            duration_secs: track.duration_secs,
+            path: track.path.clone(),
+        });
 
     PlayerState {
         now_playing,
