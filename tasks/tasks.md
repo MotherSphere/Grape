@@ -1,19 +1,24 @@
 # Tâches Grape
 
-## Objectif
-
-Ce fichier centralise les tâches à venir et l'avancement du projet Grape.
-
 ## Avancement
 
 - [x] Initialisation du dépôt Rust (Cargo).
-- [x] Mise en place des dossiers de base (`docs`, `tasks`, `src`).
-- [ ] Définir l'architecture modulaire du lecteur.
-- [ ] Choisir la bibliothèque audio (ex: rodio, cpal).
-- [ ] Implémenter l'indexation de bibliothèque locale.
-- [ ] Mettre en place une UI (à définir).
+- [x] Mise en place des dossiers de base (`docs`, `tasks`, `src`, `assets`).
+- [x] Scan local de bibliothèque (structure Artiste/Album/Pistes).
+- [x] Prototype UI Iced (layout global + composants principaux).
+- [x] Gestion d'un état UI (sélections, recherche, lecture).
+- [x] Module de lecture audio (`rodio`) non câblé à l'UI.
 
-## Prochaines tâches
+## À faire (priorité MVP)
 
-- [ ] Décrire les specs fonctionnelles (MVP).
-- [ ] Créer un module de gestion de playlists.
+- [ ] Connecter l'UI au module `player` (play/pause/seek).
+- [ ] Afficher les durées réelles des pistes.
+- [ ] Ajouter un cache d'indexation (éviter un scan complet).
+- [ ] Gestion de playlists basique.
+
+## À planifier (après MVP)
+
+- [ ] Recherche et filtres avancés.
+- [ ] Jaquettes et métadonnées enrichies.
+- [ ] Amélioration de la navigation (genres, dossiers).
+- [ ] Accessibilité et theming avancé.

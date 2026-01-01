@@ -1,23 +1,16 @@
-# Analyse UI (référence) + base pour la liste de tâches
+# Analyse UI — Référence et mapping code
 
-## Contexte
-Cette analyse sert de base à la création de la liste de tâches UI. Elle est dérivée de la capture d’écran fournie et doit guider la structure de l’interface desktop.
+Cette analyse documente la structure UI actuelle et sert de référence pour les prochains
+chantiers. La plupart des blocs décrits ci-dessous ont déjà des composants Iced associés.
 
-## Prompt d’origine (à conserver)
-"""
-Parfait.
-
-Crée moi une liste de tâche. Tu as bien capturé ce que je voulais. N'oublie pas de sauvegarder ton analyse dans un .md en le détaillant le plus possible pour la création des tâches. Et tu utilises ça ensuite pour la création des tâches. Lance la série des tâches, je vais les lancer une par une.
-"""
-
-## Structure globale (desktop) — basée sur l’image
+## Résumé visuel
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ Top bar                                                                      │
 │ - Logo/app icon (gauche)                                                     │
 │ - Tabs navigation: Artists | Genres | Albums | Folders                       │
-│ - Search box (droite) + menu/controls fenêtre                                │
+│ - Search box (droite) + controls fenêtre                                     │
 ├───────────────────────┬─────────────────────────────────┬──────────────────┤
 │ Colonne gauche         │ Zone centrale                   │ Colonne droite   │
 │ (Artists list)         │ (Albums grid)                   │ (Songs list)     │
@@ -34,120 +27,29 @@ Crée moi une liste de tâche. Tu as bien capturé ce que je voulais. N'oublie p
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Détails précis des zones (d’après l’image)
+## Mapping composants → code
 
-### 1) Top bar
-- Logo/app icon à gauche.
-- Tabs de navigation : **Artists**, **Genres**, **Albums**, **Folders**.
-- Champ de recherche à droite.
-- Contrôles fenêtre (min/max/close) alignés à droite.
+- **Top bar** : `ui::app::top_bar` (`src/ui/app.rs`)
+- **Artists** : `ArtistsPanel` (`src/ui/components/artists_panel.rs`)
+- **Albums grid** : `AlbumsGrid` (`src/ui/components/albums_grid.rs`)
+- **Songs list** : `SongsPanel` (`src/ui/components/songs_panel.rs`)
+- **Player bar** : `PlayerBar` (`src/ui/components/player_bar.rs`)
 
-### 2) Colonne gauche — Artists
-- Liste verticale d’artistes.
-- Index alphabétique A–Z (repères de navigation rapide).
-- Compteur global (ex. “65 Song artists”).
-- Élément sélectionné en surbrillance.
-- Scroll vertical.
+## États UI
 
-### 3) Zone centrale — Albums
-- Grille d’albums (jaquettes carrées).
-- Légende sous chaque cover : **titre album** + **artiste**.
-- Indication de tri (ex. “A–Z”).
-- Album sélectionné visuellement (surbrillance).
-- Scroll vertical.
+- Onglet actif : `ActiveTab`
+- Sélections : `SelectionState` (artist/album/track)
+- Lecture : `PlaybackState` (position, durée, shuffle, repeat)
+- Recherche : `SearchState` (query + tri)
 
-### 4) Colonne droite — Songs
-- En‑tête avec le **nombre de titres** (ex. “11 Songs”).
-- Affichage de l’album sélectionné (ex. *Fallen* / Evanescence).
-- Liste des pistes :
-  - Numéro à gauche.
-  - Titre principal + artiste en sous‑ligne.
-  - Durée alignée à droite.
-- Scroll vertical.
+## Écarts actuels vs design cible
 
-### 5) Footer / Player bar
-- Mini artwork + titre/artist en cours (gauche).
-- Contrôles playback (shuffle, prev, play/pause, next, repeat) au centre.
-- Barre de progression + temps écoulé / durée.
-- Icônes audio (volume, playlist/queue, etc.).
+- Les durées de pistes sont à `0` (pas de métadonnées).
+- Les actions de lecture ne sont pas branchées au module `player`.
+- Les onglets Genres/Folders sont visibles mais non implémentés.
 
-## Notes d’implémentation UI (Iced)
-- Layout en 3 colonnes + footer fixe.
-- Navigation par onglets (tabs) en top bar.
-- États UI nécessaires :
-  - Onglet actif (Artists/Genres/Albums/Folders)
-  - Artiste sélectionné
-  - Album sélectionné
-  - Piste en cours
-  - Position de lecture + durée
-  - Recherche (texte)
-- Données UI à prévoir :
-  - Liste artistes triable A–Z
-  - Liste albums d’un artiste
-  - Liste pistes d’un album
-  - Mini-métadonnées (durées, jaquettes, etc.)
+## Pistes de travail (prochaines étapes)
 
-## Sortie attendue pour les tâches
-- Structuration des modules UI.
-- Création d’un état global UI.
-- Mise en place du layout (TopBar, Sidebar, MainGrid, RightPanel, PlayerBar).
-- Gestion des messages/actions (sélection, navigation, lecture, recherche).
-- Implémentation progressive des vues et composants.
-
-## Liste de tâches détaillée (séquence à lancer une par une)
-
-### Tâche 1 — Définir l’architecture UI et le layout global (desktop)
-- Créer un module UI racine (`src/ui/mod.rs`) et un état global.
-- Mettre en place la structure de layout : **Top bar + 3 colonnes + footer**.
-- Implémenter la **Top bar** : tabs *Artists/Genres/Albums/Folders*, champ de recherche, icône app.
-- Préparer les zones : **Colonne gauche (Artists)**, **Zone centrale (Albums)**, **Colonne droite (Songs)**, **Footer/Player bar**.
-
-### Tâche 2 — Modéliser l’état UI (sélections + navigation)
-- Définir l’onglet actif (Artists/Genres/Albums/Folders) et l’état de navigation.
-- Ajouter les sélections UI :
-  - artiste sélectionné,
-  - album sélectionné,
-  - piste en cours.
-- Ajouter l’état de lecture :
-  - position courante,
-  - durée totale,
-  - is_playing/shuffle/repeat.
-- Ajouter l’état de recherche :
-  - texte de recherche,
-  - filtres éventuels (A–Z, By album).
-- Prévoir une structure de données UI minimaliste pour la grille d’albums et la liste de pistes.
-
-### Tâche 3 — Implémenter la colonne gauche (Artists)
-- Liste verticale d’artistes avec scroll.
-- Index alphabétique A–Z (repères de navigation rapide).
-- Compteur global (“65 Song artists”).
-- État sélectionné en surbrillance.
-
-### Tâche 4 — Implémenter la zone centrale (Albums grid)
-- Grille d’albums (jaquettes carrées).
-- Légende sous chaque cover : titre + artiste.
-- Indication de tri (A–Z).
-- Surbrillance de l’album sélectionné.
-- Scroll vertical.
-
-### Tâche 5 — Implémenter la colonne droite (Songs)
-- En‑tête avec nombre de titres (“11 Songs”).
-- Titre album + artiste en tête de panneau.
-- Liste des pistes :
-  - numéro à gauche,
-  - titre principal + artiste en sous‑ligne,
-  - durée alignée à droite.
-- Scroll vertical.
-- Mise en évidence de la piste en cours.
-
-### Tâche 6 — Implémenter la barre de lecture (Player bar)
-- Mini‑artwork + piste en cours (gauche).
-- Contrôles playback (shuffle, prev, play/pause, next, repeat) au centre.
-- Barre de progression + temps écoulé / durée.
-- Icônes audio (volume, playlist/queue, etc.).
-
-### Tâche 7 — Câbler les messages Iced
-- Navigation entre tabs.
-- Sélection artiste/album/piste.
-- Play/Pause + Next/Prev.
-- Recherche.
+1. Connecter la sélection de piste → `player.load` + `player.play`.
+2. Extraire les métadonnées (durée, titre, artiste) lors du scan.
+3. Ajouter un cache d'indexation pour accélérer le démarrage.
