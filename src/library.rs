@@ -92,23 +92,54 @@ fn scan_tracks(dir: &Path) -> io::Result<Vec<Track>> {
     let mut tracks = Vec::new();
     let mut index = 1u8;
 
-    let mut entries: Vec<_> = fs::read_dir(dir)?
-        .filter_map(Result::ok)
-        .filter(|entry| entry.path().is_file())
-        .collect();
+    let read_dir = match fs::read_dir(dir) {
+        Ok(read_dir) => read_dir,
+        Err(error) => {
+            eprintln!(
+                "Skipping tracks scan for {}: unable to read directory ({error})",
+                dir.display()
+            );
+            return Ok(tracks);
+        }
+    };
+
+    let mut entries = Vec::new();
+    for entry_result in read_dir {
+        match entry_result {
+            Ok(entry) => {
+                if entry.path().is_file() {
+                    entries.push(entry);
+                }
+            }
+            Err(error) => {
+                eprintln!(
+                    "Skipping unreadable entry in {}: {error}",
+                    dir.display()
+                );
+            }
+        }
+    }
 
     entries.sort_by_key(|entry| entry.file_name());
 
     for entry in entries {
         let path = entry.path();
         if !is_audio_file(&path) {
+            eprintln!("Ignoring non-audio file: {}", path.display());
             continue;
         }
 
-        let stem = path
-            .file_stem()
-            .and_then(|value| value.to_str())
-            .unwrap_or_default();
+        let stem = match path.file_stem().and_then(|value| value.to_str()) {
+            Some(stem) if !stem.trim().is_empty() => stem,
+            Some(_) => {
+                eprintln!("Ignoring track with empty name: {}", path.display());
+                continue;
+            }
+            None => {
+                eprintln!("Ignoring track with unreadable name: {}", path.display());
+                continue;
+            }
+        };
         let (number, title) = parse_track_filename(stem);
         let track_number = number.unwrap_or_else(|| {
             let current = index;
@@ -278,5 +309,57 @@ mod tests {
         let tracks = scan_tracks(dir.path()).expect("scan tracks");
         assert_eq!(tracks.len(), 1);
         assert_eq!(tracks[0].duration_secs, 1);
+    }
+
+    #[test]
+    fn scan_tracks_empty_directory_returns_empty_list() {
+        let dir = tempdir().expect("tempdir");
+        let tracks = scan_tracks(dir.path()).expect("scan tracks");
+        assert!(tracks.is_empty());
+    }
+
+    #[test]
+    fn scan_library_keeps_album_without_year() {
+        let dir = tempdir().expect("tempdir");
+        let artist_dir = dir.path().join("Artiste");
+        let album_dir = artist_dir.join("Album sans annee");
+        fs::create_dir_all(&album_dir).expect("create album dirs");
+        File::create(album_dir.join("Intro.mp3")).expect("create track");
+
+        let catalog = scan_library(dir.path()).expect("scan library");
+        let album = &catalog.artists[0].albums[0];
+        assert_eq!(album.year, 0);
+        assert_eq!(album.title, "Album sans annee");
+    }
+
+    #[test]
+    fn scan_tracks_handles_missing_numbers_and_mixed_extensions() {
+        let dir = tempdir().expect("tempdir");
+        File::create(dir.path().join("Intro.mp3")).expect("create track");
+        File::create(dir.path().join("02 - Suite.FLAC")).expect("create track");
+        File::create(dir.path().join("notes.txt")).expect("create note");
+
+        let tracks = scan_tracks(dir.path()).expect("scan tracks");
+        assert_eq!(tracks.len(), 2);
+        assert_eq!(tracks[0].number, 1);
+        assert_eq!(tracks[0].title, "Intro");
+        assert_eq!(tracks[1].number, 2);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn scan_tracks_skips_unreadable_filenames() {
+        use std::ffi::OsString;
+        use std::os::unix::ffi::OsStringExt;
+
+        let dir = tempdir().expect("tempdir");
+        let mut bytes = vec![0xff, 0xfe];
+        bytes.extend_from_slice(b".mp3");
+        let invalid_name = OsString::from_vec(bytes);
+        let path = dir.path().join(invalid_name);
+        File::create(&path).expect("create invalid track");
+
+        let tracks = scan_tracks(dir.path()).expect("scan tracks");
+        assert!(tracks.is_empty());
     }
 }
