@@ -125,7 +125,7 @@ where
             Overlay {
             position: layout.position() + translation,
             content_bounds: layout.bounds(),
-            overlay: &self.overlay,
+            overlay: &mut self.overlay,
             overlay_state: children.next().unwrap(),
             gap: self.gap,
         },
@@ -155,7 +155,7 @@ where
 struct Overlay<'a, 'b, Message> {
     position: Point,
     content_bounds: Rectangle,
-    overlay: &'b Element<'a, Message>,
+    overlay: &'b mut Element<'a, Message>,
     overlay_state: &'b mut widget::Tree,
     gap: f32,
 }
