@@ -65,3 +65,11 @@ Ce dossier regroupera la documentation du projet Grape.
 - **Liste ordonnée** des pistes à venir.
 - **Actions** : réordonner, retirer, sauter à une piste.
 - **Indicateur** de la piste en cours de lecture.
+
+## Flow MVP
+
+1. **Arrivée sur la bibliothèque** : l'utilisateur voit la liste des artistes.
+2. **Sélection d'un artiste** : affichage des albums disponibles et de leurs pistes.
+3. **Lancement d'une lecture** : clic sur un album ou une piste pour démarrer la lecture.
+4. **Écran lecture** : affichage du titre en cours, progression, et commandes play/pause.
+5. **Retour bibliothèque** : navigation possible vers d'autres artistes/albums.
