@@ -3,38 +3,38 @@ pub mod components;
 pub mod message;
 pub mod app;
 
+pub use app::GrapeApp;
 pub use message::{SearchMessage, UiMessage};
 pub use state::{ActiveTab, SortOption};
-pub use app::GrapeApp;
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct TopBar;
 
 #[derive(Debug, Default, Clone, Copy)]
-pub struct LeftSidebar;
+pub struct ArtistsColumn;
 
 #[derive(Debug, Default, Clone, Copy)]
-pub struct AlbumsGrid;
+pub struct AlbumsColumn;
 
 #[derive(Debug, Default, Clone, Copy)]
-pub struct RightPanel;
+pub struct SongsColumn;
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct PlayerBar;
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct ContentColumns {
-    pub left: LeftSidebar,
-    pub center: AlbumsGrid,
-    pub right: RightPanel,
+    pub left: ArtistsColumn,
+    pub center: AlbumsColumn,
+    pub right: SongsColumn,
 }
 
 impl ContentColumns {
     pub fn new() -> Self {
         Self {
-            left: LeftSidebar,
-            center: AlbumsGrid,
-            right: RightPanel,
+            left: ArtistsColumn,
+            center: AlbumsColumn,
+            right: SongsColumn,
         }
     }
 }
