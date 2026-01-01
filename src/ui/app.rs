@@ -13,10 +13,10 @@ pub struct GrapeApp {
 
 impl GrapeApp {
     pub fn run(catalog: Catalog) -> iced::Result {
-        Self::run_with(catalog, Settings::default())
+        Self::run_with(catalog, Settings::<Catalog>::default())
     }
 
-    pub fn run_with(catalog: Catalog, settings: Settings) -> iced::Result {
+    pub fn run_with(catalog: Catalog, settings: Settings<Catalog>) -> iced::Result {
         GrapeApp::run(settings.with_flags(catalog))
     }
 
