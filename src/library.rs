@@ -3,6 +3,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
+use tracing::{info, warn};
 
 pub mod cache;
 mod metadata;
@@ -95,9 +96,10 @@ fn scan_tracks(dir: &Path) -> io::Result<Vec<Track>> {
     let read_dir = match fs::read_dir(dir) {
         Ok(read_dir) => read_dir,
         Err(error) => {
-            eprintln!(
-                "Skipping tracks scan for {}: unable to read directory ({error})",
-                dir.display()
+            warn!(
+                error = %error,
+                path = %dir.display(),
+                "Skipping tracks scan: unable to read directory"
             );
             return Ok(tracks);
         }
@@ -112,9 +114,10 @@ fn scan_tracks(dir: &Path) -> io::Result<Vec<Track>> {
                 }
             }
             Err(error) => {
-                eprintln!(
-                    "Skipping unreadable entry in {}: {error}",
-                    dir.display()
+                warn!(
+                    error = %error,
+                    path = %dir.display(),
+                    "Skipping unreadable entry"
                 );
             }
         }
@@ -125,18 +128,18 @@ fn scan_tracks(dir: &Path) -> io::Result<Vec<Track>> {
     for entry in entries {
         let path = entry.path();
         if !is_audio_file(&path) {
-            eprintln!("Ignoring non-audio file: {}", path.display());
+            info!(path = %path.display(), "Ignoring non-audio file");
             continue;
         }
 
         let stem = match path.file_stem().and_then(|value| value.to_str()) {
             Some(stem) if !stem.trim().is_empty() => stem,
             Some(_) => {
-                eprintln!("Ignoring track with empty name: {}", path.display());
+                warn!(path = %path.display(), "Ignoring track with empty name");
                 continue;
             }
             None => {
-                eprintln!("Ignoring track with unreadable name: {}", path.display());
+                warn!(path = %path.display(), "Ignoring track with unreadable name");
                 continue;
             }
         };

@@ -8,6 +8,8 @@ use std::path::PathBuf;
 use crate::library::Catalog;
 
 fn main() {
+    tracing_subscriber::fmt::init();
+
     let library_root = std::env::args()
         .nth(1)
         .map(PathBuf::from)
