@@ -115,7 +115,7 @@ impl PlayerBar {
                     style::ButtonKind::Icon,
                 ))))
                 .on_press(UiMessage::Playback(PlaybackMessage::ToggleShuffle)),
-            button(text("⏮").font(style::font_propo(Weight::Medium)))
+            button(text("\u{f04ae}").font(style::font_propo(Weight::Medium)))
                 .style(Button::Custom(Box::new(style::ButtonStyle(
                     style::ButtonKind::Control,
                 ))))
@@ -127,7 +127,7 @@ impl PlayerBar {
                 style::ButtonKind::Control,
             ))))
             .on_press(UiMessage::Playback(PlaybackMessage::TogglePlayPause)),
-            button(text("⏭").font(style::font_propo(Weight::Medium)))
+            button(text("\u{f04ad}").font(style::font_propo(Weight::Medium)))
                 .style(Button::Custom(Box::new(style::ButtonStyle(
                     style::ButtonKind::Control,
                 ))))
@@ -219,32 +219,44 @@ impl PlayerBar {
 }
 
 fn shuffle_icon(active: bool) -> &'static str {
-    if active { "🔀" } else { "↔" }
+    if active {
+        "\u{f049d}"
+    } else {
+        "\u{f049e}"
+    }
 }
 
 fn play_pause_icon(is_playing: bool) -> &'static str {
-    if is_playing { "⏸" } else { "▶" }
+    if is_playing {
+        "\u{f03e4}"
+    } else {
+        "\u{f040a}"
+    }
 }
 
 fn repeat_icon(mode: RepeatMode) -> &'static str {
     match mode {
-        RepeatMode::Off => "🔁",
-        RepeatMode::One => "🔂",
-        RepeatMode::All => "🔁",
+        RepeatMode::Off => "\u{f0457}",
+        RepeatMode::One => "\u{f0458}",
+        RepeatMode::All => "\u{f0456}",
     }
 }
 
 fn volume_icon(volume: u8) -> &'static str {
     match volume {
-        0 => "🔇",
-        1..=33 => "🔈",
-        34..=66 => "🔉",
-        _ => "🔊",
+        0 => "\u{f0581}",
+        1..=33 => "\u{f057f}",
+        34..=66 => "\u{f0580}",
+        _ => "\u{f057e}",
     }
 }
 
 fn queue_icon(active: bool) -> &'static str {
-    if active { "📄" } else { "📃" }
+    if active {
+        "\u{f0cb8}"
+    } else {
+        "\u{f0cb9}"
+    }
 }
 
 fn progress_ratio(position: std::time::Duration, duration: std::time::Duration) -> f32 {
