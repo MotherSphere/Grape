@@ -1,6 +1,5 @@
 use crate::library::Catalog;
 use crate::ui::components::albums_grid::AlbumsGrid;
-use crate::ui::components::player_bar::PlayerBar;
 use crate::ui::message::{PlaybackMessage, SearchMessage, UiMessage};
 use crate::ui::state::{ActiveTab, Album as UiAlbum, SortOption, UiState};
 use iced::widget::{button, column, container, row, scrollable, text, text_input};
@@ -148,26 +147,47 @@ impl GrapeApp {
     }
 
     fn player_bar(&self) -> Element<UiMessage> {
-        let (title, artist) = self
-            .ui
-            .selection
-            .selected_track
-            .as_ref()
-            .map(|track| (track.title.clone(), track.artist.clone()))
-            .or_else(|| {
-                self.ui
-                    .selection
-                    .selected_album
-                    .as_ref()
-                    .map(|album| (album.title.clone(), album.artist.clone()))
-            })
-            .unwrap_or_else(|| ("No track selected".to_string(), "Pick a track to play".to_string()));
+        let play_label = if self.ui.playback.is_playing {
+            "Pause"
+        } else {
+            "Play"
+        };
+        let shuffle_label = if self.ui.playback.shuffle {
+            "Shuffle On"
+        } else {
+            "Shuffle Off"
+        };
+        let repeat_label = match self.ui.playback.repeat {
+            crate::ui::state::RepeatMode::Off => "Repeat Off",
+            crate::ui::state::RepeatMode::All => "Repeat All",
+            crate::ui::state::RepeatMode::One => "Repeat One",
+        };
+        let controls = row![
+            button(text(shuffle_label))
+                .on_press(UiMessage::Playback(PlaybackMessage::ToggleShuffle)),
+            button(text("Prev"))
+                .on_press(UiMessage::Playback(PlaybackMessage::PreviousTrack)),
+            button(text(play_label))
+                .on_press(UiMessage::Playback(PlaybackMessage::TogglePlayPause)),
+            button(text("Next"))
+                .on_press(UiMessage::Playback(PlaybackMessage::NextTrack)),
+            button(text(repeat_label))
+                .on_press(UiMessage::Playback(PlaybackMessage::CycleRepeat)),
+        ]
+        .spacing(8)
+        .align_items(Alignment::Center);
+        let content = row![
+            text("Now Playing • Artwork + title"),
+            controls,
+            text("Progress • Volume • Queue")
+        ]
+        .spacing(20)
+        .align_items(Alignment::Center);
 
-        PlayerBar::new(title, artist)
-            .with_playback(self.ui.playback)
-            .with_volume(72)
-            .with_queue(false)
-            .view()
+        container(content)
+            .padding(12)
+            .width(Length::Fill)
+            .into()
     }
 }
 
