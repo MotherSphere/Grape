@@ -1,5 +1,7 @@
 use crate::ui::message::UiMessage;
-use crate::ui::state::Track;
+use crate::ui::state::{SelectionState, Track};
+use iced::widget::{button, column, container, row, scrollable, text};
+use iced::{Alignment, Element, Length};
 
 #[derive(Debug, Clone)]
 pub struct SongsPanel {
@@ -40,6 +42,65 @@ impl SongsPanel {
             .find(|track| track.id == track_id)
             .cloned()
             .map(UiMessage::SelectTrack)
+    }
+
+    pub fn view(&self, selection: &SelectionState) -> Element<UiMessage> {
+        let selected_id = selection.selected_track.as_ref().map(|track| track.id);
+        let header = text(format!("{} Songs", self.tracks.len())).size(16);
+        let album_info = column![text(self.album.clone()).size(18), text(self.artist.clone())]
+            .spacing(4)
+            .align_items(Alignment::Start);
+        let list_items = self
+            .tracks
+            .iter()
+            .enumerate()
+            .map(|(index, track)| {
+                let is_selected = Some(track.id) == selected_id;
+                let number = track
+                    .track_number
+                    .unwrap_or((index + 1) as u32)
+                    .to_string();
+                let number_label = text(number).size(14);
+                let title = if is_selected {
+                    format!("▸ {}", track.title)
+                } else {
+                    track.title.clone()
+                };
+                let artist = if is_selected {
+                    format!("▸ {}", track.artist)
+                } else {
+                    track.artist.clone()
+                };
+                let details = column![text(title), text(artist).size(12)]
+                    .spacing(2)
+                    .width(Length::Fill)
+                    .align_items(Alignment::Start);
+                let duration = text(format_duration(track.duration)).size(14);
+                let row_content = row![number_label, details, duration]
+                    .spacing(12)
+                    .align_items(Alignment::Center)
+                    .width(Length::Fill);
+
+                button(row_content)
+                    .on_press(UiMessage::SelectTrack(track.clone()))
+                    .width(Length::Fill)
+                    .into()
+            })
+            .collect::<Vec<Element<UiMessage>>>();
+        let list = column(list_items)
+            .spacing(8)
+            .width(Length::Fill)
+            .align_items(Alignment::Start);
+        let scrollable_list = scrollable(list).height(Length::Fill);
+        let content = column![header, album_info, scrollable_list]
+            .spacing(12)
+            .height(Length::Fill);
+
+        container(content)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .padding(12)
+            .into()
     }
 
     pub fn render(&self) -> String {
