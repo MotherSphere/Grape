@@ -130,6 +130,7 @@ pub struct UiState {
     pub selection: SelectionState,
     pub playback: PlaybackState,
     pub search: SearchState,
+    pub menu_open: bool,
 }
 
 impl UiState {
@@ -155,6 +156,12 @@ impl UiState {
             }
             UiMessage::Search(message) => {
                 self.search.update(message);
+            }
+            UiMessage::ToggleLogoMenu => {
+                self.menu_open = !self.menu_open;
+            }
+            UiMessage::CloseMenu => {
+                self.menu_open = false;
             }
         }
     }
