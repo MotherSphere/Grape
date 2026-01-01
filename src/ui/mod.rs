@@ -1,5 +1,9 @@
 pub mod state;
 pub mod components;
+pub mod message;
+
+pub use message::{PlaybackMessage, SearchMessage, UiMessage};
+pub use state::{ActiveTab, SortOption};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct TopBar;
@@ -30,6 +34,20 @@ impl ContentColumns {
             center: AlbumsGrid,
             right: RightPanel,
         }
+    }
+}
+
+impl TopBar {
+    pub fn tab_selected_message(&self, tab: ActiveTab) -> UiMessage {
+        UiMessage::TabSelected(tab)
+    }
+
+    pub fn search_query_message(&self, query: impl Into<String>) -> UiMessage {
+        UiMessage::Search(SearchMessage::QueryChanged(query.into()))
+    }
+
+    pub fn search_sort_message(&self, sort: SortOption) -> UiMessage {
+        UiMessage::Search(SearchMessage::SortChanged(sort))
     }
 }
 

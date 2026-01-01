@@ -1,3 +1,4 @@
+use crate::ui::message::{PlaybackMessage, UiMessage};
 use crate::ui::state::{PlaybackState, RepeatMode};
 
 #[derive(Debug, Clone)]
@@ -40,6 +41,26 @@ impl PlayerBar {
     pub fn with_queue(mut self, queue_active: bool) -> Self {
         self.queue_active = queue_active;
         self
+    }
+
+    pub fn toggle_play_pause_message(&self) -> UiMessage {
+        UiMessage::Playback(PlaybackMessage::TogglePlayPause)
+    }
+
+    pub fn next_track_message(&self) -> UiMessage {
+        UiMessage::Playback(PlaybackMessage::NextTrack)
+    }
+
+    pub fn previous_track_message(&self) -> UiMessage {
+        UiMessage::Playback(PlaybackMessage::PreviousTrack)
+    }
+
+    pub fn toggle_shuffle_message(&self) -> UiMessage {
+        UiMessage::Playback(PlaybackMessage::ToggleShuffle)
+    }
+
+    pub fn cycle_repeat_message(&self) -> UiMessage {
+        UiMessage::Playback(PlaybackMessage::CycleRepeat)
     }
 
     pub fn render(&self) -> String {

@@ -1,3 +1,4 @@
+use crate::ui::message::UiMessage;
 use crate::ui::state::Album;
 
 #[derive(Debug, Clone)]
@@ -37,6 +38,14 @@ impl AlbumsGrid {
         self.scroll_offset = scroll_offset;
         self.viewport_rows = viewport_rows.max(1);
         self
+    }
+
+    pub fn message_for_album(&self, album_id: usize) -> Option<UiMessage> {
+        self.albums
+            .iter()
+            .find(|album| album.id == album_id)
+            .cloned()
+            .map(UiMessage::SelectAlbum)
     }
 
     pub fn render(&self) -> String {
