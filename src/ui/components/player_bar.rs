@@ -221,11 +221,19 @@ impl PlayerBar {
 }
 
 fn shuffle_icon(active: bool) -> &'static str {
-    if active { "\u{f049d}" } else { "\u{f049e}" }
+    if active {
+        "\u{f049d}"
+    } else {
+        "\u{f049e}"
+    }
 }
 
 fn play_pause_icon(is_playing: bool) -> &'static str {
-    if is_playing { "\u{f03e4}" } else { "\u{f040a}" }
+    if is_playing {
+        "\u{f03e4}"
+    } else {
+        "\u{f040a}"
+    }
 }
 
 fn repeat_icon(mode: RepeatMode) -> &'static str {
@@ -246,7 +254,11 @@ fn volume_icon(volume: u8) -> &'static str {
 }
 
 fn queue_icon(active: bool) -> &'static str {
-    if active { "\u{f0cb8}" } else { "\u{f0cb9}" }
+    if active {
+        "\u{f0cb8}"
+    } else {
+        "\u{f0cb9}"
+    }
 }
 
 fn progress_ratio(position: std::time::Duration, duration: std::time::Duration) -> f32 {

@@ -3,7 +3,6 @@ use crate::player::{PlaybackState as PlayerPlaybackState, Player};
 use crate::ui::components::albums_grid::AlbumsGrid;
 use crate::ui::components::artists_panel::ArtistsPanel;
 use crate::ui::components::player_bar::PlayerBar;
-use crate::ui::components::playlist_panel::PlaylistPanel;
 use crate::ui::components::songs_panel::SongsPanel;
 use crate::ui::message::{PlaybackMessage, SearchMessage, UiMessage};
 use crate::ui::state::{
@@ -75,7 +74,11 @@ impl GrapeApp {
 
     fn normalized_query(&self) -> Option<String> {
         let query = self.ui.search.query.trim().to_lowercase();
-        if query.is_empty() { None } else { Some(query) }
+        if query.is_empty() {
+            None
+        } else {
+            Some(query)
+        }
     }
 
     fn albums_from_catalog(&self) -> Vec<UiAlbum> {
@@ -407,17 +410,8 @@ impl GrapeApp {
         PlayerBar::new(title, artist)
             .with_playback(self.ui.playback)
             .with_volume(72)
-            .with_queue(!self.ui.playlist.items.is_empty())
+            .with_queue(false)
             .view()
-    }
-
-    fn playlist_panel(&self) -> Element<'_, UiMessage> {
-        PlaylistPanel::new(
-            self.ui.playlist.name.clone(),
-            self.ui.playlist_name_draft.clone(),
-            self.ui.playlist.items.clone(),
-        )
-        .view()
     }
 
     fn handle_track_selection(&mut self, track: &UiTrack) {
@@ -523,9 +517,6 @@ impl Application for GrapeApp {
                 .width(Length::FillPortion(5))
                 .height(Length::Fill),
             container(self.songs_panel())
-                .width(Length::FillPortion(3))
-                .height(Length::Fill),
-            container(self.playlist_panel())
                 .width(Length::FillPortion(3))
                 .height(Length::Fill),
         ]
