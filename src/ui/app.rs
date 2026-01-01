@@ -1,14 +1,12 @@
 use crate::library::Catalog;
-use iced::widget::{column, container, row, scrollable, text};
+use crate::ui::message::{PlaybackMessage, SearchMessage, UiMessage};
+use crate::ui::state::{ActiveTab, SortOption, UiState};
+use iced::widget::{button, column, container, row, scrollable, text, text_input};
 use iced::{Alignment, Application, Command, Element, Length, Settings, Theme};
-
-#[derive(Debug, Clone)]
-pub enum Message {
-    None,
-}
 
 pub struct GrapeApp {
     catalog: Catalog,
+    ui: UiState,
 }
 
 impl GrapeApp {
@@ -22,17 +20,31 @@ impl GrapeApp {
         <Self as Application>::run(settings)
     }
 
-    fn top_bar(&self) -> Element<Message> {
+    fn tab_label(&self, tab: ActiveTab, label: &str) -> String {
+        if self.ui.active_tab == tab {
+            format!("{label} •")
+        } else {
+            label.to_string()
+        }
+    }
+
+    fn top_bar(&self) -> Element<UiMessage> {
         let logo = text("Grape").size(22);
         let tabs = row![
-            text("Artists"),
-            text("Genres"),
-            text("Albums"),
-            text("Folders"),
+            button(text(self.tab_label(ActiveTab::Artists, "Artists")))
+                .on_press(UiMessage::TabSelected(ActiveTab::Artists)),
+            button(text(self.tab_label(ActiveTab::Genres, "Genres")))
+                .on_press(UiMessage::TabSelected(ActiveTab::Genres)),
+            button(text(self.tab_label(ActiveTab::Albums, "Albums")))
+                .on_press(UiMessage::TabSelected(ActiveTab::Albums)),
+            button(text(self.tab_label(ActiveTab::Folders, "Folders")))
+                .on_press(UiMessage::TabSelected(ActiveTab::Folders)),
         ]
         .spacing(16)
         .align_items(Alignment::Center);
-        let search = row![text("Search..."), text("⎯ ☐ ✕")]
+        let search_input = text_input("Search...", &self.ui.search.query)
+            .on_input(|value| UiMessage::Search(SearchMessage::QueryChanged(value)));
+        let search = row![search_input, text("⎯ ☐ ✕")]
             .spacing(12)
             .align_items(Alignment::Center);
 
@@ -50,10 +62,18 @@ impl GrapeApp {
             .into()
     }
 
-    fn artists_panel(&self) -> Element<Message> {
+    fn artists_panel(&self) -> Element<UiMessage> {
+        let selection = self
+            .ui
+            .selection
+            .selected_artist
+            .as_ref()
+            .map(|artist| artist.name.as_str())
+            .unwrap_or("None");
         let content = column![
             text("Artists").size(16),
             text("A–Z index"),
+            text(format!("Selected: {selection}")),
             text("Artists list placeholder"),
         ]
         .spacing(8);
@@ -65,10 +85,33 @@ impl GrapeApp {
             .into()
     }
 
-    fn albums_panel(&self) -> Element<Message> {
+    fn albums_panel(&self) -> Element<UiMessage> {
+        let selection = self
+            .ui
+            .selection
+            .selected_album
+            .as_ref()
+            .map(|album| album.title.as_str())
+            .unwrap_or("None");
+        let sort_label = match self.ui.search.sort {
+            SortOption::Alphabetical => "A–Z",
+            SortOption::ByAlbum => "By album",
+        };
+        let sort_controls = row![
+            button(text("A–Z")).on_press(UiMessage::Search(SearchMessage::SortChanged(
+                SortOption::Alphabetical,
+            ))),
+            button(text("By album")).on_press(UiMessage::Search(
+                SearchMessage::SortChanged(SortOption::ByAlbum),
+            )),
+        ]
+        .spacing(8)
+        .align_items(Alignment::Center);
         let content = column![
             text("Albums").size(16),
-            text("Sort: A–Z"),
+            text(format!("Sort: {sort_label}")),
+            sort_controls,
+            text(format!("Selected: {selection}")),
             text("Albums grid placeholder"),
         ]
         .spacing(8);
@@ -80,10 +123,18 @@ impl GrapeApp {
             .into()
     }
 
-    fn songs_panel(&self) -> Element<Message> {
+    fn songs_panel(&self) -> Element<UiMessage> {
+        let selection = self
+            .ui
+            .selection
+            .selected_track
+            .as_ref()
+            .map(|track| track.title.as_str())
+            .unwrap_or("None");
         let content = column![
             text("Songs").size(16),
             text("Album title / artist placeholder"),
+            text(format!("Selected: {selection}")),
             text("Songs list placeholder"),
         ]
         .spacing(8);
@@ -95,10 +146,39 @@ impl GrapeApp {
             .into()
     }
 
-    fn player_bar(&self) -> Element<Message> {
+    fn player_bar(&self) -> Element<UiMessage> {
+        let play_label = if self.ui.playback.is_playing {
+            "Pause"
+        } else {
+            "Play"
+        };
+        let shuffle_label = if self.ui.playback.shuffle {
+            "Shuffle On"
+        } else {
+            "Shuffle Off"
+        };
+        let repeat_label = match self.ui.playback.repeat {
+            crate::ui::state::RepeatMode::Off => "Repeat Off",
+            crate::ui::state::RepeatMode::All => "Repeat All",
+            crate::ui::state::RepeatMode::One => "Repeat One",
+        };
+        let controls = row![
+            button(text(shuffle_label))
+                .on_press(UiMessage::Playback(PlaybackMessage::ToggleShuffle)),
+            button(text("Prev"))
+                .on_press(UiMessage::Playback(PlaybackMessage::PreviousTrack)),
+            button(text(play_label))
+                .on_press(UiMessage::Playback(PlaybackMessage::TogglePlayPause)),
+            button(text("Next"))
+                .on_press(UiMessage::Playback(PlaybackMessage::NextTrack)),
+            button(text(repeat_label))
+                .on_press(UiMessage::Playback(PlaybackMessage::CycleRepeat)),
+        ]
+        .spacing(8)
+        .align_items(Alignment::Center);
         let content = row![
             text("Now Playing • Artwork + title"),
-            text("Shuffle • Prev • Play/Pause • Next • Repeat"),
+            controls,
             text("Progress • Volume • Queue")
         ]
         .spacing(20)
@@ -113,19 +193,26 @@ impl GrapeApp {
 
 impl Application for GrapeApp {
     type Executor = iced::executor::Default;
-    type Message = Message;
+    type Message = UiMessage;
     type Theme = Theme;
     type Flags = Catalog;
 
     fn new(flags: Self::Flags) -> (Self, Command<Self::Message>) {
-        (Self { catalog: flags }, Command::none())
+        (
+            Self {
+                catalog: flags,
+                ui: UiState::default(),
+            },
+            Command::none(),
+        )
     }
 
     fn title(&self) -> String {
         "Grape".to_string()
     }
 
-    fn update(&mut self, _message: Self::Message) -> Command<Self::Message> {
+    fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
+        self.ui.update(message);
         Command::none()
     }
 
