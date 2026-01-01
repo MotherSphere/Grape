@@ -1,5 +1,6 @@
 use crate::ui::message::UiMessage;
 use crate::ui::state::{Artist, SelectionState};
+use crate::ui::style;
 use iced::widget::{button, column, container, row, scrollable, text};
 use iced::{Alignment, Element, Length};
 
@@ -45,30 +46,57 @@ impl ArtistsPanel {
 
     pub fn view(&self, selection: &SelectionState) -> Element<'static, UiMessage> {
         let selected_id = selection.selected_artist.as_ref().map(|artist| artist.id);
-        let header = text(format!("{} Song artists", self.total_count)).size(16);
+        let header = row![
+            text(format!("{} Song artists", self.total_count))
+                .size(16)
+                .style(style::TEXT_PRIMARY),
+            text("A–Z").size(12).style(style::TEXT_MUTED)
+        ]
+        .spacing(8)
+        .align_items(Alignment::Center);
         let list_items = self
             .artists
             .iter()
             .map(|artist| {
                 let is_selected = Some(artist.id) == selected_id;
-                let label = if is_selected {
-                    format!("▸ {}", artist.name)
-                } else {
-                    artist.name.clone()
-                };
-                button(text(label))
+                let avatar = container(
+                    text(artist.name.chars().next().unwrap_or('?').to_string())
+                        .size(12)
+                        .style(style::TEXT_PRIMARY),
+                )
+                .width(Length::Fixed(24.0))
+                .height(Length::Fixed(24.0))
+                .center_x()
+                .center_y()
+                .style(style::SurfaceStyle(style::Surface::Avatar));
+                let label = text(artist.name.clone())
+                    .style(style::TEXT_PRIMARY)
+                    .size(14);
+                let row_content = row![avatar, label]
+                    .spacing(10)
+                    .align_items(Alignment::Center)
+                    .width(Length::Fill);
+                button(row_content)
+                    .style(style::ButtonStyle(style::ButtonKind::ListItem {
+                        selected: is_selected,
+                    }))
                     .on_press(UiMessage::SelectArtist(artist.clone()))
                     .width(Length::Fill)
                     .into()
             })
             .collect::<Vec<Element<UiMessage>>>();
         let list = column(list_items)
-            .spacing(8)
+            .spacing(6)
             .width(Length::Fill)
             .align_items(Alignment::Start);
         let scrollable_list = scrollable(list).height(Length::Fill);
         let index_items = ('A'..='Z')
-            .map(|letter| text(letter.to_string()).size(12).into())
+            .map(|letter| {
+                text(letter.to_string())
+                    .size(11)
+                    .style(style::TEXT_MUTED)
+                    .into()
+            })
             .collect::<Vec<Element<UiMessage>>>();
         let index = column(index_items)
             .spacing(4)
@@ -76,14 +104,13 @@ impl ArtistsPanel {
         let body = row![scrollable_list, index]
             .spacing(12)
             .height(Length::Fill);
-        let content = column![header, body]
-            .spacing(12)
-            .height(Length::Fill);
+        let content = column![header, body].spacing(12).height(Length::Fill);
 
         container(content)
             .width(Length::Fill)
             .height(Length::Fill)
             .padding(12)
+            .style(style::SurfaceStyle(style::Surface::Sidebar))
             .into()
     }
 

@@ -1,7 +1,8 @@
-pub mod state;
+pub mod app;
 pub mod components;
 pub mod message;
-pub mod app;
+pub mod state;
+pub mod style;
 
 pub use app::GrapeApp;
 pub use message::{SearchMessage, UiMessage};
