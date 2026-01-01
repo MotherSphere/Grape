@@ -23,6 +23,7 @@ impl GrapeApp {
     }
 
     fn top_bar(&self) -> Element<Message> {
+        let logo = text("Grape").size(22);
         let tabs = row![
             text("Artists"),
             text("Genres"),
@@ -31,90 +32,74 @@ impl GrapeApp {
         ]
         .spacing(16)
         .align_items(Alignment::Center);
+        let search = row![text("Search..."), text("⎯ ☐ ✕")]
+            .spacing(12)
+            .align_items(Alignment::Center);
 
-        container(tabs)
+        let layout = row![
+            container(logo).width(Length::Shrink),
+            container(tabs).width(Length::Fill).center_x(),
+            container(search).width(Length::Shrink)
+        ]
+        .spacing(24)
+        .align_items(Alignment::Center);
+
+        container(layout)
             .padding(12)
             .width(Length::Fill)
             .into()
     }
 
     fn artists_panel(&self) -> Element<Message> {
-        let mut content = column![text("Artists")].spacing(6);
-
-        if self.catalog.artists.is_empty() {
-            content = content.push(text("No artists found"));
-        } else {
-            for artist in self.catalog.artists.iter().take(30) {
-                content = content.push(text(&artist.name));
-            }
-        }
+        let content = column![
+            text("Artists").size(16),
+            text("A–Z index"),
+            text("Artists list placeholder"),
+        ]
+        .spacing(8);
 
         container(scrollable(content))
             .width(Length::Fill)
+            .height(Length::Fill)
             .padding(12)
             .into()
     }
 
     fn albums_panel(&self) -> Element<Message> {
-        let mut content = column![text("Albums")].spacing(6);
-
-        let albums: Vec<_> = self
-            .catalog
-            .artists
-            .iter()
-            .flat_map(|artist| artist.albums.iter().map(move |album| (artist, album)))
-            .take(12)
-            .collect();
-
-        if albums.is_empty() {
-            content = content.push(text("No albums found"));
-        } else {
-            for (artist, album) in albums {
-                content = content.push(text(format!("{} — {}", album.title, artist.name)));
-            }
-        }
+        let content = column![
+            text("Albums").size(16),
+            text("Sort: A–Z"),
+            text("Albums grid placeholder"),
+        ]
+        .spacing(8);
 
         container(scrollable(content))
             .width(Length::Fill)
+            .height(Length::Fill)
             .padding(12)
             .into()
     }
 
     fn songs_panel(&self) -> Element<Message> {
-        let mut content = column![text("Songs")].spacing(6);
-
-        let tracks: Vec<_> = self
-            .catalog
-            .artists
-            .iter()
-            .flat_map(|artist| {
-                artist
-                    .albums
-                    .iter()
-                    .flat_map(|album| album.tracks.iter().map(move |track| (album, track)))
-            })
-            .take(12)
-            .collect();
-
-        if tracks.is_empty() {
-            content = content.push(text("No tracks found"));
-        } else {
-            for (album, track) in tracks {
-                content = content.push(text(format!("{} — {}", track.title, album.title)));
-            }
-        }
+        let content = column![
+            text("Songs").size(16),
+            text("Album title / artist placeholder"),
+            text("Songs list placeholder"),
+        ]
+        .spacing(8);
 
         container(scrollable(content))
             .width(Length::Fill)
+            .height(Length::Fill)
             .padding(12)
             .into()
     }
 
     fn player_bar(&self) -> Element<Message> {
         let content = row![
-            text("Now Playing"),
-            text("⏮ ⏯ ⏭"),
-            text("00:00 / 03:34")
+            text("Now Playing • Artwork + title"),
+            text("Shuffle • Prev • Play/Pause • Next • Repeat"),
+            text("Progress • Volume • Queue")
         ]
         .spacing(20)
         .align_items(Alignment::Center);
@@ -156,6 +141,7 @@ impl Application for GrapeApp {
         column![self.top_bar(), content, self.player_bar()]
             .spacing(12)
             .padding(12)
+            .height(Length::Fill)
             .into()
     }
 }
