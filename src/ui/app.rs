@@ -135,7 +135,7 @@ impl GrapeApp {
             .collect()
     }
 
-    fn top_bar(&self) -> Element<UiMessage> {
+    fn top_bar(&self) -> Element<'_, UiMessage> {
         let logo_mark = container(
             text("G")
                 .size(18)
@@ -237,7 +237,7 @@ impl GrapeApp {
             .into()
     }
 
-    fn artists_panel(&self) -> Element<UiMessage> {
+    fn artists_panel(&self) -> Element<'_, UiMessage> {
         let selected_id = self
             .ui
             .selection
@@ -249,7 +249,7 @@ impl GrapeApp {
         panel.view(&self.ui.selection)
     }
 
-    fn albums_panel(&self) -> Element<UiMessage> {
+    fn albums_panel(&self) -> Element<'_, UiMessage> {
         let sort_label = match self.ui.search.sort {
             SortOption::Alphabetical => "A–Z",
             SortOption::ByAlbum => "By album",
@@ -272,7 +272,7 @@ impl GrapeApp {
             .into()
     }
 
-    fn songs_panel(&self) -> Element<UiMessage> {
+    fn songs_panel(&self) -> Element<'_, UiMessage> {
         let selected_album = self.ui.selection.selected_album.as_ref().and_then(|album| {
             self.album_entry_by_id(album.id)
                 .map(|(artist, entry)| (artist, entry))
@@ -299,7 +299,7 @@ impl GrapeApp {
         panel.view(&self.ui.selection)
     }
 
-    fn player_bar(&self) -> Element<UiMessage> {
+    fn player_bar(&self) -> Element<'_, UiMessage> {
         let (title, artist) = self
             .ui
             .selection
@@ -353,7 +353,7 @@ impl Application for GrapeApp {
         Command::none()
     }
 
-    fn view(&self) -> Element<Self::Message> {
+    fn view(&self) -> Element<'_, Self::Message> {
         let content = row![
             container(self.artists_panel())
                 .width(Length::FillPortion(2))
