@@ -1,3 +1,4 @@
+use crate::ui::message::UiMessage;
 use crate::ui::state::Artist;
 
 #[derive(Debug, Clone)]
@@ -30,6 +31,14 @@ impl ArtistsPanel {
         self.scroll_offset = scroll_offset.min(self.artists.len());
         self.viewport_size = viewport_size.max(1);
         self
+    }
+
+    pub fn message_for_artist(&self, artist_id: usize) -> Option<UiMessage> {
+        self.artists
+            .iter()
+            .find(|artist| artist.id == artist_id)
+            .cloned()
+            .map(UiMessage::SelectArtist)
     }
 
     pub fn render(&self) -> String {

@@ -1,3 +1,4 @@
+use crate::ui::message::UiMessage;
 use crate::ui::state::Track;
 
 #[derive(Debug, Clone)]
@@ -31,6 +32,14 @@ impl SongsPanel {
         self.scroll_offset = scroll_offset.min(self.tracks.len());
         self.viewport_size = viewport_size.max(1);
         self
+    }
+
+    pub fn message_for_track(&self, track_id: usize) -> Option<UiMessage> {
+        self.tracks
+            .iter()
+            .find(|track| track.id == track_id)
+            .cloned()
+            .map(UiMessage::SelectTrack)
     }
 
     pub fn render(&self) -> String {
