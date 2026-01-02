@@ -93,7 +93,12 @@ impl GrapeApp {
                     id,
                     title: album.title.clone(),
                     artist: artist.name.clone(),
-                    year: Some(album.year as u32),
+                    year: if album.year == 0 {
+                        None
+                    } else {
+                        Some(album.year as u32)
+                    },
+                    cover_path: album.cover.as_ref().map(|cover| cover.cached_path.clone()),
                 });
                 id += 1;
             }
@@ -208,6 +213,7 @@ impl GrapeApp {
                 track_number: Some(track.number as u32),
                 duration: std::time::Duration::from_secs(track.duration_secs as u64),
                 path: track.path.clone(),
+                cover_path: album.cover.as_ref().map(|cover| cover.cached_path.clone()),
             })
             .collect()
     }
@@ -499,27 +505,37 @@ impl GrapeApp {
     }
 
     fn player_bar(&self) -> Element<'_, UiMessage> {
-        let (title, artist) = self
+        let (title, artist, cover_path) = self
             .ui
             .selection
             .selected_track
             .as_ref()
-            .map(|track| (track.title.clone(), track.artist.clone()))
+            .map(|track| {
+                (
+                    track.title.clone(),
+                    track.artist.clone(),
+                    track.cover_path.clone(),
+                )
+            })
             .or_else(|| {
-                self.ui
-                    .selection
-                    .selected_album
-                    .as_ref()
-                    .map(|album| (album.title.clone(), album.artist.clone()))
+                self.ui.selection.selected_album.as_ref().map(|album| {
+                    (
+                        album.title.clone(),
+                        album.artist.clone(),
+                        album.cover_path.clone(),
+                    )
+                })
             })
             .unwrap_or_else(|| {
                 (
                     "No track selected".to_string(),
                     "Pick a track to play".to_string(),
+                    None,
                 )
             });
 
         PlayerBar::new(title, artist)
+            .with_cover(cover_path)
             .with_playback(self.ui.playback)
             .with_volume(72)
             .with_queue(false)

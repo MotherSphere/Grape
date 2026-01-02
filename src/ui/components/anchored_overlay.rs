@@ -31,13 +31,15 @@ impl<'a, Message> AnchoredOverlay<'a, Message> {
     }
 }
 
-impl<'a, Message> widget::Widget<Message, Theme, iced::Renderer>
-    for AnchoredOverlay<'a, Message>
+impl<'a, Message> widget::Widget<Message, Theme, iced::Renderer> for AnchoredOverlay<'a, Message>
 where
     Message: 'a,
 {
     fn children(&self) -> Vec<widget::Tree> {
-        vec![widget::Tree::new(&self.content), widget::Tree::new(&self.overlay)]
+        vec![
+            widget::Tree::new(&self.content),
+            widget::Tree::new(&self.overlay),
+        ]
     }
 
     fn diff(&self, tree: &mut widget::Tree) {
@@ -52,12 +54,7 @@ where
         self.content.as_widget().size_hint()
     }
 
-    fn layout(
-        &self,
-        tree: &mut widget::Tree,
-        renderer: &iced::Renderer,
-        limits: &Limits,
-    ) -> Node {
+    fn layout(&self, tree: &mut widget::Tree, renderer: &iced::Renderer, limits: &Limits) -> Node {
         self.content
             .as_widget()
             .layout(&mut tree.children[0], renderer, limits)
@@ -121,24 +118,21 @@ where
             renderer,
             translation,
         );
-        let anchored_overlay = Some(advanced::overlay::Element::new(Box::new(
-            Overlay {
+        let anchored_overlay = Some(advanced::overlay::Element::new(Box::new(Overlay {
             position: layout.position() + translation,
             content_bounds: layout.bounds(),
             overlay: &mut self.overlay,
             overlay_state: children.next().unwrap(),
             gap: self.gap,
-        },
-        )));
+        })));
 
         match (content_overlay, anchored_overlay) {
             (None, None) => None,
             (Some(content), None) => Some(content),
             (None, Some(overlay)) => Some(overlay),
-            (Some(content), Some(overlay)) => Some(
-                advanced::overlay::Group::with_children(vec![content, overlay])
-                    .overlay(),
-            ),
+            (Some(content), Some(overlay)) => {
+                Some(advanced::overlay::Group::with_children(vec![content, overlay]).overlay())
+            }
         }
     }
 }
@@ -165,11 +159,7 @@ impl<'a, 'b, Message> advanced::overlay::Overlay<Message, Theme, iced::Renderer>
 where
     Message: 'a,
 {
-    fn layout(
-        &mut self,
-        renderer: &iced::Renderer,
-        bounds: Size,
-    ) -> Node {
+    fn layout(&mut self, renderer: &iced::Renderer, bounds: Size) -> Node {
         let viewport = Rectangle::with_size(bounds);
         let overlay_layout = self.overlay.as_widget().layout(
             self.overlay_state,
@@ -192,7 +182,7 @@ where
         }
 
         Node::with_children(target_bounds.size(), vec![overlay_layout])
-        .translate(Vector::new(target_bounds.x, target_bounds.y))
+            .translate(Vector::new(target_bounds.x, target_bounds.y))
     }
 
     fn draw(
