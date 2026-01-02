@@ -95,6 +95,7 @@ impl ThemeTokens {
         let palette = match mode {
             ThemeMode::Dark => Palette::dark(),
             ThemeMode::Light => Palette::light(),
+            ThemeMode::System => Palette::dark(),
         };
         Self { palette, scale }
     }

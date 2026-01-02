@@ -1,7 +1,7 @@
 use crate::config::{
-    self, AudioOutputDevice, AudioStabilityMode, CloseBehavior, EqPreset, InterfaceLanguage,
-    MissingDeviceBehavior, StartupScreen, TextScale, ThemeMode, TimeFormat, UpdateChannel,
-    VolumeLevel,
+    self, AccentColor, AudioOutputDevice, AudioStabilityMode, CloseBehavior, EqPreset,
+    InterfaceDensity, InterfaceLanguage, MissingDeviceBehavior, StartupScreen, TextScale,
+    ThemeMode, TimeFormat, UpdateChannel, VolumeLevel,
 };
 use crate::library::Catalog;
 use crate::player::{PlaybackState as PlayerPlaybackState, Player};
@@ -22,7 +22,9 @@ use crate::ui::style;
 use iced::font::Weight;
 use iced::theme::{Button, Container, TextInput};
 use iced::widget::{button, column, container, row, scrollable, slider, text, text_input};
-use iced::{Alignment, Application, Command, Element, Length, Settings, event, keyboard, mouse};
+use iced::{
+    Alignment, Application, Color, Command, Element, Length, Settings, event, keyboard, mouse,
+};
 use iced::{Subscription, Theme};
 use std::time::Duration;
 use tracing::{error, info};
@@ -804,12 +806,14 @@ impl GrapeApp {
                         "Lancer Grape au démarrage du système",
                         "Active l'application dès l'ouverture de votre session."
                     ),
-                    controls(toggle_row(
-                        self.ui.settings.launch_at_startup,
-                        UiMessage::SetLaunchAtStartup(true),
-                        UiMessage::SetLaunchAtStartup(false),
-                    )
-                    .into()),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.launch_at_startup,
+                            UiMessage::SetLaunchAtStartup(true),
+                            UiMessage::SetLaunchAtStartup(false),
+                        )
+                        .into()
+                    ),
                 ]
                 .align_items(Alignment::Center)
                 .spacing(12),
@@ -818,47 +822,51 @@ impl GrapeApp {
                         "Restaurer la dernière session",
                         "Lecture, file d'attente et écran affiché."
                     ),
-                    controls(toggle_row(
-                        self.ui.settings.restore_last_session,
-                        UiMessage::SetRestoreLastSession(true),
-                        UiMessage::SetRestoreLastSession(false),
-                    )
-                    .into()),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.restore_last_session,
+                            UiMessage::SetRestoreLastSession(true),
+                            UiMessage::SetRestoreLastSession(false),
+                        )
+                        .into()
+                    ),
                 ]
                 .align_items(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label("Ouvrir sur", "Choisissez l'écran par défaut."),
-                    controls(column![
-                        row![
-                            option_button(
-                                self.ui.settings.open_on == StartupScreen::Home,
-                                StartupScreen::Home.label(),
-                                UiMessage::SetOpenOn(StartupScreen::Home),
-                            ),
-                            option_button(
-                                self.ui.settings.open_on == StartupScreen::Library,
-                                StartupScreen::Library.label(),
-                                UiMessage::SetOpenOn(StartupScreen::Library),
-                            ),
+                    controls(
+                        column![
+                            row![
+                                option_button(
+                                    self.ui.settings.open_on == StartupScreen::Home,
+                                    StartupScreen::Home.label(),
+                                    UiMessage::SetOpenOn(StartupScreen::Home),
+                                ),
+                                option_button(
+                                    self.ui.settings.open_on == StartupScreen::Library,
+                                    StartupScreen::Library.label(),
+                                    UiMessage::SetOpenOn(StartupScreen::Library),
+                                ),
+                            ]
+                            .spacing(8),
+                            row![
+                                option_button(
+                                    self.ui.settings.open_on == StartupScreen::Playlists,
+                                    StartupScreen::Playlists.label(),
+                                    UiMessage::SetOpenOn(StartupScreen::Playlists),
+                                ),
+                                option_button(
+                                    self.ui.settings.open_on == StartupScreen::LastScreen,
+                                    StartupScreen::LastScreen.label(),
+                                    UiMessage::SetOpenOn(StartupScreen::LastScreen),
+                                ),
+                            ]
+                            .spacing(8),
                         ]
-                        .spacing(8),
-                        row![
-                            option_button(
-                                self.ui.settings.open_on == StartupScreen::Playlists,
-                                StartupScreen::Playlists.label(),
-                                UiMessage::SetOpenOn(StartupScreen::Playlists),
-                            ),
-                            option_button(
-                                self.ui.settings.open_on == StartupScreen::LastScreen,
-                                StartupScreen::LastScreen.label(),
-                                UiMessage::SetOpenOn(StartupScreen::LastScreen),
-                            ),
-                        ]
-                        .spacing(8),
-                    ]
-                    .spacing(6)
-                    .into()),
+                        .spacing(6)
+                        .into()
+                    ),
                 ]
                 .align_items(Alignment::Center)
                 .spacing(12),
@@ -867,20 +875,22 @@ impl GrapeApp {
                         "Comportement à la fermeture",
                         "Choisissez l'action à la fermeture."
                     ),
-                    controls(row![
-                        option_button(
-                            self.ui.settings.close_behavior == CloseBehavior::Quit,
-                            CloseBehavior::Quit.label(),
-                            UiMessage::SetCloseBehavior(CloseBehavior::Quit),
-                        ),
-                        option_button(
-                            self.ui.settings.close_behavior == CloseBehavior::MinimizeToTray,
-                            CloseBehavior::MinimizeToTray.label(),
-                            UiMessage::SetCloseBehavior(CloseBehavior::MinimizeToTray),
-                        ),
-                    ]
-                    .spacing(8)
-                    .into()),
+                    controls(
+                        row![
+                            option_button(
+                                self.ui.settings.close_behavior == CloseBehavior::Quit,
+                                CloseBehavior::Quit.label(),
+                                UiMessage::SetCloseBehavior(CloseBehavior::Quit),
+                            ),
+                            option_button(
+                                self.ui.settings.close_behavior == CloseBehavior::MinimizeToTray,
+                                CloseBehavior::MinimizeToTray.label(),
+                                UiMessage::SetCloseBehavior(CloseBehavior::MinimizeToTray),
+                            ),
+                        ]
+                        .spacing(8)
+                        .into()
+                    ),
                 ]
                 .align_items(Alignment::Center)
                 .spacing(12),
@@ -894,44 +904,48 @@ impl GrapeApp {
                 section_hint("Personnalisez l'interface et le format horaire."),
                 row![
                     setting_label("Langue de l'interface", "Synchronisée avec le système."),
-                    controls(row![
-                        option_button(
-                            self.ui.settings.interface_language == InterfaceLanguage::System,
-                            InterfaceLanguage::System.label(),
-                            UiMessage::SetInterfaceLanguage(InterfaceLanguage::System),
-                        ),
-                        option_button(
-                            self.ui.settings.interface_language == InterfaceLanguage::French,
-                            InterfaceLanguage::French.label(),
-                            UiMessage::SetInterfaceLanguage(InterfaceLanguage::French),
-                        ),
-                        option_button(
-                            self.ui.settings.interface_language == InterfaceLanguage::English,
-                            InterfaceLanguage::English.label(),
-                            UiMessage::SetInterfaceLanguage(InterfaceLanguage::English),
-                        ),
-                    ]
-                    .spacing(8)
-                    .into()),
+                    controls(
+                        row![
+                            option_button(
+                                self.ui.settings.interface_language == InterfaceLanguage::System,
+                                InterfaceLanguage::System.label(),
+                                UiMessage::SetInterfaceLanguage(InterfaceLanguage::System),
+                            ),
+                            option_button(
+                                self.ui.settings.interface_language == InterfaceLanguage::French,
+                                InterfaceLanguage::French.label(),
+                                UiMessage::SetInterfaceLanguage(InterfaceLanguage::French),
+                            ),
+                            option_button(
+                                self.ui.settings.interface_language == InterfaceLanguage::English,
+                                InterfaceLanguage::English.label(),
+                                UiMessage::SetInterfaceLanguage(InterfaceLanguage::English),
+                            ),
+                        ]
+                        .spacing(8)
+                        .into()
+                    ),
                 ]
                 .align_items(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label("Format horaire", "Format utilisé dans l'application."),
-                    controls(row![
-                        option_button(
-                            self.ui.settings.time_format == TimeFormat::H24,
-                            TimeFormat::H24.label(),
-                            UiMessage::SetTimeFormat(TimeFormat::H24),
-                        ),
-                        option_button(
-                            self.ui.settings.time_format == TimeFormat::H12,
-                            TimeFormat::H12.label(),
-                            UiMessage::SetTimeFormat(TimeFormat::H12),
-                        ),
-                    ]
-                    .spacing(8)
-                    .into()),
+                    controls(
+                        row![
+                            option_button(
+                                self.ui.settings.time_format == TimeFormat::H24,
+                                TimeFormat::H24.label(),
+                                UiMessage::SetTimeFormat(TimeFormat::H24),
+                            ),
+                            option_button(
+                                self.ui.settings.time_format == TimeFormat::H12,
+                                TimeFormat::H12.label(),
+                                UiMessage::SetTimeFormat(TimeFormat::H12),
+                            ),
+                        ]
+                        .spacing(8)
+                        .into()
+                    ),
                 ]
                 .align_items(Alignment::Center)
                 .spacing(12),
@@ -948,31 +962,35 @@ impl GrapeApp {
                         "Vérifier automatiquement les mises à jour",
                         "Vérifie les nouvelles versions au lancement."
                     ),
-                    controls(toggle_row(
-                        self.ui.settings.auto_check_updates,
-                        UiMessage::SetAutoCheckUpdates(true),
-                        UiMessage::SetAutoCheckUpdates(false),
-                    )
-                    .into()),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.auto_check_updates,
+                            UiMessage::SetAutoCheckUpdates(true),
+                            UiMessage::SetAutoCheckUpdates(false),
+                        )
+                        .into()
+                    ),
                 ]
                 .align_items(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label("Canal", "Choisissez la stabilité des versions."),
-                    controls(row![
-                        option_button(
-                            self.ui.settings.update_channel == UpdateChannel::Stable,
-                            UpdateChannel::Stable.label(),
-                            UiMessage::SetUpdateChannel(UpdateChannel::Stable),
-                        ),
-                        option_button(
-                            self.ui.settings.update_channel == UpdateChannel::Beta,
-                            UpdateChannel::Beta.label(),
-                            UiMessage::SetUpdateChannel(UpdateChannel::Beta),
-                        ),
-                    ]
-                    .spacing(8)
-                    .into()),
+                    controls(
+                        row![
+                            option_button(
+                                self.ui.settings.update_channel == UpdateChannel::Stable,
+                                UpdateChannel::Stable.label(),
+                                UiMessage::SetUpdateChannel(UpdateChannel::Stable),
+                            ),
+                            option_button(
+                                self.ui.settings.update_channel == UpdateChannel::Beta,
+                                UpdateChannel::Beta.label(),
+                                UiMessage::SetUpdateChannel(UpdateChannel::Beta),
+                            ),
+                        ]
+                        .spacing(8)
+                        .into()
+                    ),
                 ]
                 .align_items(Alignment::Center)
                 .spacing(12),
@@ -981,12 +999,14 @@ impl GrapeApp {
                         "Télécharger et installer automatiquement",
                         "Installe les mises à jour en arrière-plan."
                     ),
-                    controls(toggle_row(
-                        self.ui.settings.auto_install_updates,
-                        UiMessage::SetAutoInstallUpdates(true),
-                        UiMessage::SetAutoInstallUpdates(false),
-                    )
-                    .into()),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.auto_install_updates,
+                            UiMessage::SetAutoInstallUpdates(true),
+                            UiMessage::SetAutoInstallUpdates(false),
+                        )
+                        .into()
+                    ),
                 ]
                 .align_items(Alignment::Center)
                 .spacing(12),
@@ -1003,12 +1023,14 @@ impl GrapeApp {
                         "Envoyer des rapports d'erreurs",
                         "Permet d'améliorer la stabilité."
                     ),
-                    controls(toggle_row(
-                        self.ui.settings.send_error_reports,
-                        UiMessage::SetSendErrorReports(true),
-                        UiMessage::SetSendErrorReports(false),
-                    )
-                    .into()),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.send_error_reports,
+                            UiMessage::SetSendErrorReports(true),
+                            UiMessage::SetSendErrorReports(false),
+                        )
+                        .into()
+                    ),
                 ]
                 .align_items(Alignment::Center)
                 .spacing(12),
@@ -1017,12 +1039,14 @@ impl GrapeApp {
                         "Envoyer des statistiques anonymes d'utilisation",
                         "Aide à comprendre l'usage de Grape."
                     ),
-                    controls(toggle_row(
-                        self.ui.settings.send_usage_stats,
-                        UiMessage::SetSendUsageStats(true),
-                        UiMessage::SetSendUsageStats(false),
-                    )
-                    .into()),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.send_usage_stats,
+                            UiMessage::SetSendUsageStats(true),
+                            UiMessage::SetSendUsageStats(false),
+                        )
+                        .into()
+                    ),
                 ]
                 .align_items(Alignment::Center)
                 .spacing(12),
@@ -1061,12 +1085,14 @@ impl GrapeApp {
                         "Scanner automatiquement au lancement",
                         "Met à jour la bibliothèque au démarrage."
                     ),
-                    controls(toggle_row(
-                        self.ui.settings.auto_scan_on_launch,
-                        UiMessage::SetAutoScanOnLaunch(true),
-                        UiMessage::SetAutoScanOnLaunch(false),
-                    )
-                    .into()),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.auto_scan_on_launch,
+                            UiMessage::SetAutoScanOnLaunch(true),
+                            UiMessage::SetAutoScanOnLaunch(false),
+                        )
+                        .into()
+                    ),
                 ]
                 .align_items(Alignment::Center)
                 .spacing(12),
@@ -1099,12 +1125,14 @@ impl GrapeApp {
                         "Activer les notifications système",
                         "Autorise l'affichage des notifications."
                     ),
-                    controls(toggle_row(
-                        self.ui.settings.notifications_enabled,
-                        UiMessage::SetNotificationsEnabled(true),
-                        UiMessage::SetNotificationsEnabled(false),
-                    )
-                    .into()),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.notifications_enabled,
+                            UiMessage::SetNotificationsEnabled(true),
+                            UiMessage::SetNotificationsEnabled(false),
+                        )
+                        .into()
+                    ),
                 ]
                 .align_items(Alignment::Center)
                 .spacing(12),
@@ -1113,12 +1141,14 @@ impl GrapeApp {
                         "Afficher “Now Playing” lors des changements de piste",
                         "Notification à chaque changement de lecture."
                     ),
-                    controls(toggle_row(
-                        self.ui.settings.now_playing_notifications,
-                        UiMessage::SetNowPlayingNotifications(true),
-                        UiMessage::SetNowPlayingNotifications(false),
-                    )
-                    .into()),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.now_playing_notifications,
+                            UiMessage::SetNowPlayingNotifications(true),
+                            UiMessage::SetNowPlayingNotifications(false),
+                        )
+                        .into()
+                    ),
                 ]
                 .align_items(Alignment::Center)
                 .spacing(12),
@@ -1135,12 +1165,14 @@ impl GrapeApp {
                         "Accélération matérielle",
                         "Utilise le GPU pour les animations."
                     ),
-                    controls(toggle_row(
-                        self.ui.settings.hardware_acceleration,
-                        UiMessage::SetHardwareAcceleration(true),
-                        UiMessage::SetHardwareAcceleration(false),
-                    )
-                    .into()),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.hardware_acceleration,
+                            UiMessage::SetHardwareAcceleration(true),
+                            UiMessage::SetHardwareAcceleration(false),
+                        )
+                        .into()
+                    ),
                 ]
                 .align_items(Alignment::Center)
                 .spacing(12),
@@ -1149,12 +1181,14 @@ impl GrapeApp {
                         "Limiter l'utilisation CPU pendant la lecture",
                         "Réduit la charge pendant la musique."
                     ),
-                    controls(toggle_row(
-                        self.ui.settings.limit_cpu_during_playback,
-                        UiMessage::SetLimitCpuDuringPlayback(true),
-                        UiMessage::SetLimitCpuDuringPlayback(false),
-                    )
-                    .into()),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.limit_cpu_during_playback,
+                            UiMessage::SetLimitCpuDuringPlayback(true),
+                            UiMessage::SetLimitCpuDuringPlayback(false),
+                        )
+                        .into()
+                    ),
                 ]
                 .align_items(Alignment::Center)
                 .spacing(12),
@@ -1290,105 +1324,259 @@ impl GrapeApp {
         )
         .height(Length::Fill);
 
-        let appearance_panel = column![
-            text("Thème")
-                .size(theme.size(16))
-                .font(style::font_propo(Weight::Semibold))
-                .style(style::text_primary(theme)),
-            row![
-                button(
-                    text("Sombre")
-                        .size(theme.size(13))
+        let accent_color_value = |accent: AccentColor| match accent {
+            AccentColor::Blue => Color::from_rgb8(0x3d, 0x7c, 0xff),
+            AccentColor::Violet => Color::from_rgb8(0xa0, 0x6c, 0xff),
+            AccentColor::Green => Color::from_rgb8(0x2f, 0xd0, 0x8c),
+            AccentColor::Amber => Color::from_rgb8(0xf2, 0xb3, 0x47),
+        };
+        let accent_button = |accent: AccentColor| {
+            let selected = self.ui.settings.accent_color == accent;
+            button(
+                row![
+                    text("●")
+                        .size(theme.size(14))
+                        .style(accent_color_value(accent)),
+                    text(accent.label())
+                        .size(theme.size(12))
                         .font(style::font_propo(Weight::Medium))
                         .style(style::text_primary(theme)),
-                )
-                .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                    style::ButtonKind::Tab {
-                        selected: self.ui.settings.theme_mode == ThemeMode::Dark,
-                    },
-                    theme,
-                ))))
-                .padding([6, 10])
-                .on_press(UiMessage::SetThemeMode(ThemeMode::Dark)),
-                button(
-                    text("Clair")
-                        .size(theme.size(13))
-                        .font(style::font_propo(Weight::Medium))
-                        .style(style::text_primary(theme)),
-                )
-                .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                    style::ButtonKind::Tab {
-                        selected: self.ui.settings.theme_mode == ThemeMode::Light,
-                    },
-                    theme,
-                ))))
-                .padding([6, 10])
-                .on_press(UiMessage::SetThemeMode(ThemeMode::Light)),
+                ]
+                .spacing(6)
+                .align_items(Alignment::Center),
+            )
+            .style(Button::Custom(Box::new(style::ButtonStyle::new(
+                style::ButtonKind::Tab { selected },
+                theme,
+            ))))
+            .padding([6, 10])
+            .on_press(UiMessage::SetAccentColor(accent))
+        };
+        let typography_group = || {
+            column![
+                text("Typographie")
+                    .size(theme.size(16))
+                    .font(style::font_propo(Weight::Semibold))
+                    .style(style::text_primary(theme)),
+                row![
+                    setting_label(
+                        "Taille de police UI",
+                        "Ajustez la taille des textes pour améliorer la lisibilité."
+                    ),
+                    controls(
+                        column![
+                            slider(
+                                0.0..=2.0,
+                                self.ui.settings.text_scale.slider_value(),
+                                |value| UiMessage::SetTextScale(TextScale::from_slider_value(
+                                    value
+                                )),
+                            ),
+                            text(self.ui.settings.text_scale.label())
+                                .size(theme.size(12))
+                                .font(style::font_propo(Weight::Light))
+                                .style(style::text_muted(theme)),
+                        ]
+                        .spacing(6)
+                        .into(),
+                    ),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label(
+                        "Densité d'interface",
+                        "Choisissez l'espacement des éléments."
+                    ),
+                    controls(
+                        row![
+                            option_button(
+                                self.ui.settings.interface_density == InterfaceDensity::Compact,
+                                InterfaceDensity::Compact.label(),
+                                UiMessage::SetInterfaceDensity(InterfaceDensity::Compact),
+                            ),
+                            option_button(
+                                self.ui.settings.interface_density == InterfaceDensity::Comfort,
+                                InterfaceDensity::Comfort.label(),
+                                UiMessage::SetInterfaceDensity(InterfaceDensity::Comfort),
+                            ),
+                            option_button(
+                                self.ui.settings.interface_density == InterfaceDensity::Large,
+                                InterfaceDensity::Large.label(),
+                                UiMessage::SetInterfaceDensity(InterfaceDensity::Large),
+                            ),
+                        ]
+                        .spacing(8)
+                        .into(),
+                    ),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
             ]
-            .spacing(10),
-            text("Les couleurs d'accent et les surfaces s'ajustent automatiquement.")
-                .size(theme.size(13))
-                .font(style::font_propo(Weight::Light))
-                .style(style::text_muted(theme))
-        ]
-        .spacing(8);
+            .spacing(12)
+        };
 
-        let accessibility_panel = column![
-            text("Taille de texte")
-                .size(theme.size(16))
-                .font(style::font_propo(Weight::Semibold))
-                .style(style::text_primary(theme)),
-            row![
-                button(
-                    text(TextScale::Normal.label())
-                        .size(theme.size(13))
-                        .font(style::font_propo(Weight::Medium))
-                        .style(style::text_primary(theme)),
-                )
-                .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                    style::ButtonKind::Tab {
-                        selected: self.ui.settings.text_scale == TextScale::Normal,
-                    },
-                    theme,
-                ))))
-                .padding([6, 10])
-                .on_press(UiMessage::SetTextScale(TextScale::Normal)),
-                button(
-                    text(TextScale::Large.label())
-                        .size(theme.size(13))
-                        .font(style::font_propo(Weight::Medium))
-                        .style(style::text_primary(theme)),
-                )
-                .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                    style::ButtonKind::Tab {
-                        selected: self.ui.settings.text_scale == TextScale::Large,
-                    },
-                    theme,
-                ))))
-                .padding([6, 10])
-                .on_press(UiMessage::SetTextScale(TextScale::Large)),
-                button(
-                    text(TextScale::ExtraLarge.label())
-                        .size(theme.size(13))
-                        .font(style::font_propo(Weight::Medium))
-                        .style(style::text_primary(theme)),
-                )
-                .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                    style::ButtonKind::Tab {
-                        selected: self.ui.settings.text_scale == TextScale::ExtraLarge,
-                    },
-                    theme,
-                ))))
-                .padding([6, 10])
-                .on_press(UiMessage::SetTextScale(TextScale::ExtraLarge)),
+        let appearance_panel = column![
+            column![
+                text("Thème")
+                    .size(theme.size(16))
+                    .font(style::font_propo(Weight::Semibold))
+                    .style(style::text_primary(theme)),
+                row![
+                    option_button(
+                        self.ui.settings.theme_mode == ThemeMode::Dark,
+                        ThemeMode::Dark.label(),
+                        UiMessage::SetThemeMode(ThemeMode::Dark),
+                    ),
+                    option_button(
+                        self.ui.settings.theme_mode == ThemeMode::Light,
+                        ThemeMode::Light.label(),
+                        UiMessage::SetThemeMode(ThemeMode::Light),
+                    ),
+                    option_button(
+                        self.ui.settings.theme_mode == ThemeMode::System,
+                        ThemeMode::System.label(),
+                        UiMessage::SetThemeMode(ThemeMode::System),
+                    ),
+                ]
+                .spacing(8),
+                row![
+                    setting_label(
+                        "Suivre le thème du système",
+                        "Synchronise automatiquement clair / sombre."
+                    ),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.follow_system_theme,
+                            UiMessage::SetFollowSystemTheme(true),
+                            UiMessage::SetFollowSystemTheme(false),
+                        )
+                        .into()
+                    ),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
             ]
-            .spacing(10),
-            text("Ajustez la taille de texte pour améliorer la lisibilité.")
-                .size(theme.size(13))
-                .font(style::font_propo(Weight::Light))
-                .style(style::text_muted(theme))
+            .spacing(12),
+            column![
+                text("Couleurs & accents")
+                    .size(theme.size(16))
+                    .font(style::font_propo(Weight::Semibold))
+                    .style(style::text_primary(theme)),
+                row![
+                    accent_button(AccentColor::Blue),
+                    accent_button(AccentColor::Violet),
+                    accent_button(AccentColor::Green),
+                    accent_button(AccentColor::Amber),
+                ]
+                .spacing(8),
+                row![
+                    setting_label(
+                        "Accent automatique selon le fond",
+                        "Adapte automatiquement l'accent aux arrière-plans."
+                    ),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.accent_auto,
+                            UiMessage::SetAccentAuto(true),
+                            UiMessage::SetAccentAuto(false),
+                        )
+                        .into()
+                    ),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+            ]
+            .spacing(12),
+            typography_group(),
+            column![
+                text("Arrière-plans & effets")
+                    .size(theme.size(16))
+                    .font(style::font_propo(Weight::Semibold))
+                    .style(style::text_primary(theme)),
+                row![
+                    setting_label("Transparence / Flou", "Applique des effets de profondeur."),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.transparency_blur,
+                            UiMessage::SetTransparencyBlur(true),
+                            UiMessage::SetTransparencyBlur(false),
+                        )
+                        .into()
+                    ),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label(
+                        "Animations d'interface",
+                        "Active les transitions et micro-interactions."
+                    ),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.ui_animations,
+                            UiMessage::SetUiAnimations(true),
+                            UiMessage::SetUiAnimations(false),
+                        )
+                        .into()
+                    ),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+            ]
+            .spacing(12),
+            column![
+                text("Aperçu")
+                    .size(theme.size(16))
+                    .font(style::font_propo(Weight::Semibold))
+                    .style(style::text_primary(theme)),
+                container(
+                    column![
+                        text("Carte de prévisualisation")
+                            .size(theme.size(13))
+                            .font(style::font_propo(Weight::Medium))
+                            .style(style::text_primary(theme)),
+                        text(format!(
+                            "Thème : {} · Accent : {} · Densité : {}",
+                            self.ui.settings.theme_mode.label(),
+                            self.ui.settings.accent_color.label(),
+                            self.ui.settings.interface_density.label()
+                        ))
+                        .size(theme.size(12))
+                        .font(style::font_propo(Weight::Light))
+                        .style(style::text_muted(theme)),
+                        text(format!(
+                            "Texte : {} · Effets : {} · Animations : {}",
+                            self.ui.settings.text_scale.label(),
+                            if self.ui.settings.transparency_blur {
+                                "Activés"
+                            } else {
+                                "Désactivés"
+                            },
+                            if self.ui.settings.ui_animations {
+                                "Activées"
+                            } else {
+                                "Désactivées"
+                            }
+                        ))
+                        .size(theme.size(12))
+                        .font(style::font_propo(Weight::Light))
+                        .style(style::text_muted(theme)),
+                    ]
+                    .spacing(4),
+                )
+                .padding(12)
+                .width(Length::Fill)
+                .style(Container::Custom(Box::new(style::SurfaceStyle::new(
+                    style::Surface::Panel,
+                    theme,
+                )))),
+            ]
+            .spacing(12),
         ]
-        .spacing(8);
+        .spacing(20);
+
+        let accessibility_panel = column![typography_group()].spacing(12);
 
         let volume_value = self.ui.settings.default_volume as f32;
         let crossfade_value = self.ui.settings.crossfade_seconds as f32;
@@ -1458,12 +1646,14 @@ impl GrapeApp {
                         "Lecture sans blanc (Gapless)",
                         "Supprime les silences entre les pistes."
                     ),
-                    controls(toggle_row(
-                        self.ui.settings.gapless_playback,
-                        UiMessage::SetGaplessPlayback(true),
-                        UiMessage::SetGaplessPlayback(false)
-                    )
-                    .into()),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.gapless_playback,
+                            UiMessage::SetGaplessPlayback(true),
+                            UiMessage::SetGaplessPlayback(false)
+                        )
+                        .into()
+                    ),
                 ]
                 .align_items(Alignment::Center)
                 .spacing(12),
@@ -1475,9 +1665,7 @@ impl GrapeApp {
                     controls(
                         column![
                             slider(0.0..=12.0, crossfade_value, |value| {
-                                UiMessage::SetCrossfadeSeconds(
-                                    value.round().clamp(0.0, 12.0) as u8
-                                )
+                                UiMessage::SetCrossfadeSeconds(value.round().clamp(0.0, 12.0) as u8)
                             }),
                             text(format!("{} s", self.ui.settings.crossfade_seconds))
                                 .size(theme.size(12))
@@ -1491,16 +1679,15 @@ impl GrapeApp {
                 .align_items(Alignment::Center)
                 .spacing(12),
                 row![
-                    setting_label(
-                        "Automix",
-                        "Mixe automatiquement les transitions."
+                    setting_label("Automix", "Mixe automatiquement les transitions."),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.automix_enabled,
+                            UiMessage::SetAutomixEnabled(true),
+                            UiMessage::SetAutomixEnabled(false)
+                        )
+                        .into()
                     ),
-                    controls(toggle_row(
-                        self.ui.settings.automix_enabled,
-                        UiMessage::SetAutomixEnabled(true),
-                        UiMessage::SetAutomixEnabled(false)
-                    )
-                    .into()),
                 ]
                 .align_items(Alignment::Center)
                 .spacing(12),
@@ -1513,12 +1700,14 @@ impl GrapeApp {
                 section_hint("Ajustez la dynamique et le volume global."),
                 row![
                     setting_label("Normaliser le volume", "Harmonise les niveaux sonores."),
-                    controls(toggle_row(
-                        self.ui.settings.normalize_volume,
-                        UiMessage::SetNormalizeVolume(true),
-                        UiMessage::SetNormalizeVolume(false)
-                    )
-                    .into()),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.normalize_volume,
+                            UiMessage::SetNormalizeVolume(true),
+                            UiMessage::SetNormalizeVolume(false)
+                        )
+                        .into()
+                    ),
                 ]
                 .align_items(Alignment::Center)
                 .spacing(12),
@@ -1553,9 +1742,7 @@ impl GrapeApp {
                     controls(
                         column![
                             slider(0.0..=100.0, volume_value, |value| {
-                                UiMessage::SetDefaultVolume(
-                                    value.round().clamp(0.0, 100.0) as u8
-                                )
+                                UiMessage::SetDefaultVolume(value.round().clamp(0.0, 100.0) as u8)
                             }),
                             text(format!("{} %", self.ui.settings.default_volume))
                                 .size(theme.size(13))
@@ -1577,12 +1764,14 @@ impl GrapeApp {
                 section_hint("Sculptez le rendu audio avec un preset."),
                 row![
                     setting_label("Activer l'égaliseur", "Active les réglages EQ."),
-                    controls(toggle_row(
-                        self.ui.settings.eq_enabled,
-                        UiMessage::SetEqEnabled(true),
-                        UiMessage::SetEqEnabled(false)
-                    )
-                    .into()),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.eq_enabled,
+                            UiMessage::SetEqEnabled(true),
+                            UiMessage::SetEqEnabled(false)
+                        )
+                        .into()
+                    ),
                 ]
                 .align_items(Alignment::Center)
                 .spacing(12),
@@ -1642,21 +1831,16 @@ impl GrapeApp {
             column![
                 section_hint("Options avancées pour la stabilité audio."),
                 row![
-                    setting_label(
-                        "Mode de stabilité audio",
-                        "Ajuste la latence et le buffer."
-                    ),
+                    setting_label("Mode de stabilité audio", "Ajuste la latence et le buffer."),
                     controls(
                         row![
                             option_button(
-                                self.ui.settings.audio_stability_mode
-                                    == AudioStabilityMode::Auto,
+                                self.ui.settings.audio_stability_mode == AudioStabilityMode::Auto,
                                 AudioStabilityMode::Auto.label(),
                                 UiMessage::SetAudioStabilityMode(AudioStabilityMode::Auto)
                             ),
                             option_button(
-                                self.ui.settings.audio_stability_mode
-                                    == AudioStabilityMode::Stable,
+                                self.ui.settings.audio_stability_mode == AudioStabilityMode::Stable,
                                 AudioStabilityMode::Stable.label(),
                                 UiMessage::SetAudioStabilityMode(AudioStabilityMode::Stable)
                             ),
@@ -1681,12 +1865,14 @@ impl GrapeApp {
                 .spacing(12),
                 row![
                     setting_label("Logs audio (debug)", "Active la journalisation audio."),
-                    controls(toggle_row(
-                        self.ui.settings.audio_debug_logs,
-                        UiMessage::SetAudioDebugLogs(true),
-                        UiMessage::SetAudioDebugLogs(false)
-                    )
-                    .into()),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.audio_debug_logs,
+                            UiMessage::SetAudioDebugLogs(true),
+                            UiMessage::SetAudioDebugLogs(false)
+                        )
+                        .into()
+                    ),
                 ]
                 .align_items(Alignment::Center)
                 .spacing(12),
@@ -1828,7 +2014,13 @@ impl Application for GrapeApp {
         let should_persist = matches!(
             message,
             UiMessage::SetThemeMode(_)
+                | UiMessage::SetFollowSystemTheme(_)
+                | UiMessage::SetAccentColor(_)
+                | UiMessage::SetAccentAuto(_)
                 | UiMessage::SetTextScale(_)
+                | UiMessage::SetInterfaceDensity(_)
+                | UiMessage::SetTransparencyBlur(_)
+                | UiMessage::SetUiAnimations(_)
                 | UiMessage::SetDefaultVolume(_)
                 | UiMessage::SetAudioOutputDevice(_)
                 | UiMessage::SetMissingDeviceBehavior(_)
@@ -1988,6 +2180,7 @@ impl Application for GrapeApp {
         match self.ui.settings.theme_mode {
             ThemeMode::Dark => Theme::Dark,
             ThemeMode::Light => Theme::Light,
+            ThemeMode::System => Theme::Dark,
         }
     }
 
