@@ -23,9 +23,9 @@ use iced::font::Weight;
 use iced::theme::{Button, Container, TextInput};
 use iced::widget::{button, column, container, row, scrollable, slider, text, text_input};
 use iced::{
-    Alignment, Application, Color, Command, Element, Length, Settings, event, keyboard, mouse,
+    event, keyboard, mouse, window, Alignment, Application, Color, Command, Element, Length,
+    Settings, Subscription, Theme,
 };
-use iced::{Subscription, Theme};
 use std::time::Duration;
 use tracing::{error, info};
 
@@ -414,7 +414,8 @@ impl GrapeApp {
             .style(Button::Custom(Box::new(style::ButtonStyle::new(
                 style::ButtonKind::Icon,
                 theme,
-            )))),
+            ))))
+            .on_press(UiMessage::ToggleLogoMenu),
             button(
                 text("—")
                     .font(style::font_propo(Weight::Medium))
@@ -423,16 +424,18 @@ impl GrapeApp {
             .style(Button::Custom(Box::new(style::ButtonStyle::new(
                 style::ButtonKind::Icon,
                 theme,
-            )))),
+            ))))
+            .on_press(UiMessage::WindowMinimize),
             button(
-                text("▢")
+                text("")
                     .font(style::font_propo(Weight::Medium))
                     .size(theme.size(14))
             )
             .style(Button::Custom(Box::new(style::ButtonStyle::new(
                 style::ButtonKind::Icon,
                 theme,
-            )))),
+            ))))
+            .on_press(UiMessage::WindowToggleMaximize),
             button(
                 text("✕")
                     .font(style::font_propo(Weight::Medium))
@@ -442,6 +445,7 @@ impl GrapeApp {
                 style::ButtonKind::Icon,
                 theme,
             ))))
+            .on_press(UiMessage::WindowClose)
         ]
         .spacing(8)
         .align_items(Alignment::Center);
@@ -2435,6 +2439,15 @@ impl Application for GrapeApp {
             }
             UiMessage::ClosePlaylist => {
                 self.ui.playlist_open = false;
+            }
+            UiMessage::WindowMinimize => {
+                command = window::minimize(window::Id::MAIN, true);
+            }
+            UiMessage::WindowToggleMaximize => {
+                command = window::toggle_maximize(window::Id::MAIN);
+            }
+            UiMessage::WindowClose => {
+                command = window::close(window::Id::MAIN);
             }
             UiMessage::PickLibraryFolder => {
                 command = Command::perform(

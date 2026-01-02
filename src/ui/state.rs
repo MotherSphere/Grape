@@ -355,6 +355,9 @@ impl UiState {
             UiMessage::ToggleLogoMenu => {
                 self.menu_open = !self.menu_open;
             }
+            UiMessage::WindowMinimize => {}
+            UiMessage::WindowToggleMaximize => {}
+            UiMessage::WindowClose => {}
             UiMessage::OpenPlaylist => {
                 self.menu_open = false;
                 self.playlist_open = true;
