@@ -1,11 +1,11 @@
 use crate::config::{
-    self, AccessibleTextSize, AccentColor, AudioOutputDevice, AudioStabilityMode, CloseBehavior,
+    self, AccentColor, AccessibleTextSize, AudioOutputDevice, AudioStabilityMode, CloseBehavior,
     EqPreset, InterfaceDensity, InterfaceLanguage, MissingDeviceBehavior, StartupScreen,
     SubtitleSize, TextScale, ThemeMode, TimeFormat, UpdateChannel, VolumeLevel,
 };
 use crate::library::Catalog;
-use crate::playlist::PlaylistManager;
-use crate::player::{PlaybackState as PlayerPlaybackState, Player};
+use crate::player::{NowPlaying, PlaybackState as PlayerPlaybackState, Player};
+use crate::playlist::{PlaybackQueue, PlaylistManager};
 use crate::ui::components::albums_grid::AlbumsGrid;
 use crate::ui::components::anchored_overlay::AnchoredOverlay;
 use crate::ui::components::artists_panel::ArtistsPanel;
@@ -23,8 +23,8 @@ use crate::ui::style;
 use iced::font::Weight;
 use iced::widget::{button, column, container, row, scrollable, slider, text, text_input};
 use iced::{
-    event, keyboard, mouse, window, Alignment, Color, Element, Length, Padding, Settings,
-    Subscription, Task, Theme,
+    Alignment, Color, Element, Length, Padding, Settings, Subscription, Task, Theme, event,
+    keyboard, mouse, window,
 };
 use std::time::Duration;
 use tracing::{error, info};
@@ -33,6 +33,7 @@ pub struct GrapeApp {
     catalog: Catalog,
     player: Option<Player>,
     playlists: PlaylistManager,
+    playback_queue: PlaybackQueue,
     ui: UiState,
 }
 
@@ -607,7 +608,11 @@ impl GrapeApp {
     }
 
     fn handle_track_selection(&mut self, track: &UiTrack) {
-        self.playlists.add(Self::now_playing_from_ui_track(track));
+        let now_playing = Self::now_playing_from_ui_track(track);
+        self.playlists.add(now_playing.clone());
+        let (queue_items, queue_index) = self.queue_from_track_selection(track);
+        self.playback_queue.set_queue(queue_items);
+        self.playback_queue.set_index(queue_index);
         let Some(player) = &mut self.player else {
             return;
         };
@@ -628,21 +633,95 @@ impl GrapeApp {
         }
     }
 
-    fn handle_playback_message(&mut self, message: &PlaybackMessage) {
+    fn ui_track_from_now_playing(&self, now_playing: &NowPlaying) -> UiTrack {
+        for artist in &self.catalog.artists {
+            for album in &artist.albums {
+                for (id, track) in album.tracks.iter().enumerate() {
+                    if track.path == now_playing.path {
+                        return UiTrack {
+                            id,
+                            title: track.title.clone(),
+                            album: album.title.clone(),
+                            artist: artist.name.clone(),
+                            track_number: Some(track.number as u32),
+                            duration: Duration::from_secs(track.duration_secs as u64),
+                            path: track.path.clone(),
+                            cover_path: album.cover.as_ref().map(|cover| cover.cached_path.clone()),
+                        };
+                    }
+                }
+            }
+        }
+        UiTrack {
+            id: 0,
+            title: now_playing.title.clone(),
+            album: now_playing.album.clone(),
+            artist: now_playing.artist.clone(),
+            track_number: None,
+            duration: Duration::from_secs(now_playing.duration_secs as u64),
+            path: now_playing.path.clone(),
+            cover_path: None,
+        }
+    }
+
+    fn queue_from_track_selection(&self, track: &UiTrack) -> (Vec<NowPlaying>, usize) {
+        if let Some(selected_album) = self.ui.selection.selected_album.as_ref() {
+            if let Some((artist, album)) = self.album_entry_by_id(selected_album.id) {
+                let mut items = Vec::with_capacity(album.tracks.len());
+                let mut selected_index = 0;
+                for (index, album_track) in album.tracks.iter().enumerate() {
+                    if album_track.path == track.path {
+                        selected_index = index;
+                    }
+                    items.push(NowPlaying {
+                        artist: artist.name.clone(),
+                        album: album.title.clone(),
+                        title: album_track.title.clone(),
+                        duration_secs: album_track.duration_secs,
+                        path: album_track.path.clone(),
+                    });
+                }
+                if !items.is_empty() {
+                    return (items, selected_index);
+                }
+            }
+        }
+        (vec![Self::now_playing_from_ui_track(track)], 0)
+    }
+
+    fn load_from_queue(&mut self, now_playing: Option<NowPlaying>) {
         let Some(player) = &mut self.player else {
             return;
         };
+        let Some(now_playing) = now_playing else {
+            return;
+        };
+        if let Err(err) = player.load(&now_playing.path) {
+            error!(error = %err, path = %now_playing.path.display(), "Failed to load track");
+            return;
+        }
+        player.play();
+        self.ui.selection.selected_track = Some(self.ui_track_from_now_playing(&now_playing));
+    }
+
+    fn handle_playback_message(&mut self, message: &PlaybackMessage) {
         match message {
-            PlaybackMessage::TogglePlayPause => match player.state() {
-                PlayerPlaybackState::Playing => player.pause(),
-                PlayerPlaybackState::Paused | PlayerPlaybackState::Stopped => player.play(),
-            },
-            PlaybackMessage::NextTrack | PlaybackMessage::PreviousTrack => {
-                if let Err(err) = player.seek(Duration::ZERO) {
-                    error!(error = %err, "Failed to seek to start");
-                } else {
-                    player.play();
+            PlaybackMessage::TogglePlayPause => {
+                let Some(player) = &mut self.player else {
+                    return;
+                };
+                match player.state() {
+                    PlayerPlaybackState::Playing => player.pause(),
+                    PlayerPlaybackState::Paused | PlayerPlaybackState::Stopped => player.play(),
                 }
+            }
+            PlaybackMessage::NextTrack => {
+                let next_track = self.playback_queue.next();
+                self.load_from_queue(next_track);
+            }
+            PlaybackMessage::PreviousTrack => {
+                let previous_track = self.playback_queue.previous();
+                self.load_from_queue(previous_track);
             }
             PlaybackMessage::ToggleShuffle | PlaybackMessage::CycleRepeat => {}
         }
@@ -819,9 +898,7 @@ impl GrapeApp {
                     .font(style::font_propo(Weight::Medium))
                     .style(move |_| style::text_style_primary(theme)),
             )
-            .style(move |_, status| {
-                style::button_style(theme, style::ButtonKind::Control, status)
-            })
+            .style(move |_, status| style::button_style(theme, style::ButtonKind::Control, status))
             .padding([6, 10])
             .on_press(message)
         };
@@ -1574,7 +1651,7 @@ impl GrapeApp {
                                 self.ui.settings.subtitle_size.slider_value(),
                                 |value| {
                                     UiMessage::SetSubtitleSize(SubtitleSize::from_slider_value(
-                                        value
+                                        value,
                                     ))
                                 },
                             ),
@@ -1943,7 +2020,9 @@ impl GrapeApp {
                 section_header(
                     "Navigation & interaction",
                     self.ui.preferences_sections.accessibility_navigation,
-                    UiMessage::TogglePreferencesSection(PreferencesSection::AccessibilityNavigation),
+                    UiMessage::TogglePreferencesSection(
+                        PreferencesSection::AccessibilityNavigation
+                    ),
                 ),
                 if self.ui.preferences_sections.accessibility_navigation {
                     navigation_group()
@@ -2376,6 +2455,7 @@ impl GrapeApp {
             catalog,
             player,
             playlists: PlaylistManager::new_default(),
+            playback_queue: PlaybackQueue::default(),
             ui: UiState::new(settings),
         }
     }
