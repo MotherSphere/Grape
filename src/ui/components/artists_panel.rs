@@ -57,14 +57,14 @@ impl ArtistsPanel {
             text(format!("{} Song artists", self.total_count))
                 .size(theme.size(16))
                 .font(style::font_propo(Weight::Semibold))
-                .style(style::text_primary(theme)),
+                .style(move |_| style::text_style_primary(theme)),
             text("A–Z")
                 .size(theme.size(12))
                 .font(style::font_propo(Weight::Light))
-                .style(style::text_muted(theme))
+                .style(move |_| style::text_style_muted(theme))
         ]
         .spacing(8)
-        .align_items(Alignment::Center);
+        .align_y(Alignment::Center);
         let list_items =
             self.artists
                 .iter()
@@ -74,7 +74,7 @@ impl ArtistsPanel {
                         text(artist.name.chars().next().unwrap_or('?').to_string())
                             .size(theme.size(12))
                             .font(style::font_propo(Weight::Medium))
-                            .style(style::text_primary(theme)),
+                            .style(move |_| style::text_style_primary(theme)),
                     )
                     .width(Length::Fixed(24.0))
                     .height(Length::Fixed(24.0))
@@ -83,11 +83,11 @@ impl ArtistsPanel {
                     .style(move |_| style::surface_style(theme, style::Surface::Avatar));
                     let label = text(artist.name.clone())
                         .font(style::font_propo(Weight::Medium))
-                        .style(style::text_primary(theme))
+                        .style(move |_| style::text_style_primary(theme))
                         .size(theme.size(14));
                     let row_content = row![avatar, label]
                         .spacing(10)
-                        .align_items(Alignment::Center)
+                        .align_y(Alignment::Center)
                         .width(Length::Fill);
                     button(row_content)
                         .style(move |_, status| {
@@ -107,20 +107,20 @@ impl ArtistsPanel {
         let list = column(list_items)
             .spacing(6)
             .width(Length::Fill)
-            .align_items(Alignment::Start);
+            .align_x(Alignment::Start);
         let scrollable_list = scrollable(list).height(Length::Fill);
         let index_items = ('A'..='Z')
             .map(|letter| {
                 text(letter.to_string())
                     .size(theme.size(12))
                     .font(style::font_propo(Weight::Light))
-                    .style(style::text_muted(theme))
+                    .style(move |_| style::text_style_muted(theme))
                     .into()
             })
             .collect::<Vec<Element<UiMessage>>>();
         let index = column(index_items)
             .spacing(4)
-            .align_items(Alignment::Center);
+            .align_x(Alignment::Center);
         let body = row![scrollable_list, index]
             .spacing(12)
             .height(Length::Fill);
