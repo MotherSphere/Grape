@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-use crate::config::UserSettings;
+use crate::config::{ThemeMode, UserSettings};
 use crate::ui::message::{PlaybackMessage, SearchMessage, UiMessage};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -323,9 +323,33 @@ impl UiState {
             }
             UiMessage::SetThemeMode(theme_mode) => {
                 self.settings.theme_mode = theme_mode;
+                self.settings.follow_system_theme = theme_mode == ThemeMode::System;
+            }
+            UiMessage::SetFollowSystemTheme(enabled) => {
+                self.settings.follow_system_theme = enabled;
+                if enabled {
+                    self.settings.theme_mode = ThemeMode::System;
+                } else if self.settings.theme_mode == ThemeMode::System {
+                    self.settings.theme_mode = ThemeMode::Dark;
+                }
+            }
+            UiMessage::SetAccentColor(color) => {
+                self.settings.accent_color = color;
+            }
+            UiMessage::SetAccentAuto(enabled) => {
+                self.settings.accent_auto = enabled;
             }
             UiMessage::SetTextScale(scale) => {
                 self.settings.text_scale = scale;
+            }
+            UiMessage::SetInterfaceDensity(density) => {
+                self.settings.interface_density = density;
+            }
+            UiMessage::SetTransparencyBlur(enabled) => {
+                self.settings.transparency_blur = enabled;
+            }
+            UiMessage::SetUiAnimations(enabled) => {
+                self.settings.ui_animations = enabled;
             }
             UiMessage::SetDefaultVolume(volume) => {
                 self.settings.default_volume = volume.min(100);

@@ -9,11 +9,22 @@ use tracing::warn;
 pub enum ThemeMode {
     Dark,
     Light,
+    System,
 }
 
 impl Default for ThemeMode {
     fn default() -> Self {
         Self::Dark
+    }
+}
+
+impl ThemeMode {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Dark => "Sombre",
+            Self::Light => "Clair",
+            Self::System => "Système",
+        }
     }
 }
 
@@ -39,11 +50,75 @@ impl TextScale {
         }
     }
 
+    pub fn slider_value(self) -> f32 {
+        match self {
+            Self::Normal => 0.0,
+            Self::Large => 1.0,
+            Self::ExtraLarge => 2.0,
+        }
+    }
+
+    pub fn from_slider_value(value: f32) -> Self {
+        match value.round() as i32 {
+            0 => Self::Normal,
+            1 => Self::Large,
+            _ => Self::ExtraLarge,
+        }
+    }
+
     pub fn label(self) -> &'static str {
         match self {
             Self::Normal => "Normal",
             Self::Large => "Large",
             Self::ExtraLarge => "Très grand",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AccentColor {
+    Blue,
+    Violet,
+    Green,
+    Amber,
+}
+
+impl Default for AccentColor {
+    fn default() -> Self {
+        Self::Blue
+    }
+}
+
+impl AccentColor {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Blue => "Bleu",
+            Self::Violet => "Violet",
+            Self::Green => "Vert",
+            Self::Amber => "Ambre",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum InterfaceDensity {
+    Compact,
+    Comfort,
+    Large,
+}
+
+impl Default for InterfaceDensity {
+    fn default() -> Self {
+        Self::Comfort
+    }
+}
+
+impl InterfaceDensity {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Compact => "Compact",
+            Self::Comfort => "Confort",
+            Self::Large => "Large",
         }
     }
 }
@@ -278,7 +353,13 @@ impl AudioStabilityMode {
 #[serde(default)]
 pub struct UserSettings {
     pub theme_mode: ThemeMode,
+    pub follow_system_theme: bool,
+    pub accent_color: AccentColor,
+    pub accent_auto: bool,
     pub text_scale: TextScale,
+    pub interface_density: InterfaceDensity,
+    pub transparency_blur: bool,
+    pub ui_animations: bool,
     pub default_volume: u8,
     pub output_device: AudioOutputDevice,
     pub missing_device_behavior: MissingDeviceBehavior,
@@ -315,7 +396,13 @@ impl Default for UserSettings {
     fn default() -> Self {
         Self {
             theme_mode: ThemeMode::Dark,
+            follow_system_theme: false,
+            accent_color: AccentColor::default(),
+            accent_auto: true,
             text_scale: TextScale::Normal,
+            interface_density: InterfaceDensity::default(),
+            transparency_blur: true,
+            ui_animations: true,
             default_volume: 72,
             output_device: AudioOutputDevice::default(),
             missing_device_behavior: MissingDeviceBehavior::default(),

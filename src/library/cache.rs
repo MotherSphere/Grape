@@ -92,12 +92,18 @@ pub fn store_album(
     fs::write(folder_cache_path(root, &key), contents)?;
 
     let modified_secs = folder_modified_secs(album_path)?;
-    index.entries.insert(key.clone(), FolderEntry { modified_secs });
+    index
+        .entries
+        .insert(key.clone(), FolderEntry { modified_secs });
 
     Ok(key)
 }
 
-pub fn finalize(root: &Path, index: &mut CacheIndex, used_keys: &HashSet<String>) -> io::Result<()> {
+pub fn finalize(
+    root: &Path,
+    index: &mut CacheIndex,
+    used_keys: &HashSet<String>,
+) -> io::Result<()> {
     if !root.exists() {
         return Ok(());
     }
