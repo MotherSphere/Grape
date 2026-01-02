@@ -34,60 +34,6 @@ impl Default for PreferencesTab {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PreferencesSection {
-    Startup,
-    Language,
-    Updates,
-    Privacy,
-    Storage,
-    Notifications,
-    Performance,
-    Advanced,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct PreferencesSectionsState {
-    pub startup: bool,
-    pub language: bool,
-    pub updates: bool,
-    pub privacy: bool,
-    pub storage: bool,
-    pub notifications: bool,
-    pub performance: bool,
-    pub advanced: bool,
-}
-
-impl PreferencesSectionsState {
-    pub fn toggle(&mut self, section: PreferencesSection) {
-        match section {
-            PreferencesSection::Startup => self.startup = !self.startup,
-            PreferencesSection::Language => self.language = !self.language,
-            PreferencesSection::Updates => self.updates = !self.updates,
-            PreferencesSection::Privacy => self.privacy = !self.privacy,
-            PreferencesSection::Storage => self.storage = !self.storage,
-            PreferencesSection::Notifications => self.notifications = !self.notifications,
-            PreferencesSection::Performance => self.performance = !self.performance,
-            PreferencesSection::Advanced => self.advanced = !self.advanced,
-        }
-    }
-}
-
-impl Default for PreferencesSectionsState {
-    fn default() -> Self {
-        Self {
-            startup: true,
-            language: false,
-            updates: false,
-            privacy: false,
-            storage: true,
-            notifications: false,
-            performance: false,
-            advanced: false,
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Artist {
     pub id: usize,
@@ -221,7 +167,6 @@ pub struct UiState {
     pub playlist_open: bool,
     pub preferences_open: bool,
     pub preferences_tab: PreferencesTab,
-    pub preferences_sections: PreferencesSectionsState,
     pub settings: UserSettings,
 }
 
@@ -236,7 +181,6 @@ impl UiState {
             playlist_open: false,
             preferences_open: false,
             preferences_tab: PreferencesTab::default(),
-            preferences_sections: PreferencesSectionsState::default(),
             settings,
         }
     }
@@ -309,76 +253,6 @@ impl UiState {
             }
             UiMessage::SetDefaultVolume(volume) => {
                 self.settings.default_volume = volume.min(100);
-            }
-            UiMessage::SetLaunchAtStartup(enabled) => {
-                self.settings.launch_at_startup = enabled;
-            }
-            UiMessage::SetRestoreLastSession(enabled) => {
-                self.settings.restore_last_session = enabled;
-            }
-            UiMessage::SetOpenOn(open_on) => {
-                self.settings.open_on = open_on;
-            }
-            UiMessage::SetCloseBehavior(behavior) => {
-                self.settings.close_behavior = behavior;
-            }
-            UiMessage::SetInterfaceLanguage(language) => {
-                self.settings.interface_language = language;
-            }
-            UiMessage::SetTimeFormat(format) => {
-                self.settings.time_format = format;
-            }
-            UiMessage::SetAutoCheckUpdates(enabled) => {
-                self.settings.auto_check_updates = enabled;
-            }
-            UiMessage::SetUpdateChannel(channel) => {
-                self.settings.update_channel = channel;
-            }
-            UiMessage::SetAutoInstallUpdates(enabled) => {
-                self.settings.auto_install_updates = enabled;
-            }
-            UiMessage::SetSendErrorReports(enabled) => {
-                self.settings.send_error_reports = enabled;
-            }
-            UiMessage::SetSendUsageStats(enabled) => {
-                self.settings.send_usage_stats = enabled;
-            }
-            UiMessage::LibraryFolderChanged(path) => {
-                self.settings.library_folder = path;
-            }
-            UiMessage::PickLibraryFolder => {}
-            UiMessage::LibraryFolderPicked(path) => {
-                if let Some(path) = path {
-                    self.settings.library_folder = path;
-                }
-            }
-            UiMessage::SetAutoScanOnLaunch(enabled) => {
-                self.settings.auto_scan_on_launch = enabled;
-            }
-            UiMessage::CachePathChanged(path) => {
-                self.settings.cache_path = path;
-            }
-            UiMessage::ClearCache => {}
-            UiMessage::ClearHistory => {}
-            UiMessage::SetNotificationsEnabled(enabled) => {
-                self.settings.notifications_enabled = enabled;
-            }
-            UiMessage::SetNowPlayingNotifications(enabled) => {
-                self.settings.now_playing_notifications = enabled;
-            }
-            UiMessage::SetHardwareAcceleration(enabled) => {
-                self.settings.hardware_acceleration = enabled;
-            }
-            UiMessage::SetLimitCpuDuringPlayback(enabled) => {
-                self.settings.limit_cpu_during_playback = enabled;
-            }
-            UiMessage::OpenLogsFolder => {}
-            UiMessage::ReindexLibrary => {}
-            UiMessage::ResetPreferences => {
-                self.settings = UserSettings::default();
-            }
-            UiMessage::TogglePreferencesSection(section) => {
-                self.preferences_sections.toggle(section);
             }
             UiMessage::CloseMenu => {
                 self.menu_open = false;
