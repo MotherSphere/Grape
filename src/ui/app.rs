@@ -3,18 +3,21 @@ use crate::player::{PlaybackState as PlayerPlaybackState, Player};
 use crate::ui::components::albums_grid::AlbumsGrid;
 use crate::ui::components::anchored_overlay::AnchoredOverlay;
 use crate::ui::components::artists_panel::ArtistsPanel;
+use crate::ui::components::folders_panel::FoldersPanel;
+use crate::ui::components::genres_panel::GenresPanel;
 use crate::ui::components::player_bar::PlayerBar;
 use crate::ui::components::playlist_view::PlaylistView;
 use crate::ui::components::songs_panel::SongsPanel;
 use crate::ui::message::{PlaybackMessage, SearchMessage, UiMessage};
 use crate::ui::state::{
-    ActiveTab, Album as UiAlbum, Artist as UiArtist, SortOption, Track as UiTrack, UiState,
+    ActiveTab, Album as UiAlbum, Artist as UiArtist, Folder as UiFolder, Genre as UiGenre,
+    SortOption, Track as UiTrack, UiState,
 };
 use crate::ui::style;
 use iced::font::Weight;
 use iced::theme::{Button, Container, TextInput};
 use iced::widget::{button, column, container, row, text, text_input};
-use iced::{event, keyboard, mouse, Alignment, Application, Command, Element, Length, Settings};
+use iced::{Alignment, Application, Command, Element, Length, Settings, event, keyboard, mouse};
 use iced::{Subscription, Theme};
 use std::time::Duration;
 use tracing::error;
@@ -77,11 +80,7 @@ impl GrapeApp {
 
     fn normalized_query(&self) -> Option<String> {
         let query = self.ui.search.query.trim().to_lowercase();
-        if query.is_empty() {
-            None
-        } else {
-            Some(query)
-        }
+        if query.is_empty() { None } else { Some(query) }
     }
 
     fn albums_from_catalog(&self) -> Vec<UiAlbum> {
@@ -154,6 +153,28 @@ impl GrapeApp {
         artists
     }
 
+    fn genres_from_catalog(&self) -> Vec<UiGenre> {
+        self.catalog
+            .genres()
+            .into_iter()
+            .enumerate()
+            .map(|(id, genre)| UiGenre {
+                id,
+                name: genre.name,
+                track_count: genre.track_count,
+            })
+            .collect()
+    }
+
+    fn filtered_genres_from_catalog(&self) -> Vec<UiGenre> {
+        let mut genres = self.genres_from_catalog();
+        if let Some(query) = self.normalized_query() {
+            genres.retain(|genre| genre.name.to_lowercase().contains(&query));
+        }
+        genres.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+        genres
+    }
+
     fn album_entry_by_id(
         &self,
         album_id: usize,
@@ -223,6 +244,28 @@ impl GrapeApp {
             }
         }
         tracks
+    }
+
+    fn folders_from_catalog(&self) -> Vec<UiFolder> {
+        self.catalog
+            .folders()
+            .into_iter()
+            .enumerate()
+            .map(|(id, folder)| UiFolder {
+                id,
+                name: folder.name,
+                track_count: folder.track_count,
+            })
+            .collect()
+    }
+
+    fn filtered_folders_from_catalog(&self) -> Vec<UiFolder> {
+        let mut folders = self.folders_from_catalog();
+        if let Some(query) = self.normalized_query() {
+            folders.retain(|folder| folder.name.to_lowercase().contains(&query));
+        }
+        folders.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+        folders
     }
 
     fn top_bar(&self) -> Element<'_, UiMessage> {
@@ -425,6 +468,26 @@ impl GrapeApp {
         panel.view(&self.ui.selection)
     }
 
+    fn genres_panel(&self) -> Element<'_, UiMessage> {
+        let selected_id = None;
+        let genres = self.filtered_genres_from_catalog();
+        let panel = GenresPanel::new(genres).with_selection(selected_id);
+        panel.view()
+    }
+
+    fn folders_panel(&self) -> Element<'_, UiMessage> {
+        let sort_label = match self.ui.search.sort {
+            SortOption::Alphabetical => "A–Z",
+            SortOption::ByAlbum => "By album",
+        };
+        let selected_id = None;
+        let folders = self.filtered_folders_from_catalog();
+        FoldersPanel::new(folders)
+            .with_sort_label(sort_label)
+            .with_selection(selected_id)
+            .view()
+    }
+
     fn player_bar(&self) -> Element<'_, UiMessage> {
         let (title, artist) = self
             .ui
@@ -562,8 +625,14 @@ impl Application for GrapeApp {
             return self.playlist_view();
         }
 
+        let left_panel = match self.ui.active_tab {
+            ActiveTab::Artists | ActiveTab::Albums => self.artists_panel(),
+            ActiveTab::Genres => self.genres_panel(),
+            ActiveTab::Folders => self.folders_panel(),
+        };
+
         let content = row![
-            container(self.artists_panel())
+            container(left_panel)
                 .width(Length::FillPortion(2))
                 .height(Length::Fill),
             container(self.albums_panel())

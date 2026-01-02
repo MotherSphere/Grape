@@ -1,30 +1,24 @@
 #![allow(dead_code)]
 
 use crate::ui::message::UiMessage;
+use crate::ui::state::Genre;
 use crate::ui::style;
 use iced::font::Weight;
 use iced::theme::{Button, Container};
 use iced::widget::{button, column, container, row, scrollable, text};
 use iced::{Alignment, Element, Length};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct GenreEntry {
-    pub id: usize,
-    pub name: String,
-    pub track_count: usize,
-}
-
 #[derive(Debug, Clone)]
 pub struct GenresPanel {
     total_count: usize,
-    genres: Vec<GenreEntry>,
+    genres: Vec<Genre>,
     selected_genre_id: Option<usize>,
     scroll_offset: usize,
     viewport_size: usize,
 }
 
 impl GenresPanel {
-    pub fn new(genres: Vec<GenreEntry>) -> Self {
+    pub fn new(genres: Vec<Genre>) -> Self {
         let total_count = genres.len();
         Self {
             total_count,
