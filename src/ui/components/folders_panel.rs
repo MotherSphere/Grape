@@ -73,14 +73,14 @@ impl FoldersPanel {
             text(format!("{} Folders", self.folders.len()))
                 .size(theme.size(16))
                 .font(style::font_propo(Weight::Semibold))
-                .style(style::text_primary(theme)),
+                .style(move |_| style::text_style_primary(theme)),
             text(sort_label)
                 .size(theme.size(12))
                 .font(style::font_propo(Weight::Light))
-                .style(style::text_muted(theme))
+                .style(move |_| style::text_style_muted(theme))
         ]
         .spacing(8)
-        .align_items(Alignment::Center);
+        .align_y(Alignment::Center);
 
         let content = match self.layout {
             FolderLayout::Grid => self.grid_view(header.into(), theme),
@@ -112,7 +112,7 @@ impl FoldersPanel {
                             text("▣")
                                 .size(theme.size(26))
                                 .font(style::font_propo(Weight::Medium))
-                                .style(style::text_muted(theme)),
+                                .style(move |_| style::text_style_muted(theme)),
                         )
                         .width(Length::Fixed(120.0))
                         .height(Length::Fixed(120.0))
@@ -122,14 +122,14 @@ impl FoldersPanel {
                         let title = text(folder.name.clone())
                             .size(theme.size(14))
                             .font(style::font_propo(Weight::Medium))
-                            .style(style::text_primary(theme));
+                            .style(move |_| style::text_style_primary(theme));
                         let count = text(format!("{} tracks", folder.track_count))
                             .size(theme.size(12))
                             .font(style::font_propo(Weight::Light))
-                            .style(style::text_muted(theme));
+                            .style(move |_| style::text_style_muted(theme));
                         let card = column![icon, title, count]
                             .spacing(6)
-                            .align_items(Alignment::Center)
+                            .align_x(Alignment::Center)
                             .width(Length::Fill);
 
                         button(card)
@@ -150,7 +150,7 @@ impl FoldersPanel {
 
                 row(cells)
                     .spacing(16)
-                    .align_items(Alignment::Start)
+                    .align_y(Alignment::Start)
                     .width(Length::Fill)
                     .into()
             })
@@ -158,11 +158,11 @@ impl FoldersPanel {
         let grid = column(rows)
             .spacing(20)
             .width(Length::Fill)
-            .align_items(Alignment::Start);
+            .align_x(Alignment::Start);
         column![header, grid]
             .spacing(12)
             .width(Length::Fill)
-            .align_items(Alignment::Start)
+            .align_x(Alignment::Start)
             .into()
     }
 
@@ -180,7 +180,7 @@ impl FoldersPanel {
                         text("▣")
                             .size(theme.size(16))
                             .font(style::font_propo(Weight::Medium))
-                            .style(style::text_primary(theme)),
+                            .style(move |_| style::text_style_primary(theme)),
                     )
                     .width(Length::Fixed(28.0))
                     .height(Length::Fixed(28.0))
@@ -190,18 +190,18 @@ impl FoldersPanel {
                     let title = text(folder.name.clone())
                         .size(theme.size(14))
                         .font(style::font_propo(Weight::Medium))
-                        .style(style::text_primary(theme));
+                        .style(move |_| style::text_style_primary(theme));
                     let count = text(format!("{} tracks", folder.track_count))
                         .size(theme.size(12))
                         .font(style::font_propo(Weight::Light))
-                        .style(style::text_muted(theme));
+                        .style(move |_| style::text_style_muted(theme));
                     let details = column![title, count]
                         .spacing(2)
                         .width(Length::Fill)
-                        .align_items(Alignment::Start);
+                        .align_x(Alignment::Start);
                     let row_content = row![icon, details]
                         .spacing(10)
-                        .align_items(Alignment::Center)
+                        .align_y(Alignment::Center)
                         .width(Length::Fill);
 
                     button(row_content)
@@ -222,11 +222,11 @@ impl FoldersPanel {
         let list = column(list_items)
             .spacing(8)
             .width(Length::Fill)
-            .align_items(Alignment::Start);
+            .align_x(Alignment::Start);
         column![header, list]
             .spacing(12)
             .width(Length::Fill)
-            .align_items(Alignment::Start)
+            .align_x(Alignment::Start)
             .into()
     }
 

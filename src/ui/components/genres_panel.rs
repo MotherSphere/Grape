@@ -44,14 +44,14 @@ impl GenresPanel {
             text(format!("{} Genres", self.total_count))
                 .size(theme.size(16))
                 .font(style::font_propo(Weight::Semibold))
-                .style(style::text_primary(theme)),
+                .style(move |_| style::text_style_primary(theme)),
             text("A–Z")
                 .size(theme.size(12))
                 .font(style::font_propo(Weight::Light))
-                .style(style::text_muted(theme))
+                .style(move |_| style::text_style_muted(theme))
         ]
         .spacing(8)
-        .align_items(Alignment::Center);
+        .align_y(Alignment::Center);
         let list_items =
             self.genres
                 .iter()
@@ -61,7 +61,7 @@ impl GenresPanel {
                         text(genre.name.chars().next().unwrap_or('?').to_string())
                             .size(theme.size(12))
                             .font(style::font_propo(Weight::Medium))
-                            .style(style::text_primary(theme)),
+                            .style(move |_| style::text_style_primary(theme)),
                     )
                     .width(Length::Fixed(24.0))
                     .height(Length::Fixed(24.0))
@@ -70,19 +70,19 @@ impl GenresPanel {
                     .style(move |_| style::surface_style(theme, style::Surface::Avatar));
                     let name = text(genre.name.clone())
                         .font(style::font_propo(Weight::Medium))
-                        .style(style::text_primary(theme))
+                        .style(move |_| style::text_style_primary(theme))
                         .size(theme.size(14));
                     let count = text(format!("{} tracks", genre.track_count))
                         .font(style::font_propo(Weight::Light))
-                        .style(style::text_muted(theme))
+                        .style(move |_| style::text_style_muted(theme))
                         .size(theme.size(12));
                     let details = column![name, count]
                         .spacing(2)
-                        .align_items(Alignment::Start)
+                        .align_x(Alignment::Start)
                         .width(Length::Fill);
                     let row_content = row![badge, details]
                         .spacing(10)
-                        .align_items(Alignment::Center)
+                        .align_y(Alignment::Center)
                         .width(Length::Fill);
                     button(row_content)
                         .style(move |_, status| {
@@ -102,7 +102,7 @@ impl GenresPanel {
         let list = column(list_items)
             .spacing(6)
             .width(Length::Fill)
-            .align_items(Alignment::Start);
+            .align_x(Alignment::Start);
         let scrollable_list = scrollable(list).height(Length::Fill);
         let content = column![header, scrollable_list]
             .spacing(12)

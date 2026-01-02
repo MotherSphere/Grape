@@ -64,14 +64,14 @@ impl AlbumsGrid {
             text(format!("{} Albums", self.albums.len()))
                 .size(theme.size(16))
                 .font(style::font_propo(Weight::Semibold))
-                .style(style::text_primary(theme)),
+                .style(move |_| style::text_style_primary(theme)),
             text(format!("{} ", self.sort_label))
                 .size(theme.size(12))
                 .font(style::font_propo(Weight::Light))
-                .style(style::text_muted(theme))
+                .style(move |_| style::text_style_muted(theme))
         ]
         .spacing(8)
-        .align_items(Alignment::Center);
+        .align_y(Alignment::Center);
         let rows = self
             .albums
             .chunks(self.columns)
@@ -90,7 +90,7 @@ impl AlbumsGrid {
                                 text("♪")
                                     .size(theme.size(26))
                                     .font(style::font_propo(Weight::Medium))
-                                    .style(style::text_muted(theme))
+                                    .style(move |_| style::text_style_muted(theme))
                                     .into()
                             };
                         let cover = container(cover_content)
@@ -105,14 +105,14 @@ impl AlbumsGrid {
                         let title = text(album.title.clone())
                             .size(theme.size(14))
                             .font(style::font_propo(Weight::Medium))
-                            .style(style::text_primary(theme));
+                            .style(move |_| style::text_style_primary(theme));
                         let artist = text(album.artist.clone())
                             .size(theme.size(12))
                             .font(style::font_propo(Weight::Light))
-                            .style(style::text_muted(theme));
+                            .style(move |_| style::text_style_muted(theme));
                         let card = column![cover, title, artist]
                             .spacing(6)
-                            .align_items(Alignment::Center)
+                            .align_x(Alignment::Center)
                             .width(Length::Fill);
 
                         button(card)
@@ -133,7 +133,7 @@ impl AlbumsGrid {
 
                 row(cells)
                     .spacing(16)
-                    .align_items(Alignment::Start)
+                    .align_y(Alignment::Start)
                     .width(Length::Fill)
                     .into()
             })
@@ -141,11 +141,11 @@ impl AlbumsGrid {
         let grid = column(rows)
             .spacing(20)
             .width(Length::Fill)
-            .align_items(Alignment::Start);
+            .align_x(Alignment::Start);
         let content = column![header, grid]
             .spacing(12)
             .width(Length::Fill)
-            .align_items(Alignment::Start);
+            .align_x(Alignment::Start);
 
         container(scrollable(content))
             .width(Length::Fill)

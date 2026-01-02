@@ -61,7 +61,7 @@ where
         limits: &Limits,
     ) -> Node {
         self.content
-            .as_widget()
+            .as_widget_mut()
             .layout(&mut tree.children[0], renderer, limits)
     }
 
@@ -69,7 +69,7 @@ where
         &mut self,
         tree: &mut widget::Tree,
         event: &Event,
-        layout: Layout<'_>,
+        layout: Layout<'b>,
         cursor: mouse::Cursor,
         renderer: &iced::Renderer,
         clipboard: &mut dyn Clipboard,
