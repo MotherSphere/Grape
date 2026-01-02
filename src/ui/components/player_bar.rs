@@ -5,12 +5,12 @@ use crate::ui::state::{PlaybackState, RepeatMode};
 use crate::ui::style;
 use iced::font::Weight;
 use iced::theme::{Button, Container};
-use iced::widget::{button, column, container, progress_bar, row, text};
+use iced::widget::{button, column, container, image, progress_bar, row, text};
 use iced::{Alignment, Element, Length};
 
 #[derive(Debug, Clone)]
 pub struct PlayerBar {
-    artwork: String,
+    cover_path: Option<std::path::PathBuf>,
     title: String,
     artist: String,
     playback: PlaybackState,
@@ -21,7 +21,7 @@ pub struct PlayerBar {
 impl PlayerBar {
     pub fn new(title: impl Into<String>, artist: impl Into<String>) -> Self {
         Self {
-            artwork: "██".to_string(),
+            cover_path: None,
             title: title.into(),
             artist: artist.into(),
             playback: PlaybackState::default(),
@@ -30,8 +30,8 @@ impl PlayerBar {
         }
     }
 
-    pub fn with_artwork(mut self, artwork: impl Into<String>) -> Self {
-        self.artwork = artwork.into();
+    pub fn with_cover(mut self, cover_path: Option<std::path::PathBuf>) -> Self {
+        self.cover_path = cover_path;
         self
     }
 
@@ -72,26 +72,33 @@ impl PlayerBar {
 
     pub fn view(self) -> Element<'static, UiMessage> {
         let PlayerBar {
-            artwork,
+            cover_path,
             title,
             artist,
             playback,
             volume,
             queue_active,
         } = self;
-        let cover = container(
-            text(artwork)
+        let cover_content: Element<UiMessage> = if let Some(path) = cover_path {
+            image(image::Handle::from_path(path))
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .into()
+        } else {
+            text("♪")
                 .size(18)
                 .font(style::font_propo(Weight::Medium))
-                .style(style::text_muted()),
-        )
-        .width(Length::Fixed(42.0))
-        .height(Length::Fixed(42.0))
-        .center_x()
-        .center_y()
-        .style(Container::Custom(Box::new(style::SurfaceStyle(
-            style::Surface::AlbumCover,
-        ))));
+                .style(style::text_muted())
+                .into()
+        };
+        let cover = container(cover_content)
+            .width(Length::Fixed(42.0))
+            .height(Length::Fixed(42.0))
+            .center_x()
+            .center_y()
+            .style(Container::Custom(Box::new(style::SurfaceStyle(
+                style::Surface::AlbumCover,
+            ))));
         let left = row![
             cover,
             column![
@@ -195,7 +202,12 @@ impl PlayerBar {
     }
 
     pub fn render(&self) -> String {
-        let left = format!("[{}] {} — {}", self.artwork, self.title, self.artist);
+        let artwork = if self.cover_path.is_some() {
+            "🖼"
+        } else {
+            "♪"
+        };
+        let left = format!("[{}] {} — {}", artwork, self.title, self.artist);
         let controls = format!(
             "{} ⏮ {} ⏭ {}",
             shuffle_icon(self.playback.shuffle),
@@ -221,19 +233,11 @@ impl PlayerBar {
 }
 
 fn shuffle_icon(active: bool) -> &'static str {
-    if active {
-        "\u{f049d}"
-    } else {
-        "\u{f049e}"
-    }
+    if active { "\u{f049d}" } else { "\u{f049e}" }
 }
 
 fn play_pause_icon(is_playing: bool) -> &'static str {
-    if is_playing {
-        "\u{f03e4}"
-    } else {
-        "\u{f040a}"
-    }
+    if is_playing { "\u{f03e4}" } else { "\u{f040a}" }
 }
 
 fn repeat_icon(mode: RepeatMode) -> &'static str {
@@ -254,11 +258,7 @@ fn volume_icon(volume: u8) -> &'static str {
 }
 
 fn queue_icon(active: bool) -> &'static str {
-    if active {
-        "\u{f0cb8}"
-    } else {
-        "\u{f0cb9}"
-    }
+    if active { "\u{f0cb8}" } else { "\u{f0cb9}" }
 }
 
 fn progress_ratio(position: std::time::Duration, duration: std::time::Duration) -> f32 {

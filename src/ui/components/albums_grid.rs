@@ -5,7 +5,7 @@ use crate::ui::state::Album;
 use crate::ui::style;
 use iced::font::Weight;
 use iced::theme::{Button, Container};
-use iced::widget::{button, column, container, row, scrollable, text};
+use iced::widget::{button, column, container, image, row, scrollable, text};
 use iced::{Alignment, Element, Length};
 
 #[derive(Debug, Clone)]
@@ -81,19 +81,27 @@ impl AlbumsGrid {
                     .iter()
                     .map(|album| {
                         let is_selected = Some(album.id) == self.selected_album_id;
-                        let cover = container(
-                            text("♪")
-                                .size(26)
-                                .font(style::font_propo(Weight::Medium))
-                                .style(style::text_muted()),
-                        )
-                        .width(Length::Fixed(120.0))
-                        .height(Length::Fixed(120.0))
-                        .center_x()
-                        .center_y()
-                        .style(Container::Custom(Box::new(
-                            style::SurfaceStyle(style::Surface::AlbumCover),
-                        )));
+                        let cover_content: Element<UiMessage> =
+                            if let Some(cover_path) = &album.cover_path {
+                                image(image::Handle::from_path(cover_path))
+                                    .width(Length::Fill)
+                                    .height(Length::Fill)
+                                    .into()
+                            } else {
+                                text("♪")
+                                    .size(26)
+                                    .font(style::font_propo(Weight::Medium))
+                                    .style(style::text_muted())
+                                    .into()
+                            };
+                        let cover = container(cover_content)
+                            .width(Length::Fixed(120.0))
+                            .height(Length::Fixed(120.0))
+                            .center_x()
+                            .center_y()
+                            .style(Container::Custom(Box::new(style::SurfaceStyle(
+                                style::Surface::AlbumCover,
+                            ))));
 
                         let title = text(album.title.clone())
                             .size(14)
@@ -190,7 +198,13 @@ impl AlbumsGrid {
 
     fn build_cell(&self, album: &Album, cover_width: usize, cover_height: usize) -> Vec<String> {
         let is_selected = Some(album.id) == self.selected_album_id;
-        let cover_char = if is_selected { '▓' } else { '█' };
+        let cover_char = if album.cover_path.is_some() {
+            if is_selected { '▓' } else { '▒' }
+        } else if is_selected {
+            '▓'
+        } else {
+            '█'
+        };
         let cover_line = cover_char.to_string().repeat(cover_width);
         let mut cell = Vec::with_capacity(cover_height + 2);
 
