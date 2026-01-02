@@ -34,6 +34,20 @@ pub struct Album {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Genre {
+    pub id: usize,
+    pub name: String,
+    pub track_count: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Folder {
+    pub id: usize,
+    pub name: String,
+    pub track_count: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Track {
     pub id: usize,
     pub title: String,

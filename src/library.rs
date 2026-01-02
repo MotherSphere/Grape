@@ -13,6 +13,18 @@ pub struct Catalog {
     pub artists: Vec<Artist>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GenreSummary {
+    pub name: String,
+    pub track_count: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FolderSummary {
+    pub name: String,
+    pub track_count: usize,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Artist {
     pub name: String,
@@ -39,6 +51,44 @@ impl Catalog {
         Self {
             artists: Vec::new(),
         }
+    }
+
+    pub fn genres(&self) -> Vec<GenreSummary> {
+        let total_tracks = self
+            .artists
+            .iter()
+            .flat_map(|artist| artist.albums.iter())
+            .map(|album| album.tracks.len())
+            .sum::<usize>();
+        if total_tracks == 0 {
+            return Vec::new();
+        }
+        vec![GenreSummary {
+            name: "Unknown".to_string(),
+            track_count: total_tracks,
+        }]
+    }
+
+    pub fn folders(&self) -> Vec<FolderSummary> {
+        let mut folders = Vec::new();
+        for artist in &self.artists {
+            for album in &artist.albums {
+                if album.tracks.is_empty() {
+                    continue;
+                }
+                let album_folder = if album.year > 0 {
+                    format!("{:04} - {}", album.year, album.title)
+                } else {
+                    album.title.clone()
+                };
+                let name = format!("{}/{}", artist.name, album_folder);
+                folders.push(FolderSummary {
+                    name,
+                    track_count: album.tracks.len(),
+                });
+            }
+        }
+        folders
     }
 
     #[allow(dead_code)]

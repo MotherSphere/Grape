@@ -1,18 +1,12 @@
 #![allow(dead_code)]
 
 use crate::ui::message::UiMessage;
+use crate::ui::state::Folder;
 use crate::ui::style;
 use iced::font::Weight;
 use iced::theme::{Button, Container};
 use iced::widget::{button, column, container, row, scrollable, text};
 use iced::{Alignment, Element, Length};
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct FolderEntry {
-    pub id: usize,
-    pub name: String,
-    pub track_count: usize,
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FolderLayout {
@@ -23,7 +17,7 @@ pub enum FolderLayout {
 #[derive(Debug, Clone)]
 pub struct FoldersPanel {
     sort_label: String,
-    folders: Vec<FolderEntry>,
+    folders: Vec<Folder>,
     selected_folder_id: Option<usize>,
     layout: FolderLayout,
     columns: usize,
@@ -32,7 +26,7 @@ pub struct FoldersPanel {
 }
 
 impl FoldersPanel {
-    pub fn new(folders: Vec<FolderEntry>) -> Self {
+    pub fn new(folders: Vec<Folder>) -> Self {
         Self {
             sort_label: "By name".to_string(),
             folders,
@@ -183,9 +177,9 @@ impl FoldersPanel {
                 .height(Length::Fixed(28.0))
                 .center_x()
                 .center_y()
-                .style(Container::Custom(Box::new(
-                    style::SurfaceStyle(style::Surface::AlbumCover),
-                )));
+                .style(Container::Custom(Box::new(style::SurfaceStyle(
+                    style::Surface::AlbumCover,
+                ))));
                 let title = text(folder.name.clone())
                     .size(14)
                     .font(style::font_propo(Weight::Medium))
