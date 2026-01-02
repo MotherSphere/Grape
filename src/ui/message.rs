@@ -1,8 +1,12 @@
 #![allow(dead_code)]
 
-use crate::config::{TextScale, ThemeMode};
+use crate::config::{
+    CloseBehavior, InterfaceLanguage, StartupScreen, TextScale, ThemeMode, TimeFormat,
+    UpdateChannel,
+};
 use crate::ui::state::{
-    ActiveTab, Album, Artist, Folder, Genre, PreferencesTab, SortOption, Track,
+    ActiveTab, Album, Artist, Folder, Genre, PreferencesSection, PreferencesTab, SortOption,
+    Track,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -25,6 +29,32 @@ pub enum UiMessage {
     SetThemeMode(ThemeMode),
     SetTextScale(TextScale),
     SetDefaultVolume(u8),
+    SetLaunchAtStartup(bool),
+    SetRestoreLastSession(bool),
+    SetOpenOn(StartupScreen),
+    SetCloseBehavior(CloseBehavior),
+    SetInterfaceLanguage(InterfaceLanguage),
+    SetTimeFormat(TimeFormat),
+    SetAutoCheckUpdates(bool),
+    SetUpdateChannel(UpdateChannel),
+    SetAutoInstallUpdates(bool),
+    SetSendErrorReports(bool),
+    SetSendUsageStats(bool),
+    LibraryFolderChanged(String),
+    PickLibraryFolder,
+    LibraryFolderPicked(Option<String>),
+    SetAutoScanOnLaunch(bool),
+    CachePathChanged(String),
+    ClearCache,
+    ClearHistory,
+    SetNotificationsEnabled(bool),
+    SetNowPlayingNotifications(bool),
+    SetHardwareAcceleration(bool),
+    SetLimitCpuDuringPlayback(bool),
+    OpenLogsFolder,
+    ReindexLibrary,
+    ResetPreferences,
+    TogglePreferencesSection(PreferencesSection),
     CloseMenu,
 }
 
