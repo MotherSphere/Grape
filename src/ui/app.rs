@@ -1,4 +1,7 @@
-use crate::config::{self, TextScale, ThemeMode};
+use crate::config::{
+    self, CloseBehavior, InterfaceLanguage, StartupScreen, TextScale, ThemeMode, TimeFormat,
+    UpdateChannel,
+};
 use crate::library::Catalog;
 use crate::player::{PlaybackState as PlayerPlaybackState, Player};
 use crate::ui::components::albums_grid::AlbumsGrid;
@@ -12,16 +15,16 @@ use crate::ui::components::songs_panel::SongsPanel;
 use crate::ui::message::{PlaybackMessage, SearchMessage, UiMessage};
 use crate::ui::state::{
     ActiveTab, Album as UiAlbum, Artist as UiArtist, Folder as UiFolder, Genre as UiGenre,
-    PreferencesTab, SortOption, Track as UiTrack, UiState,
+    PreferencesSection, PreferencesTab, SortOption, Track as UiTrack, UiState,
 };
 use crate::ui::style;
 use iced::font::Weight;
 use iced::theme::{Button, Container, TextInput};
-use iced::widget::{button, column, container, row, slider, text, text_input};
+use iced::widget::{button, column, container, row, scrollable, slider, text, text_input};
 use iced::{Alignment, Application, Command, Element, Length, Settings, event, keyboard, mouse};
 use iced::{Subscription, Theme};
 use std::time::Duration;
-use tracing::error;
+use tracing::{error, info};
 
 pub struct GrapeApp {
     catalog: Catalog,
@@ -698,17 +701,592 @@ impl GrapeApp {
         .spacing(6)
         .width(Length::Fill);
 
-        let general_panel = column![
-            text("Paramètres généraux")
-                .size(theme.size(16))
-                .font(style::font_propo(Weight::Semibold))
-                .style(style::text_primary(theme)),
-            text("Les préférences sont enregistrées automatiquement.")
-                .size(theme.size(13))
+        let section_header = |label: &str, expanded: bool, message: UiMessage| {
+            let chevron = if expanded { "▾" } else { "▸" };
+            button(
+                row![
+                    text(label)
+                        .size(theme.size(14))
+                        .font(style::font_propo(Weight::Semibold))
+                        .style(style::text_primary(theme)),
+                    text(chevron)
+                        .size(theme.size(14))
+                        .font(style::font_propo(Weight::Medium))
+                        .style(style::text_muted(theme)),
+                ]
+                .spacing(10)
+                .align_items(Alignment::Center),
+            )
+            .style(Button::Custom(Box::new(style::ButtonStyle::new(
+                style::ButtonKind::ListItem { selected: expanded },
+                theme,
+            ))))
+            .padding([8, 12])
+            .width(Length::Fill)
+            .on_press(message)
+        };
+        let section_hint = |label: &str| {
+            text(label)
+                .size(theme.size(12))
                 .font(style::font_propo(Weight::Light))
                 .style(style::text_muted(theme))
-        ]
-        .spacing(8);
+        };
+        let setting_label = |title: &str, subtitle: &str| {
+            column![
+                text(title)
+                    .size(theme.size(13))
+                    .font(style::font_propo(Weight::Medium))
+                    .style(style::text_primary(theme)),
+                text(subtitle)
+                    .size(theme.size(12))
+                    .font(style::font_propo(Weight::Light))
+                    .style(style::text_muted(theme)),
+            ]
+            .spacing(2)
+            .width(Length::Fill)
+        };
+        let option_button = |selected: bool, label: &str, message: UiMessage| {
+            button(
+                text(label)
+                    .size(theme.size(12))
+                    .font(style::font_propo(Weight::Medium))
+                    .style(style::text_primary(theme)),
+            )
+            .style(Button::Custom(Box::new(style::ButtonStyle::new(
+                style::ButtonKind::Tab { selected },
+                theme,
+            ))))
+            .padding([6, 10])
+            .on_press(message)
+        };
+        let toggle_row = |enabled: bool, on_message: UiMessage, off_message: UiMessage| {
+            row![
+                option_button(enabled, "Activé", on_message),
+                option_button(!enabled, "Désactivé", off_message),
+            ]
+            .spacing(8)
+        };
+        let controls = |content: Element<'_, UiMessage>| {
+            container(content)
+                .width(Length::FillPortion(2))
+                .center_x()
+                .padding([0, 0, 0, 24])
+        };
+        let action_button = |label: &str, message: UiMessage| {
+            button(
+                text(label)
+                    .size(theme.size(12))
+                    .font(style::font_propo(Weight::Medium))
+                    .style(style::text_primary(theme)),
+            )
+            .style(Button::Custom(Box::new(style::ButtonStyle::new(
+                style::ButtonKind::Control,
+                theme,
+            ))))
+            .padding([6, 10])
+            .on_press(message)
+        };
+
+        let library_input = text_input("Dossier de bibliothèque", &self.ui.settings.library_folder)
+            .style(TextInput::Custom(Box::new(style::SearchInput::new(theme))))
+            .on_input(UiMessage::LibraryFolderChanged);
+        let cache_input = text_input("Emplacement du cache", &self.ui.settings.cache_path)
+            .style(TextInput::Custom(Box::new(style::SearchInput::new(theme))))
+            .on_input(UiMessage::CachePathChanged);
+
+        let startup_content = || {
+            column![
+                section_hint("Gérez l'ouverture de Grape et la restauration des sessions."),
+                row![
+                    setting_label(
+                        "Lancer Grape au démarrage du système",
+                        "Active l'application dès l'ouverture de votre session."
+                    ),
+                    controls(toggle_row(
+                        self.ui.settings.launch_at_startup,
+                        UiMessage::SetLaunchAtStartup(true),
+                        UiMessage::SetLaunchAtStartup(false),
+                    )
+                    .into()),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label(
+                        "Restaurer la dernière session",
+                        "Lecture, file d'attente et écran affiché."
+                    ),
+                    controls(toggle_row(
+                        self.ui.settings.restore_last_session,
+                        UiMessage::SetRestoreLastSession(true),
+                        UiMessage::SetRestoreLastSession(false),
+                    )
+                    .into()),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label("Ouvrir sur", "Choisissez l'écran par défaut."),
+                    controls(column![
+                        row![
+                            option_button(
+                                self.ui.settings.open_on == StartupScreen::Home,
+                                StartupScreen::Home.label(),
+                                UiMessage::SetOpenOn(StartupScreen::Home),
+                            ),
+                            option_button(
+                                self.ui.settings.open_on == StartupScreen::Library,
+                                StartupScreen::Library.label(),
+                                UiMessage::SetOpenOn(StartupScreen::Library),
+                            ),
+                        ]
+                        .spacing(8),
+                        row![
+                            option_button(
+                                self.ui.settings.open_on == StartupScreen::Playlists,
+                                StartupScreen::Playlists.label(),
+                                UiMessage::SetOpenOn(StartupScreen::Playlists),
+                            ),
+                            option_button(
+                                self.ui.settings.open_on == StartupScreen::LastScreen,
+                                StartupScreen::LastScreen.label(),
+                                UiMessage::SetOpenOn(StartupScreen::LastScreen),
+                            ),
+                        ]
+                        .spacing(8),
+                    ]
+                    .spacing(6)
+                    .into()),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label(
+                        "Comportement à la fermeture",
+                        "Choisissez l'action à la fermeture."
+                    ),
+                    controls(row![
+                        option_button(
+                            self.ui.settings.close_behavior == CloseBehavior::Quit,
+                            CloseBehavior::Quit.label(),
+                            UiMessage::SetCloseBehavior(CloseBehavior::Quit),
+                        ),
+                        option_button(
+                            self.ui.settings.close_behavior == CloseBehavior::MinimizeToTray,
+                            CloseBehavior::MinimizeToTray.label(),
+                            UiMessage::SetCloseBehavior(CloseBehavior::MinimizeToTray),
+                        ),
+                    ]
+                    .spacing(8)
+                    .into()),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+            ]
+            .spacing(12)
+            .padding([4, 12, 0, 12])
+        };
+
+        let language_content = || {
+            column![
+                section_hint("Personnalisez l'interface et le format horaire."),
+                row![
+                    setting_label("Langue de l'interface", "Synchronisée avec le système."),
+                    controls(row![
+                        option_button(
+                            self.ui.settings.interface_language == InterfaceLanguage::System,
+                            InterfaceLanguage::System.label(),
+                            UiMessage::SetInterfaceLanguage(InterfaceLanguage::System),
+                        ),
+                        option_button(
+                            self.ui.settings.interface_language == InterfaceLanguage::French,
+                            InterfaceLanguage::French.label(),
+                            UiMessage::SetInterfaceLanguage(InterfaceLanguage::French),
+                        ),
+                        option_button(
+                            self.ui.settings.interface_language == InterfaceLanguage::English,
+                            InterfaceLanguage::English.label(),
+                            UiMessage::SetInterfaceLanguage(InterfaceLanguage::English),
+                        ),
+                    ]
+                    .spacing(8)
+                    .into()),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label("Format horaire", "Format utilisé dans l'application."),
+                    controls(row![
+                        option_button(
+                            self.ui.settings.time_format == TimeFormat::H24,
+                            TimeFormat::H24.label(),
+                            UiMessage::SetTimeFormat(TimeFormat::H24),
+                        ),
+                        option_button(
+                            self.ui.settings.time_format == TimeFormat::H12,
+                            TimeFormat::H12.label(),
+                            UiMessage::SetTimeFormat(TimeFormat::H12),
+                        ),
+                    ]
+                    .spacing(8)
+                    .into()),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+            ]
+            .spacing(12)
+            .padding([4, 12, 0, 12])
+        };
+
+        let updates_content = || {
+            column![
+                section_hint("Gérez la vérification et le canal des mises à jour."),
+                row![
+                    setting_label(
+                        "Vérifier automatiquement les mises à jour",
+                        "Vérifie les nouvelles versions au lancement."
+                    ),
+                    controls(toggle_row(
+                        self.ui.settings.auto_check_updates,
+                        UiMessage::SetAutoCheckUpdates(true),
+                        UiMessage::SetAutoCheckUpdates(false),
+                    )
+                    .into()),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label("Canal", "Choisissez la stabilité des versions."),
+                    controls(row![
+                        option_button(
+                            self.ui.settings.update_channel == UpdateChannel::Stable,
+                            UpdateChannel::Stable.label(),
+                            UiMessage::SetUpdateChannel(UpdateChannel::Stable),
+                        ),
+                        option_button(
+                            self.ui.settings.update_channel == UpdateChannel::Beta,
+                            UpdateChannel::Beta.label(),
+                            UiMessage::SetUpdateChannel(UpdateChannel::Beta),
+                        ),
+                    ]
+                    .spacing(8)
+                    .into()),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label(
+                        "Télécharger et installer automatiquement",
+                        "Installe les mises à jour en arrière-plan."
+                    ),
+                    controls(toggle_row(
+                        self.ui.settings.auto_install_updates,
+                        UiMessage::SetAutoInstallUpdates(true),
+                        UiMessage::SetAutoInstallUpdates(false),
+                    )
+                    .into()),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+            ]
+            .spacing(12)
+            .padding([4, 12, 0, 12])
+        };
+
+        let privacy_content = || {
+            column![
+                section_hint("Choisissez les données partagées avec Grape."),
+                row![
+                    setting_label(
+                        "Envoyer des rapports d'erreurs",
+                        "Permet d'améliorer la stabilité."
+                    ),
+                    controls(toggle_row(
+                        self.ui.settings.send_error_reports,
+                        UiMessage::SetSendErrorReports(true),
+                        UiMessage::SetSendErrorReports(false),
+                    )
+                    .into()),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label(
+                        "Envoyer des statistiques anonymes d'utilisation",
+                        "Aide à comprendre l'usage de Grape."
+                    ),
+                    controls(toggle_row(
+                        self.ui.settings.send_usage_stats,
+                        UiMessage::SetSendUsageStats(true),
+                        UiMessage::SetSendUsageStats(false),
+                    )
+                    .into()),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label("Effacer l'historique local", "Supprime les traces locales."),
+                    controls(action_button("Effacer", UiMessage::ClearHistory).into()),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+            ]
+            .spacing(12)
+            .padding([4, 12, 0, 12])
+        };
+
+        let storage_content = || {
+            column![
+                section_hint("Gérez l'emplacement de la bibliothèque et du cache."),
+                row![
+                    setting_label(
+                        "Dossier de bibliothèque",
+                        "Sélectionnez le dossier principal."
+                    ),
+                    controls(
+                        row![
+                            library_input.width(Length::Fill),
+                            action_button("Choisir", UiMessage::PickLibraryFolder),
+                        ]
+                        .spacing(8)
+                        .into(),
+                    ),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label(
+                        "Scanner automatiquement au lancement",
+                        "Met à jour la bibliothèque au démarrage."
+                    ),
+                    controls(toggle_row(
+                        self.ui.settings.auto_scan_on_launch,
+                        UiMessage::SetAutoScanOnLaunch(true),
+                        UiMessage::SetAutoScanOnLaunch(false),
+                    )
+                    .into()),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label(
+                        "Emplacement du cache",
+                        "Chemin modifiable pour les fichiers temporaires."
+                    ),
+                    controls(
+                        row![
+                            cache_input.width(Length::Fill),
+                            action_button("Vider le cache", UiMessage::ClearCache),
+                        ]
+                        .spacing(8)
+                        .into(),
+                    ),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+            ]
+            .spacing(12)
+            .padding([4, 12, 0, 12])
+        };
+
+        let notifications_content = || {
+            column![
+                section_hint("Gérez les alertes système."),
+                row![
+                    setting_label(
+                        "Activer les notifications système",
+                        "Autorise l'affichage des notifications."
+                    ),
+                    controls(toggle_row(
+                        self.ui.settings.notifications_enabled,
+                        UiMessage::SetNotificationsEnabled(true),
+                        UiMessage::SetNotificationsEnabled(false),
+                    )
+                    .into()),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label(
+                        "Afficher “Now Playing” lors des changements de piste",
+                        "Notification à chaque changement de lecture."
+                    ),
+                    controls(toggle_row(
+                        self.ui.settings.now_playing_notifications,
+                        UiMessage::SetNowPlayingNotifications(true),
+                        UiMessage::SetNowPlayingNotifications(false),
+                    )
+                    .into()),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+            ]
+            .spacing(12)
+            .padding([4, 12, 0, 12])
+        };
+
+        let performance_content = || {
+            column![
+                section_hint("Ajustez les options de performance."),
+                row![
+                    setting_label(
+                        "Accélération matérielle",
+                        "Utilise le GPU pour les animations."
+                    ),
+                    controls(toggle_row(
+                        self.ui.settings.hardware_acceleration,
+                        UiMessage::SetHardwareAcceleration(true),
+                        UiMessage::SetHardwareAcceleration(false),
+                    )
+                    .into()),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label(
+                        "Limiter l'utilisation CPU pendant la lecture",
+                        "Réduit la charge pendant la musique."
+                    ),
+                    controls(toggle_row(
+                        self.ui.settings.limit_cpu_during_playback,
+                        UiMessage::SetLimitCpuDuringPlayback(true),
+                        UiMessage::SetLimitCpuDuringPlayback(false),
+                    )
+                    .into()),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+            ]
+            .spacing(12)
+            .padding([4, 12, 0, 12])
+        };
+
+        let advanced_content = || {
+            column![
+                section_hint("Outils pour diagnostiquer et réinitialiser."),
+                row![
+                    setting_label("Ouvrir le dossier de logs", "Accès aux journaux."),
+                    controls(action_button("Ouvrir", UiMessage::OpenLogsFolder).into()),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label("Réindexer la bibliothèque", "Reconstruit l'index local."),
+                    controls(action_button("Réindexer", UiMessage::ReindexLibrary).into()),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label(
+                        "Réinitialiser les préférences",
+                        "Restaure les valeurs par défaut."
+                    ),
+                    controls(action_button("Réinitialiser", UiMessage::ResetPreferences).into()),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+            ]
+            .spacing(12)
+            .padding([4, 12, 0, 12])
+        };
+
+        let general_panel = scrollable(
+            column![
+                column![
+                    text("Paramètres généraux")
+                        .size(theme.size(16))
+                        .font(style::font_propo(Weight::Semibold))
+                        .style(style::text_primary(theme)),
+                    text("Les préférences sont enregistrées automatiquement.")
+                        .size(theme.size(13))
+                        .font(style::font_propo(Weight::Light))
+                        .style(style::text_muted(theme))
+                ]
+                .spacing(6),
+                section_header(
+                    "Démarrage",
+                    self.ui.preferences_sections.startup,
+                    UiMessage::TogglePreferencesSection(PreferencesSection::Startup),
+                ),
+                if self.ui.preferences_sections.startup {
+                    startup_content()
+                } else {
+                    column![]
+                },
+                section_header(
+                    "Langue",
+                    self.ui.preferences_sections.language,
+                    UiMessage::TogglePreferencesSection(PreferencesSection::Language),
+                ),
+                if self.ui.preferences_sections.language {
+                    language_content()
+                } else {
+                    column![]
+                },
+                section_header(
+                    "Mises à jour",
+                    self.ui.preferences_sections.updates,
+                    UiMessage::TogglePreferencesSection(PreferencesSection::Updates),
+                ),
+                if self.ui.preferences_sections.updates {
+                    updates_content()
+                } else {
+                    column![]
+                },
+                section_header(
+                    "Confidentialité",
+                    self.ui.preferences_sections.privacy,
+                    UiMessage::TogglePreferencesSection(PreferencesSection::Privacy),
+                ),
+                if self.ui.preferences_sections.privacy {
+                    privacy_content()
+                } else {
+                    column![]
+                },
+                section_header(
+                    "Stockage",
+                    self.ui.preferences_sections.storage,
+                    UiMessage::TogglePreferencesSection(PreferencesSection::Storage),
+                ),
+                if self.ui.preferences_sections.storage {
+                    storage_content()
+                } else {
+                    column![]
+                },
+                section_header(
+                    "Notifications",
+                    self.ui.preferences_sections.notifications,
+                    UiMessage::TogglePreferencesSection(PreferencesSection::Notifications),
+                ),
+                if self.ui.preferences_sections.notifications {
+                    notifications_content()
+                } else {
+                    column![]
+                },
+                section_header(
+                    "Performance",
+                    self.ui.preferences_sections.performance,
+                    UiMessage::TogglePreferencesSection(PreferencesSection::Performance),
+                ),
+                if self.ui.preferences_sections.performance {
+                    performance_content()
+                } else {
+                    column![]
+                },
+                section_header(
+                    "Avancé / Dépannage",
+                    self.ui.preferences_sections.advanced,
+                    UiMessage::TogglePreferencesSection(PreferencesSection::Advanced),
+                ),
+                if self.ui.preferences_sections.advanced {
+                    advanced_content()
+                } else {
+                    column![]
+                },
+            ]
+            .spacing(16),
+        )
+        .height(Length::Fill);
 
         let appearance_panel = column![
             text("Thème")
@@ -894,7 +1472,28 @@ impl Application for GrapeApp {
             UiMessage::SetThemeMode(_)
                 | UiMessage::SetTextScale(_)
                 | UiMessage::SetDefaultVolume(_)
+                | UiMessage::SetLaunchAtStartup(_)
+                | UiMessage::SetRestoreLastSession(_)
+                | UiMessage::SetOpenOn(_)
+                | UiMessage::SetCloseBehavior(_)
+                | UiMessage::SetInterfaceLanguage(_)
+                | UiMessage::SetTimeFormat(_)
+                | UiMessage::SetAutoCheckUpdates(_)
+                | UiMessage::SetUpdateChannel(_)
+                | UiMessage::SetAutoInstallUpdates(_)
+                | UiMessage::SetSendErrorReports(_)
+                | UiMessage::SetSendUsageStats(_)
+                | UiMessage::LibraryFolderChanged(_)
+                | UiMessage::LibraryFolderPicked(_)
+                | UiMessage::SetAutoScanOnLaunch(_)
+                | UiMessage::CachePathChanged(_)
+                | UiMessage::SetNotificationsEnabled(_)
+                | UiMessage::SetNowPlayingNotifications(_)
+                | UiMessage::SetHardwareAcceleration(_)
+                | UiMessage::SetLimitCpuDuringPlayback(_)
+                | UiMessage::ResetPreferences
         );
+        let mut command = Command::none();
         match &message {
             UiMessage::SelectTrack(track) => {
                 self.handle_track_selection(track);
@@ -908,6 +1507,37 @@ impl Application for GrapeApp {
             UiMessage::ClosePlaylist => {
                 self.ui.playlist_open = false;
             }
+            UiMessage::PickLibraryFolder => {
+                command = Command::perform(
+                    async {
+                        rfd::FileDialog::new()
+                            .pick_folder()
+                            .map(|path| path.display().to_string())
+                    },
+                    UiMessage::LibraryFolderPicked,
+                );
+            }
+            UiMessage::ClearCache => {
+                if let Err(err) = config::clear_cache(&self.ui.settings) {
+                    error!(error = %err, "Failed to clear cache");
+                } else {
+                    info!("Cache cleared");
+                }
+            }
+            UiMessage::ClearHistory => {
+                if let Err(err) = config::clear_history() {
+                    error!(error = %err, "Failed to clear local history");
+                } else {
+                    info!("Local history cleared");
+                }
+            }
+            UiMessage::OpenLogsFolder => {
+                let path = config::logs_path();
+                info!(path = %path.display(), "Open logs folder requested");
+            }
+            UiMessage::ReindexLibrary => {
+                info!("Library reindex requested");
+            }
             _ => {}
         }
         self.ui.update(message);
@@ -917,7 +1547,7 @@ impl Application for GrapeApp {
             }
         }
         self.sync_playback_state();
-        Command::none()
+        command
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
