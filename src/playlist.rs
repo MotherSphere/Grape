@@ -6,6 +6,53 @@ use serde::{Deserialize, Serialize};
 
 use crate::player::NowPlaying;
 
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct PlaybackQueue {
+    items: Vec<NowPlaying>,
+    index: usize,
+}
+
+impl PlaybackQueue {
+    pub fn set_queue(&mut self, items: Vec<NowPlaying>) {
+        self.items = items;
+        if self.items.is_empty() {
+            self.index = 0;
+        } else if self.index >= self.items.len() {
+            self.index = self.items.len() - 1;
+        }
+    }
+
+    pub fn set_index(&mut self, index: usize) {
+        if self.items.is_empty() {
+            self.index = 0;
+        } else {
+            self.index = index.min(self.items.len() - 1);
+        }
+    }
+
+    pub fn current(&self) -> Option<NowPlaying> {
+        self.items.get(self.index).cloned()
+    }
+
+    pub fn next(&mut self) -> Option<NowPlaying> {
+        if self.index + 1 < self.items.len() {
+            self.index += 1;
+            self.current()
+        } else {
+            None
+        }
+    }
+
+    pub fn previous(&mut self) -> Option<NowPlaying> {
+        if self.index > 0 {
+            self.index -= 1;
+            self.current()
+        } else {
+            None
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Playlist {
     pub name: String,
