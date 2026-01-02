@@ -2441,13 +2441,31 @@ impl GrapeApp {
                 self.ui.playlist_open = false;
             }
             UiMessage::WindowMinimize => {
-                task = window::minimize(window::Id::MAIN, true);
+                task = window::oldest().then(|id| {
+                    if let Some(id) = id {
+                        window::minimize(id, true)
+                    } else {
+                        Task::none()
+                    }
+                });
             }
             UiMessage::WindowToggleMaximize => {
-                task = window::toggle_maximize(window::Id::MAIN);
+                task = window::oldest().then(|id| {
+                    if let Some(id) = id {
+                        window::toggle_maximize(id)
+                    } else {
+                        Task::none()
+                    }
+                });
             }
             UiMessage::WindowClose => {
-                task = window::close(window::Id::MAIN);
+                task = window::oldest().then(|id| {
+                    if let Some(id) = id {
+                        window::close(id)
+                    } else {
+                        Task::none()
+                    }
+                });
             }
             UiMessage::PickLibraryFolder => {
                 task = Task::perform(
