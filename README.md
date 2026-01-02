@@ -8,8 +8,11 @@ expérience rapide et claire pour explorer une bibliothèque locale et lancer la
 - **UI desktop Iced** : layout complet (top bar, colonnes, player bar) avec navigation et états.
 - **Scan local** : lecture de dossiers `Artiste/Album` et création d'un catalogue en mémoire.
 - **Durées audio** : lecture des durées via les métadonnées (crate `lofty`).
-- **Cache** : catalogue sauvegardé dans `.grape_cache.json` pour accélérer les démarrages.
-- **Lecture audio** : module `player` basé sur `rodio` (pas encore relié à l'UI).
+- **Cache local** : cache par dossier d'album + index global dans `.grape_cache/`.
+- **Jaquettes** : détection d'images locales et cache des couvertures d'album.
+- **Lecture audio** : module `player` basé sur `rodio`, branché à la sélection de pistes.
+- **Navigation enrichie** : onglets Genres/Folders + recherche/tri appliqués aux listes.
+- **Playlist** : vue dédiée (contenu à connecter au modèle).
 
 ## Stack technique
 
@@ -49,8 +52,14 @@ Formats supportés pour le scan : `mp3`, `flac`, `wav`, `ogg`, `m4a`.
 
 ### Cache local
 
-Après un scan réussi, un fichier `.grape_cache.json` est écrit dans le dossier de la bibliothèque.
-Le cache est invalidé si la date de modification du dossier racine change.
+Après un scan réussi, Grape conserve un cache dans `.grape_cache/` à la racine de la
+bibliothèque :
+
+- `index.json` : index global (hash des dossiers + dates de modification).
+- `folders/` : un fichier JSON par dossier d'album.
+- `covers/` : jaquettes mises en cache (copie locale des images détectées).
+
+Le cache est invalidé par dossier en comparant la date de modification du répertoire d'album.
 
 ## Documentation
 
@@ -61,6 +70,6 @@ Le cache est invalidé si la date de modification du dossier racine change.
 
 ## Feuille de route (résumé)
 
-- Brancher la lecture audio à l'UI
-- Améliorer l'indexation (métadonnées, jaquettes, cache plus fin)
-- Ajouter la gestion des playlists
+- Finaliser la gestion des playlists (modèle + UI).
+- Améliorer l'indexation (métadonnées enrichies, cache plus fin, genres réels).
+- Ajouter un vrai moteur de navigation/lecture (queue, repeat, shuffle avancé).
