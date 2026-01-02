@@ -5,17 +5,19 @@
 - Scan local fonctionnel (`library.rs`).
 - UI desktop Iced (layout + navigation).
 - Durées audio via métadonnées (`lofty`).
-- Cache JSON simple pour accélérer les démarrages.
-- Lecture audio connectée à l'UI (à faire).
+- Cache JSON par dossier dans `.grape_cache/`.
+- Jaquettes en cache local (covers).
+- Lecture audio connectée à l'UI (sélection + play/pause/seek).
 
 ## Phase 2 — Expérience
 
-- Playlists éditables.
+- Playlists éditables (UI + persistance).
 - Recherche avancée et filtres.
-- Cache d'indexation plus fin (JSON/SQLite) par dossier.
+- Cache d'indexation plus fin (JSON/SQLite) par piste.
+- Genres réels via métadonnées.
 
 ## Phase 3 — Qualité audio & finition
 
 - Égaliseur et options de sortie.
-- Jaquettes et métadonnées enrichies.
+- Jaquettes et métadonnées enrichies (embed + online).
 - Accessibilité, thèmes, polish UX.

@@ -6,20 +6,24 @@
 - [x] Mise en place des dossiers de base (`docs`, `tasks`, `src`, `assets`).
 - [x] Scan local de bibliothèque (structure Artiste/Album/Pistes).
 - [x] Lecture des durées via métadonnées (`lofty`).
-- [x] Cache JSON local (`.grape_cache.json`).
+- [x] Cache local `.grape_cache/` (index + cache par dossier).
+- [x] Détection et cache des jaquettes d'album.
 - [x] Prototype UI Iced (layout global + composants principaux).
 - [x] Gestion d'un état UI (sélections, recherche, lecture).
-- [x] Module de lecture audio (`rodio`) non câblé à l'UI.
+- [x] Onglets Genres/Folders avec panels dédiés.
+- [x] Recherche/tri appliqués aux listes.
+- [x] Module de lecture audio (`rodio`) branché à la sélection de pistes.
+- [x] Vue playlist (placeholder UI).
 
 ## À faire (priorité MVP)
 
-- [ ] Connecter l'UI au module `player` (play/pause/seek).
-- [ ] Ajouter un tri/recherche fonctionnel dans les listes.
-- [ ] Gestion de playlists basique.
+- [ ] Connecter la playlist UI au modèle (`playlist.rs`).
+- [ ] Ajouter une file de lecture et la navigation Next/Previous réelle.
+- [ ] Persister les playlists (JSON local).
 
 ## À planifier (après MVP)
 
-- [ ] Cache d'indexation plus fin (par dossier, JSON/SQLite).
-- [ ] Jaquettes et métadonnées enrichies.
-- [ ] Amélioration de la navigation (genres, dossiers).
+- [ ] Genres réels (lecture métadonnées + agrégation).
+- [ ] Cache d'indexation plus fin (par piste, JSON/SQLite).
+- [ ] Amélioration de la navigation (panneaux contextuels, raccourcis).
 - [ ] Accessibilité et theming avancé.
