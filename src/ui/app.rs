@@ -22,8 +22,8 @@ use crate::ui::style;
 use iced::font::Weight;
 use iced::widget::{button, column, container, row, scrollable, slider, text, text_input};
 use iced::{
-    event, keyboard, mouse, window, Alignment, Color, Element, Length, Settings, Subscription,
-    Task, Theme,
+    event, keyboard, mouse, window, Alignment, Color, Element, Length, Padding, Settings,
+    Subscription, Task, Theme,
 };
 use std::time::Duration;
 use tracing::{error, info};
@@ -37,7 +37,7 @@ pub struct GrapeApp {
 impl GrapeApp {
     pub fn run(catalog: Catalog) -> iced::Result {
         let settings = Self::apply_font_settings(Settings::default());
-        iced::application(move || Self::new(catalog), Self::update, Self::view)
+        iced::application(move || Self::new(catalog.clone()), Self::update, Self::view)
             .settings(settings)
             .title(Self::title)
             .subscription(Self::subscription)
@@ -47,7 +47,7 @@ impl GrapeApp {
 
     pub fn run_with(catalog: Catalog, settings: Settings) -> iced::Result {
         let settings = Self::apply_font_settings(settings);
-        iced::application(move || Self::new(catalog), Self::update, Self::view)
+        iced::application(move || Self::new(catalog.clone()), Self::update, Self::view)
             .settings(settings)
             .title(Self::title)
             .subscription(Self::subscription)
@@ -303,7 +303,7 @@ impl GrapeApp {
             text("G")
                 .size(theme.size(18))
                 .font(style::font_propo(Weight::Bold))
-                .style(style::text_primary(theme)),
+                .style(move |_| style::text_style_primary(theme)),
         )
         .padding([6, 10])
         .style(move |_| style::surface_style(theme, style::Surface::Avatar));
@@ -312,10 +312,10 @@ impl GrapeApp {
             text("Grape")
                 .size(theme.size(20))
                 .font(style::font_propo(Weight::Semibold))
-                .style(style::text_primary(theme))
+                .style(move |_| style::text_style_primary(theme))
         ]
         .spacing(8)
-        .align_items(Alignment::Center);
+        .align_y(Alignment::Center);
         let logo_button = button(logo)
             .style(move |_, status| style::button_style(theme, style::ButtonKind::Icon, status))
             .padding([2, 6])
@@ -325,7 +325,7 @@ impl GrapeApp {
                 text(label)
                     .size(theme.size(13))
                     .font(style::font_propo(Weight::Medium))
-                    .style(style::text_primary(theme)),
+                    .style(move |_| style::text_style_primary(theme)),
             )
             .style(move |_, status| {
                 style::button_style(
@@ -415,7 +415,7 @@ impl GrapeApp {
             .on_press(UiMessage::TabSelected(ActiveTab::Folders)),
         ]
         .spacing(12)
-        .align_items(Alignment::Center);
+        .align_y(Alignment::Center);
         let search_input = text_input("Search...", &self.ui.search.query)
             .style(move |_, status| style::text_input_style(theme, status))
             .on_input(|value| UiMessage::Search(SearchMessage::QueryChanged(value)));
@@ -451,15 +451,15 @@ impl GrapeApp {
             .on_press(UiMessage::WindowClose)
         ]
         .spacing(8)
-        .align_items(Alignment::Center);
+        .align_y(Alignment::Center);
 
         let layout = row![
             container(logo_widget).width(Length::Shrink),
-            container(tabs).width(Length::Fill).center_x(),
+            container(tabs).width(Length::Fill).center_x(Length::Fill),
             container(search).width(Length::Shrink)
         ]
         .spacing(24)
-        .align_items(Alignment::Center);
+        .align_y(Alignment::Center);
 
         container(layout)
             .padding([10, 16])
@@ -661,16 +661,22 @@ impl GrapeApp {
 
     fn preferences_view(&self) -> Element<'_, UiMessage> {
         let theme = self.theme_tokens();
+        let section_padding = Padding {
+            top: 4.0,
+            right: 12.0,
+            bottom: 0.0,
+            left: 12.0,
+        };
         let header = row![
             text("Préférences")
                 .size(theme.size(22))
                 .font(style::font_propo(Weight::Semibold))
-                .style(style::text_primary(theme)),
+                .style(move |_| style::text_style_primary(theme)),
             button(
                 text("Fermer")
                     .size(theme.size(13))
                     .font(style::font_propo(Weight::Medium))
-                    .style(style::text_primary(theme)),
+                    .style(move |_| style::text_style_primary(theme)),
             )
             .style(move |_, status| {
                 style::button_style(
@@ -682,7 +688,7 @@ impl GrapeApp {
             .padding([6, 10])
             .on_press(UiMessage::ClosePreferences)
         ]
-        .align_items(Alignment::Center)
+        .align_y(Alignment::Center)
         .spacing(12);
 
         let menu_button = |tab: PreferencesTab, label: &str| {
@@ -690,7 +696,7 @@ impl GrapeApp {
                 text(label)
                     .size(theme.size(14))
                     .font(style::font_propo(Weight::Medium))
-                    .style(style::text_primary(theme)),
+                    .style(move |_| style::text_style_primary(theme)),
             )
             .style(move |_, status| {
                 style::button_style(
@@ -721,14 +727,14 @@ impl GrapeApp {
                     text(label)
                         .size(theme.size(14))
                         .font(style::font_propo(Weight::Semibold))
-                        .style(style::text_primary(theme)),
+                        .style(move |_| style::text_style_primary(theme)),
                     text(chevron)
                         .size(theme.size(14))
                         .font(style::font_propo(Weight::Medium))
-                        .style(style::text_muted(theme)),
+                        .style(move |_| style::text_style_muted(theme)),
                 ]
                 .spacing(10)
-                .align_items(Alignment::Center),
+                .align_y(Alignment::Center),
             )
             .style(move |_, status| {
                 style::button_style(
@@ -745,18 +751,18 @@ impl GrapeApp {
             text(label)
                 .size(theme.size(12))
                 .font(style::font_propo(Weight::Light))
-                .style(style::text_muted(theme))
+                .style(move |_| style::text_style_muted(theme))
         };
         let setting_label = |title: &str, subtitle: &str| {
             column![
                 text(title)
                     .size(theme.size(13))
                     .font(style::font_propo(Weight::Medium))
-                    .style(style::text_primary(theme)),
+                    .style(move |_| style::text_style_primary(theme)),
                 text(subtitle)
                     .size(theme.size(12))
                     .font(style::font_propo(Weight::Light))
-                    .style(style::text_muted(theme)),
+                    .style(move |_| style::text_style_muted(theme)),
             ]
             .spacing(2)
             .width(Length::Fill)
@@ -766,7 +772,7 @@ impl GrapeApp {
                 text(label)
                     .size(theme.size(12))
                     .font(style::font_propo(Weight::Medium))
-                    .style(style::text_primary(theme)),
+                    .style(move |_| style::text_style_primary(theme)),
             )
             .style(move |_, status| {
                 style::button_style(theme, style::ButtonKind::Tab { selected }, status)
@@ -784,8 +790,13 @@ impl GrapeApp {
         fn controls<'a>(content: Element<'a, UiMessage>) -> Element<'a, UiMessage> {
             container(content)
                 .width(Length::FillPortion(2))
-                .center_x()
-                .padding([0, 0, 0, 24])
+                .center_x(Length::Fill)
+                .padding(Padding {
+                    top: 0.0,
+                    right: 0.0,
+                    bottom: 0.0,
+                    left: 24.0,
+                })
                 .into()
         }
         let action_button = |label: &str, message: UiMessage| {
@@ -793,7 +804,7 @@ impl GrapeApp {
                 text(label)
                     .size(theme.size(12))
                     .font(style::font_propo(Weight::Medium))
-                    .style(style::text_primary(theme)),
+                    .style(move |_| style::text_style_primary(theme)),
             )
             .style(move |_, status| {
                 style::button_style(theme, style::ButtonKind::Control, status)
@@ -826,7 +837,7 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label(
@@ -842,7 +853,7 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label("Ouvrir sur", "Choisissez l'écran par défaut."),
@@ -879,7 +890,7 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label(
@@ -903,11 +914,11 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let language_content = || {
@@ -937,7 +948,7 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label("Format horaire", "Format utilisé dans l'application."),
@@ -958,11 +969,11 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let updates_content = || {
@@ -982,7 +993,7 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label("Canal", "Choisissez la stabilité des versions."),
@@ -1003,7 +1014,7 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label(
@@ -1019,11 +1030,11 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let privacy_content = || {
@@ -1043,7 +1054,7 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label(
@@ -1059,17 +1070,17 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label("Effacer l'historique local", "Supprime les traces locales."),
                     controls(action_button("Effacer", UiMessage::ClearHistory).into()),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let storage_content = || {
@@ -1089,7 +1100,7 @@ impl GrapeApp {
                         .into(),
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label(
@@ -1105,7 +1116,7 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label(
@@ -1121,11 +1132,11 @@ impl GrapeApp {
                         .into(),
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let notifications_content = || {
@@ -1145,7 +1156,7 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label(
@@ -1161,11 +1172,11 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let performance_content = || {
@@ -1185,7 +1196,7 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label(
@@ -1201,11 +1212,11 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let advanced_content = || {
@@ -1215,13 +1226,13 @@ impl GrapeApp {
                     setting_label("Ouvrir le dossier de logs", "Accès aux journaux."),
                     controls(action_button("Ouvrir", UiMessage::OpenLogsFolder).into()),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label("Réindexer la bibliothèque", "Reconstruit l'index local."),
                     controls(action_button("Réindexer", UiMessage::ReindexLibrary).into()),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label(
@@ -1230,11 +1241,11 @@ impl GrapeApp {
                     ),
                     controls(action_button("Réinitialiser", UiMessage::ResetPreferences).into()),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let general_panel = scrollable(
@@ -1243,11 +1254,11 @@ impl GrapeApp {
                     text("Paramètres généraux")
                         .size(theme.size(16))
                         .font(style::font_propo(Weight::Semibold))
-                        .style(style::text_primary(theme)),
+                        .style(move |_| style::text_style_primary(theme)),
                     text("Les préférences sont enregistrées automatiquement.")
                         .size(theme.size(13))
                         .font(style::font_propo(Weight::Light))
-                        .style(style::text_muted(theme))
+                        .style(move |_| style::text_style_muted(theme))
                 ]
                 .spacing(6),
                 section_header(
@@ -1347,14 +1358,14 @@ impl GrapeApp {
                 row![
                     text("●")
                         .size(theme.size(14))
-                        .style(accent_color_value(accent)),
+                        .style(move |_| style::text_style(accent_color_value(accent))),
                     text(accent.label())
                         .size(theme.size(12))
                         .font(style::font_propo(Weight::Medium))
-                        .style(style::text_primary(theme)),
+                        .style(move |_| style::text_style_primary(theme)),
                 ]
                 .spacing(6)
-                .align_items(Alignment::Center),
+                .align_y(Alignment::Center),
             )
             .style(move |_, status| {
                 style::button_style(theme, style::ButtonKind::Tab { selected }, status)
@@ -1381,13 +1392,13 @@ impl GrapeApp {
                             text(self.ui.settings.text_scale.label())
                                 .size(theme.size(12))
                                 .font(style::font_propo(Weight::Light))
-                                .style(style::text_muted(theme)),
+                                .style(move |_| style::text_style_muted(theme)),
                         ]
                         .spacing(6)
                         .into(),
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label(
@@ -1416,11 +1427,11 @@ impl GrapeApp {
                         .into(),
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let vision_group = || {
@@ -1436,7 +1447,7 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label(
@@ -1452,7 +1463,7 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label(
@@ -1471,17 +1482,17 @@ impl GrapeApp {
                             text(self.ui.settings.accessible_text_size.label())
                                 .size(theme.size(12))
                                 .font(style::font_propo(Weight::Light))
-                                .style(style::text_muted(theme)),
+                                .style(move |_| style::text_style_muted(theme)),
                         ]
                         .spacing(6)
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let movement_group = || {
@@ -1500,7 +1511,7 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label(
@@ -1516,11 +1527,11 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let audio_subtitles_group = || {
@@ -1539,7 +1550,7 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label("Taille des sous-titres", "Ajustez la taille affichée."),
@@ -1557,17 +1568,17 @@ impl GrapeApp {
                             text(self.ui.settings.subtitle_size.label())
                                 .size(theme.size(12))
                                 .font(style::font_propo(Weight::Light))
-                                .style(style::text_muted(theme)),
+                                .style(move |_| style::text_style_muted(theme)),
                         ]
                         .spacing(6)
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let navigation_group = || {
@@ -1586,7 +1597,7 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label(
@@ -1602,11 +1613,11 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let playback_group = || {
@@ -1622,13 +1633,13 @@ impl GrapeApp {
                             text(format!("{:.1}x", playback_speed))
                                 .size(theme.size(12))
                                 .font(style::font_propo(Weight::Light))
-                                .style(style::text_muted(theme)),
+                                .style(move |_| style::text_style_muted(theme)),
                         ]
                         .spacing(6)
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label(
@@ -1644,11 +1655,11 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let appearance_theme_content = || {
@@ -1685,11 +1696,11 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let appearance_accents_content = || {
@@ -1715,11 +1726,11 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let appearance_effects_content = || {
@@ -1735,7 +1746,7 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label(
@@ -1751,11 +1762,11 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let appearance_preview_content = || {
@@ -1765,7 +1776,7 @@ impl GrapeApp {
                         text("Carte de prévisualisation")
                             .size(theme.size(13))
                             .font(style::font_propo(Weight::Medium))
-                            .style(style::text_primary(theme)),
+                            .style(move |_| style::text_style_primary(theme)),
                         text(format!(
                             "Thème : {} · Accent : {} · Densité : {}",
                             self.ui.settings.theme_mode.label(),
@@ -1774,7 +1785,7 @@ impl GrapeApp {
                         ))
                         .size(theme.size(12))
                         .font(style::font_propo(Weight::Light))
-                        .style(style::text_muted(theme)),
+                        .style(move |_| style::text_style_muted(theme)),
                         text(format!(
                             "Texte : {} · Effets : {} · Animations : {}",
                             self.ui.settings.text_scale.label(),
@@ -1791,7 +1802,7 @@ impl GrapeApp {
                         ))
                         .size(theme.size(12))
                         .font(style::font_propo(Weight::Light))
-                        .style(style::text_muted(theme)),
+                        .style(move |_| style::text_style_muted(theme)),
                     ]
                     .spacing(4),
                 )
@@ -1800,7 +1811,7 @@ impl GrapeApp {
                 .style(move |_| style::surface_style(theme, style::Surface::Panel)),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let appearance_panel = scrollable(
@@ -1809,11 +1820,11 @@ impl GrapeApp {
                     text("Paramètres d'apparence")
                         .size(theme.size(16))
                         .font(style::font_propo(Weight::Semibold))
-                        .style(style::text_primary(theme)),
+                        .style(move |_| style::text_style_primary(theme)),
                     text("Ajustez le thème, les accents et les effets visuels.")
                         .size(theme.size(13))
                         .font(style::font_propo(Weight::Light))
-                        .style(style::text_muted(theme))
+                        .style(move |_| style::text_style_muted(theme))
                 ]
                 .spacing(6),
                 section_header(
@@ -1877,11 +1888,11 @@ impl GrapeApp {
                     text("Paramètres d'accessibilité")
                         .size(theme.size(16))
                         .font(style::font_propo(Weight::Semibold))
-                        .style(style::text_primary(theme)),
+                        .style(move |_| style::text_style_primary(theme)),
                     text("Facilitez la lecture, la navigation et la lecture média.")
                         .size(theme.size(13))
                         .font(style::font_propo(Weight::Light))
-                        .style(style::text_muted(theme))
+                        .style(move |_| style::text_style_muted(theme))
                 ]
                 .spacing(6),
                 section_header(
@@ -1965,7 +1976,7 @@ impl GrapeApp {
                         .into(),
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label(
@@ -1995,11 +2006,11 @@ impl GrapeApp {
                         .into(),
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
         let audio_playback_content = || {
             column![
@@ -2018,7 +2029,7 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label(
@@ -2033,13 +2044,13 @@ impl GrapeApp {
                             text(format!("{} s", self.ui.settings.crossfade_seconds))
                                 .size(theme.size(12))
                                 .font(style::font_propo(Weight::Medium))
-                                .style(style::text_muted(theme))
+                                .style(move |_| style::text_style_muted(theme))
                         ]
                         .spacing(6)
                         .into(),
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label("Automix", "Mixe automatiquement les transitions."),
@@ -2052,11 +2063,11 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
         let audio_volume_content = || {
             column![
@@ -2072,7 +2083,7 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label("Niveau", "Profil de volume préféré."),
@@ -2098,7 +2109,7 @@ impl GrapeApp {
                         .into(),
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label("Volume par défaut", "Volume global de l'application."),
@@ -2110,17 +2121,17 @@ impl GrapeApp {
                             text(format!("{} %", self.ui.settings.default_volume))
                                 .size(theme.size(13))
                                 .font(style::font_propo(Weight::Medium))
-                                .style(style::text_muted(theme))
+                                .style(move |_| style::text_style_muted(theme))
                         ]
                         .spacing(6)
                         .into(),
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
         let audio_equalizer_content = || {
             column![
@@ -2136,7 +2147,7 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label("Preset", "Sélectionnez un profil."),
@@ -2178,17 +2189,17 @@ impl GrapeApp {
                         .into(),
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label("Réinitialiser EQ", "Retourne aux réglages par défaut."),
                     controls(action_button("Réinitialiser", UiMessage::ResetEq).into()),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
         let audio_advanced_content = || {
             column![
@@ -2218,13 +2229,13 @@ impl GrapeApp {
                         .into(),
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label("Réinitialiser le moteur audio", "Recharge la sortie audio."),
                     controls(action_button("Réinitialiser", UiMessage::ResetAudioEngine).into()),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
                 row![
                     setting_label("Logs audio (debug)", "Active la journalisation audio."),
@@ -2237,11 +2248,11 @@ impl GrapeApp {
                         .into()
                     ),
                 ]
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
         let audio_panel = scrollable(
             column![
@@ -2249,11 +2260,11 @@ impl GrapeApp {
                     text("Paramètres audio")
                         .size(theme.size(16))
                         .font(style::font_propo(Weight::Semibold))
-                        .style(style::text_primary(theme)),
+                        .style(move |_| style::text_style_primary(theme)),
                     text("Personnalisez la sortie et la lecture audio.")
                         .size(theme.size(13))
                         .font(style::font_propo(Weight::Light))
-                        .style(style::text_muted(theme))
+                        .style(move |_| style::text_style_muted(theme))
                 ]
                 .spacing(6),
                 section_header(
@@ -2430,13 +2441,13 @@ impl GrapeApp {
                 self.ui.playlist_open = false;
             }
             UiMessage::WindowMinimize => {
-                task = window::minimize(window::Id::MAIN, true);
+                task = window::minimize(window::Id::default(), true);
             }
             UiMessage::WindowToggleMaximize => {
-                task = window::toggle_maximize(window::Id::MAIN);
+                task = window::toggle_maximize(window::Id::default());
             }
             UiMessage::WindowClose => {
-                task = window::close(window::Id::MAIN);
+                task = window::close(window::Id::default());
             }
             UiMessage::PickLibraryFolder => {
                 task = Task::perform(
@@ -2554,7 +2565,7 @@ impl GrapeApp {
         let mut subscriptions = Vec::new();
 
         if self.ui.menu_open {
-            subscriptions.push(event::listen_with(|event, status| match event {
+            subscriptions.push(event::listen_with(|event, status, _| match event {
                 event::Event::Keyboard(keyboard::Event::KeyPressed { key, .. })
                     if matches!(key, keyboard::Key::Named(keyboard::key::Named::Escape)) =>
                 {
@@ -2570,7 +2581,7 @@ impl GrapeApp {
         }
 
         if self.ui.playlist_open {
-            subscriptions.push(event::listen_with(|event, _status| match event {
+            subscriptions.push(event::listen_with(|event, _status, _| match event {
                 event::Event::Keyboard(keyboard::Event::KeyPressed { key, .. })
                     if matches!(key, keyboard::Key::Named(keyboard::key::Named::Escape)) =>
                 {
@@ -2581,7 +2592,7 @@ impl GrapeApp {
         }
 
         if self.ui.preferences_open {
-            subscriptions.push(event::listen_with(|event, _status| match event {
+            subscriptions.push(event::listen_with(|event, _status, _| match event {
                 event::Event::Keyboard(keyboard::Event::KeyPressed { key, .. })
                     if matches!(key, keyboard::Key::Named(keyboard::key::Named::Escape)) =>
                 {

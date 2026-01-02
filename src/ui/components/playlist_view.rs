@@ -16,24 +16,24 @@ impl PlaylistView {
             text("Playlist")
                 .size(theme.size(24))
                 .font(style::font_propo(Weight::Semibold))
-                .style(style::text_primary(theme)),
+                .style(move |_| style::text_style_primary(theme)),
             button(
                 text("✕")
                     .size(theme.size(16))
                     .font(style::font_propo(Weight::Medium))
-                    .style(style::text_primary(theme)),
+                    .style(move |_| style::text_style_primary(theme)),
             )
             .style(move |_, status| style::button_style(theme, style::ButtonKind::Icon, status))
             .on_press(UiMessage::ClosePlaylist)
         ]
-        .align_items(Alignment::Center)
+        .align_y(Alignment::Center)
         .spacing(12);
 
         let body = column![
             text("Votre playlist apparaîtra ici.")
                 .size(theme.size(14))
                 .font(style::font_propo(Weight::Medium))
-                .style(style::text_muted(theme))
+                .style(move |_| style::text_style_muted(theme))
         ]
         .spacing(8);
 
@@ -45,8 +45,8 @@ impl PlaylistView {
         container(panel)
             .width(Length::Fill)
             .height(Length::Fill)
-            .center_x()
-            .center_y()
+            .center_x(Length::Fill)
+            .center_y(Length::Fill)
             .style(move |_| style::surface_style(theme, style::Surface::AppBackground))
             .into()
     }

@@ -87,14 +87,14 @@ impl PlayerBar {
             text("♪")
                 .size(theme.size(18))
                 .font(style::font_propo(Weight::Medium))
-                .style(style::text_muted(theme))
+                .style(move |_| style::text_style_muted(theme))
                 .into()
         };
         let cover = container(cover_content)
             .width(Length::Fixed(42.0))
             .height(Length::Fixed(42.0))
-            .center_x()
-            .center_y()
+            .center_x(Length::Fill)
+            .center_y(Length::Fill)
             .style(move |_| style::surface_style(theme, style::Surface::AlbumCover));
         let left = row![
             cover,
@@ -102,17 +102,17 @@ impl PlayerBar {
                 text(title)
                     .size(theme.size(14))
                     .font(style::font_propo(Weight::Medium))
-                    .style(style::text_primary(theme)),
+                    .style(move |_| style::text_style_primary(theme)),
                 text(artist)
                     .size(theme.size(12))
                     .font(style::font_propo(Weight::Light))
-                    .style(style::text_muted(theme))
+                    .style(move |_| style::text_style_muted(theme))
             ]
             .spacing(4)
-            .align_items(Alignment::Start)
+            .align_x(Alignment::Start)
         ]
         .spacing(12)
-        .align_items(Alignment::Center)
+        .align_y(Alignment::Center)
         .width(Length::FillPortion(3));
 
         let controls = row![
@@ -145,48 +145,48 @@ impl PlayerBar {
                 .on_press(UiMessage::Playback(PlaybackMessage::CycleRepeat)),
         ]
         .spacing(10)
-        .align_items(Alignment::Center)
+        .align_y(Alignment::Center)
         .width(Length::FillPortion(4));
 
         let elapsed = format_duration(playback.position);
         let duration = format_duration(playback.duration);
-        let progress = progress_bar(
+        let progress = container(progress_bar(
             0.0..=1.0,
             progress_ratio(playback.position, playback.duration),
-        )
+        ))
         .width(Length::Fill);
         let progress_row = row![
             text(elapsed)
                 .size(theme.size(12))
                 .font(style::font_mono(Weight::Medium))
-                .style(style::text_muted(theme)),
+                .style(move |_| style::text_style_muted(theme)),
             progress,
             text(duration)
                 .size(theme.size(12))
                 .font(style::font_mono(Weight::Medium))
-                .style(style::text_muted(theme))
+                .style(move |_| style::text_style_muted(theme))
         ]
         .spacing(8)
-        .align_items(Alignment::Center)
+        .align_y(Alignment::Center)
         .width(Length::Fill);
         let audio_icons = row![
             text(volume_icon(volume))
                 .font(style::font_propo(Weight::Medium))
-                .style(style::text_muted(theme)),
+                .style(move |_| style::text_style_muted(theme)),
             text(queue_icon(queue_active))
                 .font(style::font_propo(Weight::Medium))
-                .style(style::text_muted(theme))
+                .style(move |_| style::text_style_muted(theme))
         ]
         .spacing(8)
-        .align_items(Alignment::Center);
+        .align_y(Alignment::Center);
         let right = column![progress_row, audio_icons]
             .spacing(6)
-            .align_items(Alignment::End)
+            .align_x(Alignment::End)
             .width(Length::FillPortion(5));
 
         let content = row![left, controls, right]
             .spacing(20)
-            .align_items(Alignment::Center)
+            .align_y(Alignment::Center)
             .width(Length::Fill);
 
         container(content)

@@ -1,5 +1,5 @@
 use iced::font::{Family, Weight};
-use iced::widget::{button, container, text_input};
+use iced::widget::{button, container, text, text_input};
 use iced::{Background, Border, Color, Font, Shadow};
 
 use crate::config::ThemeMode;
@@ -100,8 +100,8 @@ impl ThemeTokens {
         Self { palette, scale }
     }
 
-    pub fn size(&self, base: u16) -> u16 {
-        ((base as f32 * self.scale).round().max(10.0)) as u16
+    pub fn size(&self, base: u16) -> u32 {
+        ((base as f32 * self.scale).round().max(10.0)) as u32
     }
 }
 
@@ -115,6 +115,27 @@ pub fn text_primary(theme: ThemeTokens) -> Color {
 
 pub fn text_muted(theme: ThemeTokens) -> Color {
     theme.palette.text_muted
+}
+
+pub fn text_style_primary(theme: ThemeTokens) -> text::Style {
+    text::Style {
+        color: Some(text_primary(theme)),
+        ..text::Style::default()
+    }
+}
+
+pub fn text_style_muted(theme: ThemeTokens) -> text::Style {
+    text::Style {
+        color: Some(text_muted(theme)),
+        ..text::Style::default()
+    }
+}
+
+pub fn text_style(color: Color) -> text::Style {
+    text::Style {
+        color: Some(color),
+        ..text::Style::default()
+    }
 }
 
 pub fn accent_alpha(theme: ThemeTokens, alpha: f32) -> Color {

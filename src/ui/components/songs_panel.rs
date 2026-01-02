@@ -58,26 +58,26 @@ impl SongsPanel {
             text(format!("{} Songs", self.tracks.len()))
                 .size(theme.size(16))
                 .font(style::font_propo(Weight::Semibold))
-                .style(style::text_primary(theme)),
+                .style(move |_| style::text_style_primary(theme)),
             text("By album")
                 .size(theme.size(12))
                 .font(style::font_propo(Weight::Light))
-                .style(style::text_muted(theme))
+                .style(move |_| style::text_style_muted(theme))
         ]
         .spacing(8)
-        .align_items(Alignment::Center);
+        .align_y(Alignment::Center);
         let album_info = column![
             text(self.album.clone())
                 .size(theme.size(18))
                 .font(style::font_propo(Weight::Medium))
-                .style(style::text_primary(theme)),
+                .style(move |_| style::text_style_primary(theme)),
             text(self.artist.clone())
                 .size(theme.size(12))
                 .font(style::font_propo(Weight::Light))
-                .style(style::text_muted(theme))
+                .style(move |_| style::text_style_muted(theme))
         ]
         .spacing(4)
-        .align_items(Alignment::Start);
+        .align_x(Alignment::Start);
         let list_items = self
             .tracks
             .iter()
@@ -88,26 +88,26 @@ impl SongsPanel {
                 let number_label = text(number)
                     .size(theme.size(12))
                     .font(style::font_mono(Weight::Medium))
-                    .style(style::text_muted(theme));
+                    .style(move |_| style::text_style_muted(theme));
                 let title = text(track.title.clone())
                     .size(theme.size(14))
                     .font(style::font_propo(Weight::Medium))
-                    .style(style::text_primary(theme));
+                    .style(move |_| style::text_style_primary(theme));
                 let artist = text(track.artist.clone())
                     .size(theme.size(12))
                     .font(style::font_propo(Weight::Light))
-                    .style(style::text_muted(theme));
+                    .style(move |_| style::text_style_muted(theme));
                 let details = column![title, artist]
                     .spacing(2)
                     .width(Length::Fill)
-                    .align_items(Alignment::Start);
+                    .align_x(Alignment::Start);
                 let duration = text(format_duration(track.duration))
                     .size(theme.size(12))
                     .font(style::font_mono(Weight::Medium))
-                    .style(style::text_muted(theme));
+                    .style(move |_| style::text_style_muted(theme));
                 let row_content = row![number_label, details, duration]
                     .spacing(12)
-                    .align_items(Alignment::Center)
+                    .align_y(Alignment::Center)
                     .width(Length::Fill);
 
                 button(row_content)
@@ -128,7 +128,7 @@ impl SongsPanel {
         let list = column(list_items)
             .spacing(8)
             .width(Length::Fill)
-            .align_items(Alignment::Start);
+            .align_x(Alignment::Start);
         let scrollable_list = scrollable(list).height(Length::Fill);
         let content = column![header, album_info, scrollable_list]
             .spacing(12)
