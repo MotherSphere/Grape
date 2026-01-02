@@ -1,6 +1,7 @@
 use crate::config::{
-    self, CloseBehavior, InterfaceLanguage, StartupScreen, TextScale, ThemeMode, TimeFormat,
-    UpdateChannel,
+    self, AudioOutputDevice, AudioStabilityMode, CloseBehavior, EqPreset, InterfaceLanguage,
+    MissingDeviceBehavior, StartupScreen, TextScale, ThemeMode, TimeFormat, UpdateChannel,
+    VolumeLevel,
 };
 use crate::library::Catalog;
 use crate::player::{PlaybackState as PlayerPlaybackState, Player};
@@ -1390,20 +1391,364 @@ impl GrapeApp {
         .spacing(8);
 
         let volume_value = self.ui.settings.default_volume as f32;
-        let audio_panel = column![
-            text("Volume par défaut")
-                .size(theme.size(16))
-                .font(style::font_propo(Weight::Semibold))
-                .style(style::text_primary(theme)),
-            slider(0.0..=100.0, volume_value, |value| {
-                UiMessage::SetDefaultVolume(value.round().clamp(0.0, 100.0) as u8)
-            }),
-            text(format!("{} %", self.ui.settings.default_volume))
-                .size(theme.size(13))
-                .font(style::font_propo(Weight::Medium))
-                .style(style::text_muted(theme))
-        ]
-        .spacing(8);
+        let crossfade_value = self.ui.settings.crossfade_seconds as f32;
+        let audio_output_content = || {
+            column![
+                section_hint("Choisissez la sortie audio principale."),
+                row![
+                    setting_label("Périphérique de sortie", "Sélectionnez la sortie active."),
+                    controls(
+                        row![
+                            option_button(
+                                self.ui.settings.output_device == AudioOutputDevice::System,
+                                "Système (par défaut)",
+                                UiMessage::SetAudioOutputDevice(AudioOutputDevice::System)
+                            ),
+                            option_button(
+                                self.ui.settings.output_device == AudioOutputDevice::UsbHeadset,
+                                "Casque USB",
+                                UiMessage::SetAudioOutputDevice(AudioOutputDevice::UsbHeadset)
+                            ),
+                        ]
+                        .spacing(8),
+                    ),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label(
+                        "Si le périphérique disparaît",
+                        "Détermine la reprise automatique."
+                    ),
+                    controls(
+                        row![
+                            option_button(
+                                self.ui.settings.missing_device_behavior
+                                    == MissingDeviceBehavior::SwitchToSystem,
+                                "Basculer vers Système",
+                                UiMessage::SetMissingDeviceBehavior(
+                                    MissingDeviceBehavior::SwitchToSystem
+                                )
+                            ),
+                            option_button(
+                                self.ui.settings.missing_device_behavior
+                                    == MissingDeviceBehavior::PausePlayback,
+                                "Mettre en pause",
+                                UiMessage::SetMissingDeviceBehavior(
+                                    MissingDeviceBehavior::PausePlayback
+                                )
+                            ),
+                        ]
+                        .spacing(8),
+                    ),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+            ]
+            .spacing(12)
+            .padding([4, 12, 0, 12])
+        };
+        let audio_playback_content = || {
+            column![
+                section_hint("Gérez la transition entre les morceaux."),
+                row![
+                    setting_label(
+                        "Lecture sans blanc (Gapless)",
+                        "Supprime les silences entre les pistes."
+                    ),
+                    controls(toggle_row(
+                        self.ui.settings.gapless_playback,
+                        UiMessage::SetGaplessPlayback(true),
+                        UiMessage::SetGaplessPlayback(false)
+                    )),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label(
+                        "Fondu enchaîné (Crossfade)",
+                        "Durée du fondu entre les morceaux."
+                    ),
+                    controls(
+                        column![
+                            slider(0.0..=12.0, crossfade_value, |value| {
+                                UiMessage::SetCrossfadeSeconds(
+                                    value.round().clamp(0.0, 12.0) as u8
+                                )
+                            }),
+                            text(format!("{} s", self.ui.settings.crossfade_seconds))
+                                .size(theme.size(12))
+                                .font(style::font_propo(Weight::Medium))
+                                .style(style::text_muted(theme))
+                        ]
+                        .spacing(6),
+                    ),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label(
+                        "Automix",
+                        "Mixe automatiquement les transitions."
+                    ),
+                    controls(toggle_row(
+                        self.ui.settings.automix_enabled,
+                        UiMessage::SetAutomixEnabled(true),
+                        UiMessage::SetAutomixEnabled(false)
+                    )),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+            ]
+            .spacing(12)
+            .padding([4, 12, 0, 12])
+        };
+        let audio_volume_content = || {
+            column![
+                section_hint("Ajustez la dynamique et le volume global."),
+                row![
+                    setting_label("Normaliser le volume", "Harmonise les niveaux sonores."),
+                    controls(toggle_row(
+                        self.ui.settings.normalize_volume,
+                        UiMessage::SetNormalizeVolume(true),
+                        UiMessage::SetNormalizeVolume(false)
+                    )),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label("Niveau", "Profil de volume préféré."),
+                    controls(
+                        row![
+                            option_button(
+                                self.ui.settings.volume_level == VolumeLevel::Quiet,
+                                VolumeLevel::Quiet.label(),
+                                UiMessage::SetVolumeLevel(VolumeLevel::Quiet)
+                            ),
+                            option_button(
+                                self.ui.settings.volume_level == VolumeLevel::Normal,
+                                VolumeLevel::Normal.label(),
+                                UiMessage::SetVolumeLevel(VolumeLevel::Normal)
+                            ),
+                            option_button(
+                                self.ui.settings.volume_level == VolumeLevel::Loud,
+                                VolumeLevel::Loud.label(),
+                                UiMessage::SetVolumeLevel(VolumeLevel::Loud)
+                            ),
+                        ]
+                        .spacing(8),
+                    ),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label("Volume par défaut", "Volume global de l'application."),
+                    controls(
+                        column![
+                            slider(0.0..=100.0, volume_value, |value| {
+                                UiMessage::SetDefaultVolume(
+                                    value.round().clamp(0.0, 100.0) as u8
+                                )
+                            }),
+                            text(format!("{} %", self.ui.settings.default_volume))
+                                .size(theme.size(13))
+                                .font(style::font_propo(Weight::Medium))
+                                .style(style::text_muted(theme))
+                        ]
+                        .spacing(6),
+                    ),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+            ]
+            .spacing(12)
+            .padding([4, 12, 0, 12])
+        };
+        let audio_equalizer_content = || {
+            column![
+                section_hint("Sculptez le rendu audio avec un preset."),
+                row![
+                    setting_label("Activer l'égaliseur", "Active les réglages EQ."),
+                    controls(toggle_row(
+                        self.ui.settings.eq_enabled,
+                        UiMessage::SetEqEnabled(true),
+                        UiMessage::SetEqEnabled(false)
+                    )),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label("Preset", "Sélectionnez un profil."),
+                    controls(
+                        column![
+                            row![
+                                option_button(
+                                    self.ui.settings.eq_preset == EqPreset::Flat,
+                                    EqPreset::Flat.label(),
+                                    UiMessage::SetEqPreset(EqPreset::Flat)
+                                ),
+                                option_button(
+                                    self.ui.settings.eq_preset == EqPreset::Bass,
+                                    EqPreset::Bass.label(),
+                                    UiMessage::SetEqPreset(EqPreset::Bass)
+                                ),
+                                option_button(
+                                    self.ui.settings.eq_preset == EqPreset::Treble,
+                                    EqPreset::Treble.label(),
+                                    UiMessage::SetEqPreset(EqPreset::Treble)
+                                ),
+                            ]
+                            .spacing(8),
+                            row![
+                                option_button(
+                                    self.ui.settings.eq_preset == EqPreset::Vocal,
+                                    EqPreset::Vocal.label(),
+                                    UiMessage::SetEqPreset(EqPreset::Vocal)
+                                ),
+                                option_button(
+                                    self.ui.settings.eq_preset == EqPreset::Custom,
+                                    EqPreset::Custom.label(),
+                                    UiMessage::SetEqPreset(EqPreset::Custom)
+                                ),
+                            ]
+                            .spacing(8),
+                        ]
+                        .spacing(8),
+                    ),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label("Réinitialiser EQ", "Retourne aux réglages par défaut."),
+                    controls(action_button("Réinitialiser", UiMessage::ResetEq).into()),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+            ]
+            .spacing(12)
+            .padding([4, 12, 0, 12])
+        };
+        let audio_advanced_content = || {
+            column![
+                section_hint("Options avancées pour la stabilité audio."),
+                row![
+                    setting_label(
+                        "Mode de stabilité audio",
+                        "Ajuste la latence et le buffer."
+                    ),
+                    controls(
+                        row![
+                            option_button(
+                                self.ui.settings.audio_stability_mode
+                                    == AudioStabilityMode::Auto,
+                                AudioStabilityMode::Auto.label(),
+                                UiMessage::SetAudioStabilityMode(AudioStabilityMode::Auto)
+                            ),
+                            option_button(
+                                self.ui.settings.audio_stability_mode
+                                    == AudioStabilityMode::Stable,
+                                AudioStabilityMode::Stable.label(),
+                                UiMessage::SetAudioStabilityMode(AudioStabilityMode::Stable)
+                            ),
+                            option_button(
+                                self.ui.settings.audio_stability_mode
+                                    == AudioStabilityMode::LowLatency,
+                                AudioStabilityMode::LowLatency.label(),
+                                UiMessage::SetAudioStabilityMode(AudioStabilityMode::LowLatency)
+                            ),
+                        ]
+                        .spacing(8),
+                    ),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label("Réinitialiser le moteur audio", "Recharge la sortie audio."),
+                    controls(action_button("Réinitialiser", UiMessage::ResetAudioEngine).into()),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label("Logs audio (debug)", "Active la journalisation audio."),
+                    controls(toggle_row(
+                        self.ui.settings.audio_debug_logs,
+                        UiMessage::SetAudioDebugLogs(true),
+                        UiMessage::SetAudioDebugLogs(false)
+                    )),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+            ]
+            .spacing(12)
+            .padding([4, 12, 0, 12])
+        };
+        let audio_panel = scrollable(
+            column![
+                column![
+                    text("Paramètres audio")
+                        .size(theme.size(16))
+                        .font(style::font_propo(Weight::Semibold))
+                        .style(style::text_primary(theme)),
+                    text("Personnalisez la sortie et la lecture audio.")
+                        .size(theme.size(13))
+                        .font(style::font_propo(Weight::Light))
+                        .style(style::text_muted(theme))
+                ]
+                .spacing(6),
+                section_header(
+                    "Sortie audio",
+                    self.ui.preferences_sections.audio_output,
+                    UiMessage::TogglePreferencesSection(PreferencesSection::AudioOutput),
+                ),
+                if self.ui.preferences_sections.audio_output {
+                    audio_output_content()
+                } else {
+                    column![]
+                },
+                section_header(
+                    "Lecture",
+                    self.ui.preferences_sections.audio_playback,
+                    UiMessage::TogglePreferencesSection(PreferencesSection::AudioPlayback),
+                ),
+                if self.ui.preferences_sections.audio_playback {
+                    audio_playback_content()
+                } else {
+                    column![]
+                },
+                section_header(
+                    "Niveau sonore",
+                    self.ui.preferences_sections.audio_volume,
+                    UiMessage::TogglePreferencesSection(PreferencesSection::AudioVolume),
+                ),
+                if self.ui.preferences_sections.audio_volume {
+                    audio_volume_content()
+                } else {
+                    column![]
+                },
+                section_header(
+                    "Égaliseur",
+                    self.ui.preferences_sections.audio_equalizer,
+                    UiMessage::TogglePreferencesSection(PreferencesSection::AudioEqualizer),
+                ),
+                if self.ui.preferences_sections.audio_equalizer {
+                    audio_equalizer_content()
+                } else {
+                    column![]
+                },
+                section_header(
+                    "Avancé / Dépannage",
+                    self.ui.preferences_sections.audio_advanced,
+                    UiMessage::TogglePreferencesSection(PreferencesSection::AudioAdvanced),
+                ),
+                if self.ui.preferences_sections.audio_advanced {
+                    audio_advanced_content()
+                } else {
+                    column![]
+                },
+            ]
+            .spacing(16),
+        )
+        .height(Length::Fill);
 
         let content_panel: Element<'_, UiMessage> = match self.ui.preferences_tab {
             PreferencesTab::General => general_panel.into(),
@@ -1473,6 +1818,18 @@ impl Application for GrapeApp {
             UiMessage::SetThemeMode(_)
                 | UiMessage::SetTextScale(_)
                 | UiMessage::SetDefaultVolume(_)
+                | UiMessage::SetAudioOutputDevice(_)
+                | UiMessage::SetMissingDeviceBehavior(_)
+                | UiMessage::SetGaplessPlayback(_)
+                | UiMessage::SetCrossfadeSeconds(_)
+                | UiMessage::SetAutomixEnabled(_)
+                | UiMessage::SetNormalizeVolume(_)
+                | UiMessage::SetVolumeLevel(_)
+                | UiMessage::SetEqEnabled(_)
+                | UiMessage::SetEqPreset(_)
+                | UiMessage::ResetEq
+                | UiMessage::SetAudioStabilityMode(_)
+                | UiMessage::SetAudioDebugLogs(_)
                 | UiMessage::SetLaunchAtStartup(_)
                 | UiMessage::SetRestoreLastSession(_)
                 | UiMessage::SetOpenOn(_)
@@ -1538,6 +1895,9 @@ impl Application for GrapeApp {
             }
             UiMessage::ReindexLibrary => {
                 info!("Library reindex requested");
+            }
+            UiMessage::ResetAudioEngine => {
+                info!("Audio engine reset requested");
             }
             _ => {}
         }
