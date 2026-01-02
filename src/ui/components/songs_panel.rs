@@ -4,7 +4,6 @@ use crate::ui::message::UiMessage;
 use crate::ui::state::{SelectionState, Track};
 use crate::ui::style;
 use iced::font::Weight;
-use iced::theme::{Button, Container};
 use iced::widget::{button, column, container, row, scrollable, text};
 use iced::{Alignment, Element, Length};
 
@@ -112,12 +111,15 @@ impl SongsPanel {
                     .width(Length::Fill);
 
                 button(row_content)
-                    .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                        style::ButtonKind::ListItem {
-                            selected: is_selected,
-                        },
-                        theme,
-                    ))))
+                    .style(move |_, status| {
+                        style::button_style(
+                            theme,
+                            style::ButtonKind::ListItem {
+                                selected: is_selected,
+                            },
+                            status,
+                        )
+                    })
                     .on_press(UiMessage::SelectTrack(track.clone()))
                     .width(Length::Fill)
                     .into()
@@ -136,10 +138,7 @@ impl SongsPanel {
             .width(Length::Fill)
             .height(Length::Fill)
             .padding(12)
-            .style(Container::Custom(Box::new(style::SurfaceStyle::new(
-                style::Surface::Panel,
-                theme,
-            ))))
+            .style(move |_| style::surface_style(theme, style::Surface::Panel))
             .into()
     }
 

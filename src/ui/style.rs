@@ -1,6 +1,6 @@
 use iced::font::{Family, Weight};
 use iced::widget::{button, container, text_input};
-use iced::{Background, Border, Color, Font, Theme};
+use iced::{Background, Border, Color, Font, Shadow};
 
 use crate::config::ThemeMode;
 
@@ -135,88 +135,73 @@ pub enum Surface {
     Avatar,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct SurfaceStyle {
-    surface: Surface,
-    theme: ThemeTokens,
-}
+pub fn surface_style(theme: ThemeTokens, surface: Surface) -> container::Style {
+    let palette = theme.palette;
+    let (background, border) = match surface {
+        Surface::AppBackground => (
+            palette.background,
+            Border {
+                radius: 0.0.into(),
+                width: 0.0,
+                color: Color::TRANSPARENT,
+            },
+        ),
+        Surface::TopBar => (
+            palette.elevated,
+            Border {
+                radius: 0.0.into(),
+                width: 0.0,
+                color: Color::TRANSPARENT,
+            },
+        ),
+        Surface::Panel => (
+            palette.panel,
+            Border {
+                radius: 12.0.into(),
+                width: 1.0,
+                color: palette.border,
+            },
+        ),
+        Surface::Sidebar => (
+            palette.elevated,
+            Border {
+                radius: 12.0.into(),
+                width: 1.0,
+                color: palette.border_subtle,
+            },
+        ),
+        Surface::PlayerBar => (
+            palette.player_bar,
+            Border {
+                radius: 0.0.into(),
+                width: 0.0,
+                color: Color::TRANSPARENT,
+            },
+        ),
+        Surface::AlbumCover => (
+            palette.album_cover,
+            Border {
+                radius: 8.0.into(),
+                width: 1.0,
+                color: palette.border_subtle,
+            },
+        ),
+        Surface::Avatar => (
+            palette.avatar,
+            Border {
+                radius: 999.0.into(),
+                width: 0.0,
+                color: Color::TRANSPARENT,
+            },
+        ),
+    };
 
-impl SurfaceStyle {
-    pub fn new(surface: Surface, theme: ThemeTokens) -> Self {
-        Self { surface, theme }
-    }
-}
-
-impl container::StyleSheet for SurfaceStyle {
-    type Style = Theme;
-
-    fn appearance(&self, _style: &Theme) -> container::Appearance {
-        let palette = self.theme.palette;
-        let (background, border) = match self.surface {
-            Surface::AppBackground => (
-                palette.background,
-                Border {
-                    radius: 0.0.into(),
-                    width: 0.0,
-                    color: Color::TRANSPARENT,
-                },
-            ),
-            Surface::TopBar => (
-                palette.elevated,
-                Border {
-                    radius: 0.0.into(),
-                    width: 0.0,
-                    color: Color::TRANSPARENT,
-                },
-            ),
-            Surface::Panel => (
-                palette.panel,
-                Border {
-                    radius: 12.0.into(),
-                    width: 1.0,
-                    color: palette.border,
-                },
-            ),
-            Surface::Sidebar => (
-                palette.elevated,
-                Border {
-                    radius: 12.0.into(),
-                    width: 1.0,
-                    color: palette.border_subtle,
-                },
-            ),
-            Surface::PlayerBar => (
-                palette.player_bar,
-                Border {
-                    radius: 0.0.into(),
-                    width: 0.0,
-                    color: Color::TRANSPARENT,
-                },
-            ),
-            Surface::AlbumCover => (
-                palette.album_cover,
-                Border {
-                    radius: 8.0.into(),
-                    width: 1.0,
-                    color: palette.border_subtle,
-                },
-            ),
-            Surface::Avatar => (
-                palette.avatar,
-                Border {
-                    radius: 999.0.into(),
-                    width: 0.0,
-                    color: Color::TRANSPARENT,
-                },
-            ),
-        };
-
-        container::Appearance {
-            background: Some(Background::Color(background)),
-            text_color: Some(text_primary(self.theme)),
-            border,
-            shadow: Default::default(),
-        }
+    container::Style {
+        background: Some(Background::Color(background)),
+        text_color: Some(text_primary(theme)),
+        border,
+        shadow: Shadow::default(),
+        snap: cfg!(feature = "crisp"),
     }
 }
 
@@ -229,164 +214,154 @@ pub enum ButtonKind {
     Icon,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct ButtonStyle {
-    kind: ButtonKind,
+pub fn button_style(
     theme: ThemeTokens,
-}
-
-impl ButtonStyle {
-    pub fn new(kind: ButtonKind, theme: ThemeTokens) -> Self {
-        Self { kind, theme }
-    }
-}
-
-impl button::StyleSheet for ButtonStyle {
-    type Style = Theme;
-
-    fn active(&self, _style: &Theme) -> button::Appearance {
-        let palette = self.theme.palette;
-        match self.kind {
-            ButtonKind::Tab { selected } => button::Appearance {
-                background: Some(Background::Color(if selected {
-                    palette.hover
-                } else {
-                    Color::TRANSPARENT
-                })),
-                text_color: if selected {
+    kind: ButtonKind,
+    status: button::Status,
+) -> button::Style {
+    let palette = theme.palette;
+    let mut style = match kind {
+        ButtonKind::Tab { selected } => button::Style {
+            background: Some(Background::Color(if selected {
+                palette.hover
+            } else {
+                Color::TRANSPARENT
+            })),
+            text_color: if selected {
+                palette.accent
+            } else {
+                palette.text_muted
+            },
+            border: Border {
+                radius: 8.0.into(),
+                width: if selected { 1.0 } else { 0.0 },
+                color: if selected {
                     palette.accent
                 } else {
-                    palette.text_muted
-                },
-                border: Border {
-                    radius: 8.0.into(),
-                    width: if selected { 1.0 } else { 0.0 },
-                    color: if selected {
-                        palette.accent
-                    } else {
-                        Color::TRANSPARENT
-                    },
-                },
-                ..Default::default()
-            },
-            ButtonKind::ListItem { selected } => button::Appearance {
-                background: Some(Background::Color(if selected {
-                    palette.selected
-                } else {
                     Color::TRANSPARENT
-                })),
-                text_color: palette.text_primary,
-                border: Border {
-                    radius: 10.0.into(),
-                    width: if selected { 1.0 } else { 0.0 },
-                    color: if selected {
-                        palette.accent
-                    } else {
-                        Color::TRANSPARENT
-                    },
                 },
-                ..Default::default()
             },
-            ButtonKind::AlbumCard { selected } => button::Appearance {
-                background: Some(Background::Color(if selected {
-                    palette.selected
-                } else {
-                    Color::TRANSPARENT
-                })),
-                text_color: palette.text_primary,
-                border: Border {
-                    radius: 12.0.into(),
-                    width: if selected { 1.0 } else { 0.0 },
-                    color: if selected {
-                        palette.accent
-                    } else {
-                        Color::TRANSPARENT
-                    },
-                },
-                ..Default::default()
-            },
-            ButtonKind::Control => button::Appearance {
-                background: Some(Background::Color(palette.elevated)),
-                text_color: palette.text_primary,
-                border: Border {
-                    radius: 12.0.into(),
-                    width: 1.0,
-                    color: palette.border_subtle,
-                },
-                ..Default::default()
-            },
-            ButtonKind::Icon => button::Appearance {
-                background: Some(Background::Color(Color::TRANSPARENT)),
-                text_color: palette.text_muted,
-                border: Border {
-                    radius: 8.0.into(),
-                    width: 0.0,
-                    color: Color::TRANSPARENT,
-                },
-                ..Default::default()
-            },
-        }
-    }
-
-    fn hovered(&self, style: &Theme) -> button::Appearance {
-        let mut appearance = self.active(style);
-        appearance.background = Some(Background::Color(self.theme.palette.hover));
-        appearance
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct SearchInput {
-    theme: ThemeTokens,
-}
-
-impl SearchInput {
-    pub fn new(theme: ThemeTokens) -> Self {
-        Self { theme }
-    }
-}
-
-impl text_input::StyleSheet for SearchInput {
-    type Style = Theme;
-
-    fn active(&self, _style: &Theme) -> text_input::Appearance {
-        text_input::Appearance {
-            background: Background::Color(self.theme.palette.input_background),
+            shadow: Shadow::default(),
+            snap: cfg!(feature = "crisp"),
+        },
+        ButtonKind::ListItem { selected } => button::Style {
+            background: Some(Background::Color(if selected {
+                palette.selected
+            } else {
+                Color::TRANSPARENT
+            })),
+            text_color: palette.text_primary,
             border: Border {
                 radius: 10.0.into(),
-                width: 1.0,
-                color: self.theme.palette.input_border,
+                width: if selected { 1.0 } else { 0.0 },
+                color: if selected {
+                    palette.accent
+                } else {
+                    Color::TRANSPARENT
+                },
             },
-            icon_color: text_muted(self.theme),
+            shadow: Shadow::default(),
+            snap: cfg!(feature = "crisp"),
+        },
+        ButtonKind::AlbumCard { selected } => button::Style {
+            background: Some(Background::Color(if selected {
+                palette.selected
+            } else {
+                Color::TRANSPARENT
+            })),
+            text_color: palette.text_primary,
+            border: Border {
+                radius: 12.0.into(),
+                width: if selected { 1.0 } else { 0.0 },
+                color: if selected {
+                    palette.accent
+                } else {
+                    Color::TRANSPARENT
+                },
+            },
+            shadow: Shadow::default(),
+            snap: cfg!(feature = "crisp"),
+        },
+        ButtonKind::Control => button::Style {
+            background: Some(Background::Color(palette.elevated)),
+            text_color: palette.text_primary,
+            border: Border {
+                radius: 12.0.into(),
+                width: 1.0,
+                color: palette.border_subtle,
+            },
+            shadow: Shadow::default(),
+            snap: cfg!(feature = "crisp"),
+        },
+        ButtonKind::Icon => button::Style {
+            background: Some(Background::Color(Color::TRANSPARENT)),
+            text_color: palette.text_muted,
+            border: Border {
+                radius: 8.0.into(),
+                width: 0.0,
+                color: Color::TRANSPARENT,
+            },
+            shadow: Shadow::default(),
+            snap: cfg!(feature = "crisp"),
+        },
+    };
+
+    match status {
+        button::Status::Hovered | button::Status::Pressed => {
+            style.background = Some(Background::Color(palette.hover));
         }
+        button::Status::Disabled => {
+            style.background = Some(Background::Color(palette.elevated));
+            style.text_color = palette.text_muted;
+            style.border.color = palette.border_subtle;
+        }
+        button::Status::Active => {}
     }
 
-    fn focused(&self, style: &Theme) -> text_input::Appearance {
-        let mut appearance = self.active(style);
-        appearance.border.color = accent(self.theme);
-        appearance
-    }
+    style
+}
 
-    fn placeholder_color(&self, _style: &Theme) -> Color {
-        text_muted(self.theme)
-    }
+pub fn text_input_style(
+    theme: ThemeTokens,
+    status: text_input::Status,
+) -> text_input::Style {
+    let base = text_input::Style {
+        background: Background::Color(theme.palette.input_background),
+        border: Border {
+            radius: 10.0.into(),
+            width: 1.0,
+            color: theme.palette.input_border,
+        },
+        icon: text_muted(theme),
+        placeholder: text_muted(theme),
+        value: text_primary(theme),
+        selection: accent_alpha(theme, 0.25),
+    };
 
-    fn value_color(&self, _style: &Theme) -> Color {
-        text_primary(self.theme)
-    }
-
-    fn disabled_color(&self, _style: &Theme) -> Color {
-        text_muted(self.theme)
-    }
-
-    fn selection_color(&self, _style: &Theme) -> Color {
-        accent_alpha(self.theme, 0.25)
-    }
-
-    fn disabled(&self, style: &Theme) -> text_input::Appearance {
-        let mut appearance = self.active(style);
-        appearance.background = Background::Color(self.theme.palette.elevated);
-        appearance.border.color = self.theme.palette.border;
-        appearance
+    match status {
+        text_input::Status::Active => base,
+        text_input::Status::Hovered => text_input::Style {
+            border: Border {
+                color: theme.palette.border,
+                ..base.border
+            },
+            ..base
+        },
+        text_input::Status::Focused { .. } => text_input::Style {
+            border: Border {
+                color: accent(theme),
+                ..base.border
+            },
+            ..base
+        },
+        text_input::Status::Disabled => text_input::Style {
+            background: Background::Color(theme.palette.elevated),
+            border: Border {
+                color: theme.palette.border,
+                ..base.border
+            },
+            value: text_muted(theme),
+            ..base
+        },
     }
 }

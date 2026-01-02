@@ -4,7 +4,6 @@ use crate::ui::message::UiMessage;
 use crate::ui::state::Folder;
 use crate::ui::style;
 use iced::font::Weight;
-use iced::theme::{Button, Container};
 use iced::widget::{button, column, container, row, scrollable, text};
 use iced::{Alignment, Element, Length};
 
@@ -92,10 +91,7 @@ impl FoldersPanel {
             .width(Length::Fill)
             .height(Length::Fill)
             .padding(12)
-            .style(Container::Custom(Box::new(style::SurfaceStyle::new(
-                style::Surface::Panel,
-                theme,
-            ))))
+            .style(move |_| style::surface_style(theme, style::Surface::Panel))
             .into()
     }
 
@@ -122,9 +118,7 @@ impl FoldersPanel {
                         .height(Length::Fixed(120.0))
                         .center_x()
                         .center_y()
-                        .style(Container::Custom(Box::new(
-                            style::SurfaceStyle::new(style::Surface::AlbumCover, theme),
-                        )));
+                        .style(move |_| style::surface_style(theme, style::Surface::AlbumCover));
                         let title = text(folder.name.clone())
                             .size(theme.size(14))
                             .font(style::font_propo(Weight::Medium))
@@ -139,12 +133,15 @@ impl FoldersPanel {
                             .width(Length::Fill);
 
                         button(card)
-                            .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                                style::ButtonKind::AlbumCard {
-                                    selected: is_selected,
-                                },
-                                theme,
-                            ))))
+                            .style(move |_, status| {
+                                style::button_style(
+                                    theme,
+                                    style::ButtonKind::AlbumCard {
+                                        selected: is_selected,
+                                    },
+                                    status,
+                                )
+                            })
                             .on_press(UiMessage::SelectFolder(folder.clone()))
                             .width(Length::FillPortion(1))
                             .into()
@@ -189,9 +186,7 @@ impl FoldersPanel {
                     .height(Length::Fixed(28.0))
                     .center_x()
                     .center_y()
-                    .style(Container::Custom(Box::new(
-                        style::SurfaceStyle::new(style::Surface::AlbumCover, theme),
-                    )));
+                    .style(move |_| style::surface_style(theme, style::Surface::AlbumCover));
                     let title = text(folder.name.clone())
                         .size(theme.size(14))
                         .font(style::font_propo(Weight::Medium))
@@ -210,12 +205,15 @@ impl FoldersPanel {
                         .width(Length::Fill);
 
                     button(row_content)
-                        .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                            style::ButtonKind::ListItem {
-                                selected: is_selected,
-                            },
-                            theme,
-                        ))))
+                        .style(move |_, status| {
+                            style::button_style(
+                                theme,
+                                style::ButtonKind::ListItem {
+                                    selected: is_selected,
+                                },
+                                status,
+                            )
+                        })
                         .on_press(UiMessage::SelectFolder(folder.clone()))
                         .width(Length::Fill)
                         .into()

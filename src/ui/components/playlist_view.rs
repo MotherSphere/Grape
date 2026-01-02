@@ -1,7 +1,6 @@
 use crate::ui::message::UiMessage;
 use crate::ui::style;
 use iced::font::Weight;
-use iced::theme::{Button, Container};
 use iced::widget::{button, column, container, row, text};
 use iced::{Alignment, Element, Length};
 
@@ -24,10 +23,7 @@ impl PlaylistView {
                     .font(style::font_propo(Weight::Medium))
                     .style(style::text_primary(theme)),
             )
-            .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                style::ButtonKind::Icon,
-                theme,
-            ))))
+            .style(move |_, status| style::button_style(theme, style::ButtonKind::Icon, status))
             .on_press(UiMessage::ClosePlaylist)
         ]
         .align_items(Alignment::Center)
@@ -44,20 +40,14 @@ impl PlaylistView {
         let panel = container(column![header, body].spacing(16))
             .padding(24)
             .width(Length::FillPortion(2))
-            .style(Container::Custom(Box::new(style::SurfaceStyle::new(
-                style::Surface::Panel,
-                theme,
-            ))));
+            .style(move |_| style::surface_style(theme, style::Surface::Panel));
 
         container(panel)
             .width(Length::Fill)
             .height(Length::Fill)
             .center_x()
             .center_y()
-            .style(Container::Custom(Box::new(style::SurfaceStyle::new(
-                style::Surface::AppBackground,
-                theme,
-            ))))
+            .style(move |_| style::surface_style(theme, style::Surface::AppBackground))
             .into()
     }
 }

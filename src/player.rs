@@ -7,7 +7,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink, source::Source};
+use rodio::{Decoder, OutputStream, OutputStreamBuilder, Sink, source::Source};
 use tracing::{error, info};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -91,8 +91,7 @@ impl From<rodio::PlayError> for PlayerError {
 }
 
 pub struct Player {
-    _stream: OutputStream,
-    handle: OutputStreamHandle,
+    stream: OutputStream,
     sink: Sink,
     state: PlaybackState,
     current_track: Option<PathBuf>,
@@ -101,11 +100,10 @@ pub struct Player {
 
 impl Player {
     pub fn new() -> Result<Self, PlayerError> {
-        let (stream, handle) = OutputStream::try_default()?;
-        let sink = Sink::try_new(&handle)?;
+        let stream = OutputStreamBuilder::open_default_stream()?;
+        let sink = Sink::connect_new(stream.mixer());
         Ok(Self {
-            _stream: stream,
-            handle,
+            stream,
             sink,
             state: PlaybackState::Stopped,
             current_track: None,
@@ -119,7 +117,7 @@ impl Player {
         self.current_track = Some(path.clone());
         self.position = Duration::ZERO;
         self.sink.stop();
-        self.sink = Sink::try_new(&self.handle)?;
+        self.sink = Sink::connect_new(self.stream.mixer());
         let source = self.decode_source(&path).map_err(|err| {
             error!(error = %err, path = %path.display(), "Failed to load track");
             err
@@ -150,7 +148,7 @@ impl Player {
             .ok_or(PlayerError::NoTrackLoaded)?;
         self.position = position;
         self.sink.stop();
-        self.sink = Sink::try_new(&self.handle)?;
+        self.sink = Sink::connect_new(self.stream.mixer());
         let source = self
             .decode_source(&path)
             .map_err(|err| {

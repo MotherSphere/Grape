@@ -4,7 +4,6 @@ use crate::ui::message::UiMessage;
 use crate::ui::state::{Artist, SelectionState};
 use crate::ui::style;
 use iced::font::Weight;
-use iced::theme::{Button, Container};
 use iced::widget::{button, column, container, row, scrollable, text};
 use iced::{Alignment, Element, Length};
 
@@ -81,9 +80,7 @@ impl ArtistsPanel {
                     .height(Length::Fixed(24.0))
                     .center_x()
                     .center_y()
-                    .style(Container::Custom(Box::new(
-                        style::SurfaceStyle::new(style::Surface::Avatar, theme),
-                    )));
+                    .style(move |_| style::surface_style(theme, style::Surface::Avatar));
                     let label = text(artist.name.clone())
                         .font(style::font_propo(Weight::Medium))
                         .style(style::text_primary(theme))
@@ -93,12 +90,15 @@ impl ArtistsPanel {
                         .align_items(Alignment::Center)
                         .width(Length::Fill);
                     button(row_content)
-                        .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                            style::ButtonKind::ListItem {
-                                selected: is_selected,
-                            },
-                            theme,
-                        ))))
+                        .style(move |_, status| {
+                            style::button_style(
+                                theme,
+                                style::ButtonKind::ListItem {
+                                    selected: is_selected,
+                                },
+                                status,
+                            )
+                        })
                         .on_press(UiMessage::SelectArtist(artist.clone()))
                         .width(Length::Fill)
                         .into()
@@ -130,10 +130,7 @@ impl ArtistsPanel {
             .width(Length::Fill)
             .height(Length::Fill)
             .padding(12)
-            .style(Container::Custom(Box::new(style::SurfaceStyle::new(
-                style::Surface::Sidebar,
-                theme,
-            ))))
+            .style(move |_| style::surface_style(theme, style::Surface::Sidebar))
             .into()
     }
 
