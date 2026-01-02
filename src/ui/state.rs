@@ -139,6 +139,7 @@ impl UiState {
         match message {
             UiMessage::TabSelected(tab) => {
                 self.active_tab = tab;
+                self.playlist_open = false;
             }
             UiMessage::SelectArtist(artist) => {
                 self.selection.selected_artist = Some(artist);
