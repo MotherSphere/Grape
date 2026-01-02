@@ -44,6 +44,16 @@ pub enum PreferencesSection {
     Notifications,
     Performance,
     Advanced,
+    AppearanceTheme,
+    AppearanceAccents,
+    AppearanceTypography,
+    AppearanceEffects,
+    AppearancePreview,
+    AccessibilityVision,
+    AccessibilityMovement,
+    AccessibilityAudioSubtitles,
+    AccessibilityNavigation,
+    AccessibilityPlayback,
     AudioOutput,
     AudioPlayback,
     AudioVolume,
@@ -61,6 +71,16 @@ pub struct PreferencesSectionsState {
     pub notifications: bool,
     pub performance: bool,
     pub advanced: bool,
+    pub appearance_theme: bool,
+    pub appearance_accents: bool,
+    pub appearance_typography: bool,
+    pub appearance_effects: bool,
+    pub appearance_preview: bool,
+    pub accessibility_vision: bool,
+    pub accessibility_movement: bool,
+    pub accessibility_audio_subtitles: bool,
+    pub accessibility_navigation: bool,
+    pub accessibility_playback: bool,
     pub audio_output: bool,
     pub audio_playback: bool,
     pub audio_volume: bool,
@@ -79,6 +99,34 @@ impl PreferencesSectionsState {
             PreferencesSection::Notifications => self.notifications = !self.notifications,
             PreferencesSection::Performance => self.performance = !self.performance,
             PreferencesSection::Advanced => self.advanced = !self.advanced,
+            PreferencesSection::AppearanceTheme => self.appearance_theme = !self.appearance_theme,
+            PreferencesSection::AppearanceAccents => {
+                self.appearance_accents = !self.appearance_accents;
+            }
+            PreferencesSection::AppearanceTypography => {
+                self.appearance_typography = !self.appearance_typography;
+            }
+            PreferencesSection::AppearanceEffects => {
+                self.appearance_effects = !self.appearance_effects;
+            }
+            PreferencesSection::AppearancePreview => {
+                self.appearance_preview = !self.appearance_preview;
+            }
+            PreferencesSection::AccessibilityVision => {
+                self.accessibility_vision = !self.accessibility_vision;
+            }
+            PreferencesSection::AccessibilityMovement => {
+                self.accessibility_movement = !self.accessibility_movement;
+            }
+            PreferencesSection::AccessibilityAudioSubtitles => {
+                self.accessibility_audio_subtitles = !self.accessibility_audio_subtitles;
+            }
+            PreferencesSection::AccessibilityNavigation => {
+                self.accessibility_navigation = !self.accessibility_navigation;
+            }
+            PreferencesSection::AccessibilityPlayback => {
+                self.accessibility_playback = !self.accessibility_playback;
+            }
             PreferencesSection::AudioOutput => self.audio_output = !self.audio_output,
             PreferencesSection::AudioPlayback => self.audio_playback = !self.audio_playback,
             PreferencesSection::AudioVolume => self.audio_volume = !self.audio_volume,
@@ -99,6 +147,16 @@ impl Default for PreferencesSectionsState {
             notifications: false,
             performance: false,
             advanced: false,
+            appearance_theme: true,
+            appearance_accents: true,
+            appearance_typography: true,
+            appearance_effects: true,
+            appearance_preview: true,
+            accessibility_vision: true,
+            accessibility_movement: true,
+            accessibility_audio_subtitles: true,
+            accessibility_navigation: true,
+            accessibility_playback: true,
             audio_output: true,
             audio_playback: true,
             audio_volume: true,

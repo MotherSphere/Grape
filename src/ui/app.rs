@@ -1354,10 +1354,6 @@ impl GrapeApp {
         };
         let typography_group = || {
             column![
-                text("Typographie")
-                    .size(theme.size(16))
-                    .font(style::font_propo(Weight::Semibold))
-                    .style(style::text_primary(theme)),
                 row![
                     setting_label(
                         "Taille de police UI",
@@ -1414,14 +1410,11 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
+            .padding([4, 12, 0, 12])
         };
 
         let vision_group = || {
             column![
-                text("Vision")
-                    .size(theme.size(16))
-                    .font(style::font_propo(Weight::Semibold))
-                    .style(style::text_primary(theme)),
                 row![
                     setting_label("Augmenter le contraste", "Renforce les contrastes UI."),
                     controls(
@@ -1478,14 +1471,11 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
+            .padding([4, 12, 0, 12])
         };
 
         let movement_group = || {
             column![
-                text("Mouvement")
-                    .size(theme.size(16))
-                    .font(style::font_propo(Weight::Semibold))
-                    .style(style::text_primary(theme)),
                 row![
                     setting_label(
                         "Réduire les animations",
@@ -1520,14 +1510,11 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
+            .padding([4, 12, 0, 12])
         };
 
         let audio_subtitles_group = || {
             column![
-                text("Audio & sous-titres")
-                    .size(theme.size(16))
-                    .font(style::font_propo(Weight::Semibold))
-                    .style(style::text_primary(theme)),
                 row![
                     setting_label(
                         "Sous-titres par défaut",
@@ -1570,14 +1557,11 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
+            .padding([4, 12, 0, 12])
         };
 
         let navigation_group = || {
             column![
-                text("Navigation & interaction")
-                    .size(theme.size(16))
-                    .font(style::font_propo(Weight::Semibold))
-                    .style(style::text_primary(theme)),
                 row![
                     setting_label(
                         "Surligner le focus clavier",
@@ -1612,15 +1596,12 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
+            .padding([4, 12, 0, 12])
         };
 
         let playback_group = || {
             let playback_speed = self.ui.settings.default_playback_speed as f32 / 10.0;
             column![
-                text("Lecture")
-                    .size(theme.size(16))
-                    .font(style::font_propo(Weight::Semibold))
-                    .style(style::text_primary(theme)),
                 row![
                     setting_label("Vitesse de lecture par défaut", "Appliquée aux médias."),
                     controls(
@@ -1657,14 +1638,11 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
+            .padding([4, 12, 0, 12])
         };
 
-        let appearance_panel = column![
+        let appearance_theme_content = || {
             column![
-                text("Thème")
-                    .size(theme.size(16))
-                    .font(style::font_propo(Weight::Semibold))
-                    .style(style::text_primary(theme)),
                 row![
                     option_button(
                         self.ui.settings.theme_mode == ThemeMode::Dark,
@@ -1700,12 +1678,12 @@ impl GrapeApp {
                 .align_items(Alignment::Center)
                 .spacing(12),
             ]
-            .spacing(12),
+            .spacing(12)
+            .padding([4, 12, 0, 12])
+        };
+
+        let appearance_accents_content = || {
             column![
-                text("Couleurs & accents")
-                    .size(theme.size(16))
-                    .font(style::font_propo(Weight::Semibold))
-                    .style(style::text_primary(theme)),
                 row![
                     accent_button(AccentColor::Blue),
                     accent_button(AccentColor::Violet),
@@ -1730,13 +1708,12 @@ impl GrapeApp {
                 .align_items(Alignment::Center)
                 .spacing(12),
             ]
-            .spacing(12),
-            typography_group(),
+            .spacing(12)
+            .padding([4, 12, 0, 12])
+        };
+
+        let appearance_effects_content = || {
             column![
-                text("Arrière-plans & effets")
-                    .size(theme.size(16))
-                    .font(style::font_propo(Weight::Semibold))
-                    .style(style::text_primary(theme)),
                 row![
                     setting_label("Transparence / Flou", "Applique des effets de profondeur."),
                     controls(
@@ -1767,12 +1744,12 @@ impl GrapeApp {
                 .align_items(Alignment::Center)
                 .spacing(12),
             ]
-            .spacing(12),
+            .spacing(12)
+            .padding([4, 12, 0, 12])
+        };
+
+        let appearance_preview_content = || {
             column![
-                text("Aperçu")
-                    .size(theme.size(16))
-                    .font(style::font_propo(Weight::Semibold))
-                    .style(style::text_primary(theme)),
                 container(
                     column![
                         text("Carte de prévisualisation")
@@ -1815,18 +1792,147 @@ impl GrapeApp {
                     theme,
                 )))),
             ]
-            .spacing(12),
-        ]
-        .spacing(20);
+            .spacing(12)
+            .padding([4, 12, 0, 12])
+        };
 
-        let accessibility_panel = column![
-            vision_group(),
-            movement_group(),
-            audio_subtitles_group(),
-            navigation_group(),
-            playback_group(),
-        ]
-        .spacing(20);
+        let appearance_panel = scrollable(
+            column![
+                column![
+                    text("Paramètres d'apparence")
+                        .size(theme.size(16))
+                        .font(style::font_propo(Weight::Semibold))
+                        .style(style::text_primary(theme)),
+                    text("Ajustez le thème, les accents et les effets visuels.")
+                        .size(theme.size(13))
+                        .font(style::font_propo(Weight::Light))
+                        .style(style::text_muted(theme))
+                ]
+                .spacing(6),
+                section_header(
+                    "Thème",
+                    self.ui.preferences_sections.appearance_theme,
+                    UiMessage::TogglePreferencesSection(PreferencesSection::AppearanceTheme),
+                ),
+                if self.ui.preferences_sections.appearance_theme {
+                    appearance_theme_content()
+                } else {
+                    column![]
+                },
+                section_header(
+                    "Couleurs & accents",
+                    self.ui.preferences_sections.appearance_accents,
+                    UiMessage::TogglePreferencesSection(PreferencesSection::AppearanceAccents),
+                ),
+                if self.ui.preferences_sections.appearance_accents {
+                    appearance_accents_content()
+                } else {
+                    column![]
+                },
+                section_header(
+                    "Typographie",
+                    self.ui.preferences_sections.appearance_typography,
+                    UiMessage::TogglePreferencesSection(PreferencesSection::AppearanceTypography),
+                ),
+                if self.ui.preferences_sections.appearance_typography {
+                    typography_group()
+                } else {
+                    column![]
+                },
+                section_header(
+                    "Arrière-plans & effets",
+                    self.ui.preferences_sections.appearance_effects,
+                    UiMessage::TogglePreferencesSection(PreferencesSection::AppearanceEffects),
+                ),
+                if self.ui.preferences_sections.appearance_effects {
+                    appearance_effects_content()
+                } else {
+                    column![]
+                },
+                section_header(
+                    "Aperçu",
+                    self.ui.preferences_sections.appearance_preview,
+                    UiMessage::TogglePreferencesSection(PreferencesSection::AppearancePreview),
+                ),
+                if self.ui.preferences_sections.appearance_preview {
+                    appearance_preview_content()
+                } else {
+                    column![]
+                },
+            ]
+            .spacing(16),
+        )
+        .height(Length::Fill);
+
+        let accessibility_panel = scrollable(
+            column![
+                column![
+                    text("Paramètres d'accessibilité")
+                        .size(theme.size(16))
+                        .font(style::font_propo(Weight::Semibold))
+                        .style(style::text_primary(theme)),
+                    text("Facilitez la lecture, la navigation et la lecture média.")
+                        .size(theme.size(13))
+                        .font(style::font_propo(Weight::Light))
+                        .style(style::text_muted(theme))
+                ]
+                .spacing(6),
+                section_header(
+                    "Vision",
+                    self.ui.preferences_sections.accessibility_vision,
+                    UiMessage::TogglePreferencesSection(PreferencesSection::AccessibilityVision),
+                ),
+                if self.ui.preferences_sections.accessibility_vision {
+                    vision_group()
+                } else {
+                    column![]
+                },
+                section_header(
+                    "Mouvement",
+                    self.ui.preferences_sections.accessibility_movement,
+                    UiMessage::TogglePreferencesSection(PreferencesSection::AccessibilityMovement),
+                ),
+                if self.ui.preferences_sections.accessibility_movement {
+                    movement_group()
+                } else {
+                    column![]
+                },
+                section_header(
+                    "Audio & sous-titres",
+                    self.ui.preferences_sections.accessibility_audio_subtitles,
+                    UiMessage::TogglePreferencesSection(
+                        PreferencesSection::AccessibilityAudioSubtitles
+                    ),
+                ),
+                if self.ui.preferences_sections.accessibility_audio_subtitles {
+                    audio_subtitles_group()
+                } else {
+                    column![]
+                },
+                section_header(
+                    "Navigation & interaction",
+                    self.ui.preferences_sections.accessibility_navigation,
+                    UiMessage::TogglePreferencesSection(PreferencesSection::AccessibilityNavigation),
+                ),
+                if self.ui.preferences_sections.accessibility_navigation {
+                    navigation_group()
+                } else {
+                    column![]
+                },
+                section_header(
+                    "Lecture",
+                    self.ui.preferences_sections.accessibility_playback,
+                    UiMessage::TogglePreferencesSection(PreferencesSection::AccessibilityPlayback),
+                ),
+                if self.ui.preferences_sections.accessibility_playback {
+                    playback_group()
+                } else {
+                    column![]
+                },
+            ]
+            .spacing(16),
+        )
+        .height(Length::Fill);
 
         let volume_value = self.ui.settings.default_volume as f32;
         let crossfade_value = self.ui.settings.crossfade_seconds as f32;
