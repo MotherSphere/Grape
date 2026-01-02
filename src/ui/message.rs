@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
 use crate::config::{
-    AccentColor, AudioOutputDevice, AudioStabilityMode, CloseBehavior, EqPreset, InterfaceDensity,
-    InterfaceLanguage, MissingDeviceBehavior, StartupScreen, TextScale, ThemeMode, TimeFormat,
-    UpdateChannel, VolumeLevel,
+    AccessibleTextSize, AccentColor, AudioOutputDevice, AudioStabilityMode, CloseBehavior, EqPreset,
+    InterfaceDensity, InterfaceLanguage, MissingDeviceBehavior, StartupScreen, SubtitleSize,
+    TextScale, ThemeMode, TimeFormat, UpdateChannel, VolumeLevel,
 };
 use crate::ui::state::{
     ActiveTab, Album, Artist, Folder, Genre, PreferencesSection, PreferencesTab, SortOption, Track,
@@ -34,6 +34,17 @@ pub enum UiMessage {
     SetInterfaceDensity(InterfaceDensity),
     SetTransparencyBlur(bool),
     SetUiAnimations(bool),
+    SetIncreaseContrast(bool),
+    SetReduceTransparency(bool),
+    SetAccessibleTextSize(AccessibleTextSize),
+    SetReduceAnimations(bool),
+    SetReduceTransitions(bool),
+    SetSubtitlesEnabled(bool),
+    SetSubtitleSize(SubtitleSize),
+    SetHighlightKeyboardFocus(bool),
+    SetAdvancedShortcuts(bool),
+    SetDefaultPlaybackSpeed(f32),
+    SetPauseOnFocusLoss(bool),
     SetDefaultVolume(u8),
     SetAudioOutputDevice(AudioOutputDevice),
     SetMissingDeviceBehavior(MissingDeviceBehavior),
