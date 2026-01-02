@@ -138,6 +138,7 @@ impl FoldersPanel {
                                     selected: is_selected,
                                 },
                             ))))
+                            .on_press(UiMessage::SelectFolder(folder.clone()))
                             .width(Length::FillPortion(1))
                             .into()
                     })
@@ -203,6 +204,7 @@ impl FoldersPanel {
                             selected: is_selected,
                         },
                     ))))
+                    .on_press(UiMessage::SelectFolder(folder.clone()))
                     .width(Length::Fill)
                     .into()
             })

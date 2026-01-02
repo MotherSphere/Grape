@@ -469,7 +469,12 @@ impl GrapeApp {
     }
 
     fn genres_panel(&self) -> Element<'_, UiMessage> {
-        let selected_id = None;
+        let selected_id = self
+            .ui
+            .selection
+            .selected_genre
+            .as_ref()
+            .map(|genre| genre.id);
         let genres = self.filtered_genres_from_catalog();
         let panel = GenresPanel::new(genres).with_selection(selected_id);
         panel.view()
@@ -480,7 +485,12 @@ impl GrapeApp {
             SortOption::Alphabetical => "A–Z",
             SortOption::ByAlbum => "By album",
         };
-        let selected_id = None;
+        let selected_id = self
+            .ui
+            .selection
+            .selected_folder
+            .as_ref()
+            .map(|folder| folder.id);
         let folders = self.filtered_folders_from_catalog();
         FoldersPanel::new(folders)
             .with_sort_label(sort_label)
@@ -625,23 +635,38 @@ impl Application for GrapeApp {
             return self.playlist_view();
         }
 
-        let left_panel = match self.ui.active_tab {
-            ActiveTab::Artists | ActiveTab::Albums => self.artists_panel(),
-            ActiveTab::Genres => self.genres_panel(),
-            ActiveTab::Folders => self.folders_panel(),
-        };
-
-        let content = row![
-            container(left_panel)
-                .width(Length::FillPortion(2))
-                .height(Length::Fill),
-            container(self.albums_panel())
-                .width(Length::FillPortion(5))
-                .height(Length::Fill),
-            container(self.songs_panel())
-                .width(Length::FillPortion(3))
-                .height(Length::Fill),
-        ]
+        let content = match self.ui.active_tab {
+            ActiveTab::Artists | ActiveTab::Albums => row![
+                container(self.artists_panel())
+                    .width(Length::FillPortion(2))
+                    .height(Length::Fill),
+                container(self.albums_panel())
+                    .width(Length::FillPortion(5))
+                    .height(Length::Fill),
+                container(self.songs_panel())
+                    .width(Length::FillPortion(3))
+                    .height(Length::Fill),
+            ],
+            ActiveTab::Genres => row![
+                container(self.genres_panel())
+                    .width(Length::FillPortion(2))
+                    .height(Length::Fill),
+                container(self.albums_panel())
+                    .width(Length::FillPortion(5))
+                    .height(Length::Fill),
+                container(self.songs_panel())
+                    .width(Length::FillPortion(3))
+                    .height(Length::Fill),
+            ],
+            ActiveTab::Folders => row![
+                container(self.folders_panel())
+                    .width(Length::FillPortion(7))
+                    .height(Length::Fill),
+                container(self.songs_panel())
+                    .width(Length::FillPortion(3))
+                    .height(Length::Fill),
+            ],
+        }
         .spacing(16)
         .height(Length::Fill);
 

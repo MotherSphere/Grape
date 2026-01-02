@@ -62,6 +62,8 @@ pub struct Track {
 pub struct SelectionState {
     pub selected_artist: Option<Artist>,
     pub selected_album: Option<Album>,
+    pub selected_genre: Option<Genre>,
+    pub selected_folder: Option<Folder>,
     pub selected_track: Option<Track>,
 }
 
@@ -163,6 +165,14 @@ impl UiState {
             UiMessage::SelectAlbum(album) => {
                 self.selection.selected_album = Some(album);
                 self.selection.selected_track = None;
+            }
+            UiMessage::SelectGenre(genre) => {
+                self.selection.selected_genre = Some(genre);
+                self.selection.selected_folder = None;
+            }
+            UiMessage::SelectFolder(folder) => {
+                self.selection.selected_folder = Some(folder);
+                self.selection.selected_genre = None;
             }
             UiMessage::SelectTrack(track) => {
                 self.selection.selected_track = Some(track);
