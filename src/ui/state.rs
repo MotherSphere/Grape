@@ -351,39 +351,6 @@ impl UiState {
             UiMessage::SetUiAnimations(enabled) => {
                 self.settings.ui_animations = enabled;
             }
-            UiMessage::SetIncreaseContrast(enabled) => {
-                self.settings.increase_contrast = enabled;
-            }
-            UiMessage::SetReduceTransparency(enabled) => {
-                self.settings.reduce_transparency = enabled;
-            }
-            UiMessage::SetAccessibleTextSize(size) => {
-                self.settings.accessible_text_size = size;
-            }
-            UiMessage::SetReduceAnimations(enabled) => {
-                self.settings.reduce_animations = enabled;
-            }
-            UiMessage::SetReduceTransitions(enabled) => {
-                self.settings.reduce_transitions = enabled;
-            }
-            UiMessage::SetSubtitlesEnabled(enabled) => {
-                self.settings.subtitles_enabled = enabled;
-            }
-            UiMessage::SetSubtitleSize(size) => {
-                self.settings.subtitle_size = size;
-            }
-            UiMessage::SetHighlightKeyboardFocus(enabled) => {
-                self.settings.highlight_keyboard_focus = enabled;
-            }
-            UiMessage::SetAdvancedShortcuts(enabled) => {
-                self.settings.enable_advanced_shortcuts = enabled;
-            }
-            UiMessage::SetDefaultPlaybackSpeed(speed) => {
-                self.settings.default_playback_speed = speed.clamp(0.5, 2.0);
-            }
-            UiMessage::SetPauseOnFocusLoss(enabled) => {
-                self.settings.pause_on_focus_loss = enabled;
-            }
             UiMessage::SetDefaultVolume(volume) => {
                 self.settings.default_volume = volume.min(100);
             }
