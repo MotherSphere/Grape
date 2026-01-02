@@ -93,6 +93,7 @@ impl GenresPanel {
                             selected: is_selected,
                         },
                     ))))
+                    .on_press(UiMessage::SelectGenre(genre.clone()))
                     .width(Length::Fill)
                     .into()
             })
