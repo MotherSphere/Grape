@@ -691,7 +691,7 @@ impl GrapeApp {
         .align_y(Alignment::Center)
         .spacing(12);
 
-        let menu_button = |tab: PreferencesTab, label: &str| {
+        let menu_button = |tab: PreferencesTab, label: &'static str| {
             button(
                 text(label)
                     .size(theme.size(14))
@@ -720,7 +720,7 @@ impl GrapeApp {
         .spacing(6)
         .width(Length::Fill);
 
-        let section_header = |label: &str, expanded: bool, message: UiMessage| {
+        let section_header = |label: &'static str, expanded: bool, message: UiMessage| {
             let chevron = if expanded { "▾" } else { "▸" };
             button(
                 row![
@@ -747,13 +747,13 @@ impl GrapeApp {
             .width(Length::Fill)
             .on_press(message)
         };
-        let section_hint = |label: &str| {
+        let section_hint = |label: &'static str| {
             text(label)
                 .size(theme.size(12))
                 .font(style::font_propo(Weight::Light))
                 .style(move |_| style::text_style_muted(theme))
         };
-        let setting_label = |title: &str, subtitle: &str| {
+        let setting_label = |title: &'static str, subtitle: &'static str| {
             column![
                 text(title)
                     .size(theme.size(13))
@@ -767,7 +767,7 @@ impl GrapeApp {
             .spacing(2)
             .width(Length::Fill)
         };
-        let option_button = |selected: bool, label: &str, message: UiMessage| {
+        let option_button = |selected: bool, label: &'static str, message: UiMessage| {
             button(
                 text(label)
                     .size(theme.size(12))
@@ -799,7 +799,7 @@ impl GrapeApp {
                 })
                 .into()
         }
-        let action_button = |label: &str, message: UiMessage| {
+        let action_button = |label: &'static str, message: UiMessage| {
             button(
                 text(label)
                     .size(theme.size(12))
@@ -2441,13 +2441,13 @@ impl GrapeApp {
                 self.ui.playlist_open = false;
             }
             UiMessage::WindowMinimize => {
-                task = window::minimize(window::Id::default(), true);
+                task = window::minimize(window::Id::MAIN, true);
             }
             UiMessage::WindowToggleMaximize => {
-                task = window::toggle_maximize(window::Id::default());
+                task = window::toggle_maximize(window::Id::MAIN);
             }
             UiMessage::WindowClose => {
-                task = window::close(window::Id::default());
+                task = window::close(window::Id::MAIN);
             }
             UiMessage::PickLibraryFolder => {
                 task = Task::perform(

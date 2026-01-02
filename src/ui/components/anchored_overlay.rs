@@ -69,7 +69,7 @@ where
         &mut self,
         tree: &mut widget::Tree,
         event: &Event,
-        layout: Layout<'b>,
+        layout: Layout<'_>,
         cursor: mouse::Cursor,
         renderer: &iced::Renderer,
         clipboard: &mut dyn Clipboard,
@@ -168,7 +168,7 @@ where
 {
     fn layout(&mut self, renderer: &iced::Renderer, bounds: Size) -> Node {
         let viewport = Rectangle::with_size(bounds);
-        let overlay_layout = self.overlay.as_widget().layout(
+        let overlay_layout = self.overlay.as_widget_mut().layout(
             self.overlay_state,
             renderer,
             &Limits::new(Size::ZERO, Size::INFINITE),
