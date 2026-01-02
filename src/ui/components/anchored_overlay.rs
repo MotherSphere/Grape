@@ -112,7 +112,7 @@ where
     fn overlay<'b>(
         &'b mut self,
         tree: &'b mut widget::Tree,
-        layout: Layout<'_>,
+        layout: Layout<'b>,
         renderer: &iced::Renderer,
         viewport: &Rectangle,
         translation: Vector,
@@ -171,7 +171,7 @@ where
         let overlay_layout = self.overlay.as_widget().layout(
             self.overlay_state,
             renderer,
-            &Limits::new(Size::ZERO, Size::INFINITY),
+            &Limits::new(Size::ZERO, Size::INFINITE),
         );
         let overlay_bounds = overlay_layout.bounds();
         let mut target_bounds = Rectangle {
@@ -207,7 +207,7 @@ where
             style,
             layout.children().next().unwrap(),
             cursor,
-            &Rectangle::with_size(Size::INFINITY),
+            &Rectangle::with_size(Size::INFINITE),
         );
     }
 
@@ -228,7 +228,7 @@ where
             renderer,
             clipboard,
             shell,
-            &Rectangle::with_size(Size::INFINITY),
+            &Rectangle::with_size(Size::INFINITE),
         );
     }
 }

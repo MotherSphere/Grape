@@ -93,8 +93,8 @@ impl PlayerBar {
         let cover = container(cover_content)
             .width(Length::Fixed(42.0))
             .height(Length::Fixed(42.0))
-            .center_x()
-            .center_y()
+            .center_x(Length::Fill)
+            .center_y(Length::Fill)
             .style(move |_| style::surface_style(theme, style::Surface::AlbumCover));
         let left = row![
             cover,
@@ -150,10 +150,10 @@ impl PlayerBar {
 
         let elapsed = format_duration(playback.position);
         let duration = format_duration(playback.duration);
-        let progress = progress_bar(
+        let progress = container(progress_bar(
             0.0..=1.0,
             progress_ratio(playback.position, playback.duration),
-        )
+        ))
         .width(Length::Fill);
         let progress_row = row![
             text(elapsed)

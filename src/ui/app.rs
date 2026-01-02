@@ -22,8 +22,8 @@ use crate::ui::style;
 use iced::font::Weight;
 use iced::widget::{button, column, container, row, scrollable, slider, text, text_input};
 use iced::{
-    event, keyboard, mouse, window, Alignment, Color, Element, Length, Settings, Subscription,
-    Task, Theme,
+    event, keyboard, mouse, window, Alignment, Color, Element, Length, Padding, Settings,
+    Subscription, Task, Theme,
 };
 use std::time::Duration;
 use tracing::{error, info};
@@ -455,7 +455,7 @@ impl GrapeApp {
 
         let layout = row![
             container(logo_widget).width(Length::Shrink),
-            container(tabs).width(Length::Fill).center_x(),
+            container(tabs).width(Length::Fill).center_x(Length::Fill),
             container(search).width(Length::Shrink)
         ]
         .spacing(24)
@@ -661,6 +661,12 @@ impl GrapeApp {
 
     fn preferences_view(&self) -> Element<'_, UiMessage> {
         let theme = self.theme_tokens();
+        let section_padding = Padding {
+            top: 4.0,
+            right: 12.0,
+            bottom: 0.0,
+            left: 12.0,
+        };
         let header = row![
             text("Préférences")
                 .size(theme.size(22))
@@ -784,8 +790,13 @@ impl GrapeApp {
         fn controls<'a>(content: Element<'a, UiMessage>) -> Element<'a, UiMessage> {
             container(content)
                 .width(Length::FillPortion(2))
-                .center_x()
-                .padding([0, 0, 0, 24])
+                .center_x(Length::Fill)
+                .padding(Padding {
+                    top: 0.0,
+                    right: 0.0,
+                    bottom: 0.0,
+                    left: 24.0,
+                })
                 .into()
         }
         let action_button = |label: &str, message: UiMessage| {
@@ -907,7 +918,7 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let language_content = || {
@@ -962,7 +973,7 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let updates_content = || {
@@ -1023,7 +1034,7 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let privacy_content = || {
@@ -1069,7 +1080,7 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let storage_content = || {
@@ -1125,7 +1136,7 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let notifications_content = || {
@@ -1165,7 +1176,7 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let performance_content = || {
@@ -1205,7 +1216,7 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let advanced_content = || {
@@ -1234,7 +1245,7 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let general_panel = scrollable(
@@ -1420,7 +1431,7 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let vision_group = || {
@@ -1481,7 +1492,7 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let movement_group = || {
@@ -1520,7 +1531,7 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let audio_subtitles_group = || {
@@ -1567,7 +1578,7 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let navigation_group = || {
@@ -1606,7 +1617,7 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let playback_group = || {
@@ -1648,7 +1659,7 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let appearance_theme_content = || {
@@ -1689,7 +1700,7 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let appearance_accents_content = || {
@@ -1719,7 +1730,7 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let appearance_effects_content = || {
@@ -1755,7 +1766,7 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let appearance_preview_content = || {
@@ -1800,7 +1811,7 @@ impl GrapeApp {
                 .style(move |_| style::surface_style(theme, style::Surface::Panel)),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
 
         let appearance_panel = scrollable(
@@ -1999,7 +2010,7 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
         let audio_playback_content = || {
             column![
@@ -2056,7 +2067,7 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
         let audio_volume_content = || {
             column![
@@ -2120,7 +2131,7 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
         let audio_equalizer_content = || {
             column![
@@ -2188,7 +2199,7 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
         let audio_advanced_content = || {
             column![
@@ -2241,7 +2252,7 @@ impl GrapeApp {
                 .spacing(12),
             ]
             .spacing(12)
-            .padding([4, 12, 0, 12])
+            .padding(section_padding)
         };
         let audio_panel = scrollable(
             column![
@@ -2430,13 +2441,13 @@ impl GrapeApp {
                 self.ui.playlist_open = false;
             }
             UiMessage::WindowMinimize => {
-                task = window::minimize(window::Id::MAIN, true);
+                task = window::minimize(window::Id::default(), true);
             }
             UiMessage::WindowToggleMaximize => {
-                task = window::toggle_maximize(window::Id::MAIN);
+                task = window::toggle_maximize(window::Id::default());
             }
             UiMessage::WindowClose => {
-                task = window::close(window::Id::MAIN);
+                task = window::close(window::Id::default());
             }
             UiMessage::PickLibraryFolder => {
                 task = Task::perform(
@@ -2554,7 +2565,7 @@ impl GrapeApp {
         let mut subscriptions = Vec::new();
 
         if self.ui.menu_open {
-            subscriptions.push(event::listen_with(|event, status| match event {
+            subscriptions.push(event::listen_with(|event, status, _| match event {
                 event::Event::Keyboard(keyboard::Event::KeyPressed { key, .. })
                     if matches!(key, keyboard::Key::Named(keyboard::key::Named::Escape)) =>
                 {
@@ -2570,7 +2581,7 @@ impl GrapeApp {
         }
 
         if self.ui.playlist_open {
-            subscriptions.push(event::listen_with(|event, _status| match event {
+            subscriptions.push(event::listen_with(|event, _status, _| match event {
                 event::Event::Keyboard(keyboard::Event::KeyPressed { key, .. })
                     if matches!(key, keyboard::Key::Named(keyboard::key::Named::Escape)) =>
                 {
@@ -2581,7 +2592,7 @@ impl GrapeApp {
         }
 
         if self.ui.preferences_open {
-            subscriptions.push(event::listen_with(|event, _status| match event {
+            subscriptions.push(event::listen_with(|event, _status, _| match event {
                 event::Event::Keyboard(keyboard::Event::KeyPressed { key, .. })
                     if matches!(key, keyboard::Key::Named(keyboard::key::Named::Escape)) =>
                 {

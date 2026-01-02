@@ -116,8 +116,8 @@ impl FoldersPanel {
                         )
                         .width(Length::Fixed(120.0))
                         .height(Length::Fixed(120.0))
-                        .center_x()
-                        .center_y()
+                        .center_x(Length::Fill)
+                        .center_y(Length::Fill)
                         .style(move |_| style::surface_style(theme, style::Surface::AlbumCover));
                         let title = text(folder.name.clone())
                             .size(theme.size(14))
@@ -184,8 +184,8 @@ impl FoldersPanel {
                     )
                     .width(Length::Fixed(28.0))
                     .height(Length::Fixed(28.0))
-                    .center_x()
-                    .center_y()
+                    .center_x(Length::Fill)
+                    .center_y(Length::Fill)
                     .style(move |_| style::surface_style(theme, style::Surface::AlbumCover));
                     let title = text(folder.name.clone())
                         .size(theme.size(14))

@@ -78,8 +78,8 @@ impl ArtistsPanel {
                     )
                     .width(Length::Fixed(24.0))
                     .height(Length::Fixed(24.0))
-                    .center_x()
-                    .center_y()
+                    .center_x(Length::Fill)
+                    .center_y(Length::Fill)
                     .style(move |_| style::surface_style(theme, style::Surface::Avatar));
                     let label = text(artist.name.clone())
                         .font(style::font_propo(Weight::Medium))

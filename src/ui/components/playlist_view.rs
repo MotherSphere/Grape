@@ -45,8 +45,8 @@ impl PlaylistView {
         container(panel)
             .width(Length::Fill)
             .height(Length::Fill)
-            .center_x()
-            .center_y()
+            .center_x(Length::Fill)
+            .center_y(Length::Fill)
             .style(move |_| style::surface_style(theme, style::Surface::AppBackground))
             .into()
     }
