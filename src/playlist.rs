@@ -44,6 +44,10 @@ impl Playlist {
         true
     }
 
+    pub fn clear(&mut self) {
+        self.items.clear();
+    }
+
     pub fn to_exchange(&self) -> PlaylistExchange {
         PlaylistExchange {
             version: PlaylistExchange::VERSION,
@@ -66,6 +70,49 @@ impl Playlist {
     pub fn from_json(payload: &str) -> Result<Self, serde_json::Error> {
         let exchange: PlaylistExchange = serde_json::from_str(payload)?;
         Ok(Self::from_exchange(exchange))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PlaylistManager {
+    pub playlists: Vec<Playlist>,
+    pub active_index: usize,
+}
+
+impl PlaylistManager {
+    pub fn new_default() -> Self {
+        Self {
+            playlists: vec![Playlist::empty("Queue")],
+            active_index: 0,
+        }
+    }
+
+    pub fn active(&self) -> Option<&Playlist> {
+        self.playlists.get(self.active_index)
+    }
+
+    pub fn add(&mut self, item: NowPlaying) {
+        if let Some(playlist) = self.playlists.get_mut(self.active_index) {
+            playlist.add(item);
+        }
+    }
+
+    pub fn remove(&mut self, index: usize) -> Option<NowPlaying> {
+        self.playlists
+            .get_mut(self.active_index)
+            .and_then(|playlist| playlist.remove(index))
+    }
+
+    pub fn reorder(&mut self, from: usize, to: usize) -> bool {
+        self.playlists
+            .get_mut(self.active_index)
+            .map_or(false, |playlist| playlist.reorder(from, to))
+    }
+
+    pub fn clear(&mut self) {
+        if let Some(playlist) = self.playlists.get_mut(self.active_index) {
+            playlist.clear();
+        }
     }
 }
 

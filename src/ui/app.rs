@@ -4,6 +4,7 @@ use crate::config::{
     SubtitleSize, TextScale, ThemeMode, TimeFormat, UpdateChannel, VolumeLevel,
 };
 use crate::library::Catalog;
+use crate::playlist::PlaylistManager;
 use crate::player::{PlaybackState as PlayerPlaybackState, Player};
 use crate::ui::components::albums_grid::AlbumsGrid;
 use crate::ui::components::anchored_overlay::AnchoredOverlay;
@@ -31,6 +32,7 @@ use tracing::{error, info};
 pub struct GrapeApp {
     catalog: Catalog,
     player: Option<Player>,
+    playlists: PlaylistManager,
     ui: UiState,
 }
 
@@ -605,6 +607,7 @@ impl GrapeApp {
     }
 
     fn handle_track_selection(&mut self, track: &UiTrack) {
+        self.playlists.add(Self::now_playing_from_ui_track(track));
         let Some(player) = &mut self.player else {
             return;
         };
@@ -613,6 +616,16 @@ impl GrapeApp {
             return;
         }
         player.play();
+    }
+
+    fn now_playing_from_ui_track(track: &UiTrack) -> crate::player::NowPlaying {
+        crate::player::NowPlaying {
+            artist: track.artist.clone(),
+            album: track.album.clone(),
+            title: track.title.clone(),
+            duration_secs: u32::try_from(track.duration.as_secs()).unwrap_or(u32::MAX),
+            path: track.path.clone(),
+        }
     }
 
     fn handle_playback_message(&mut self, message: &PlaybackMessage) {
@@ -2362,6 +2375,7 @@ impl GrapeApp {
         Self {
             catalog,
             player,
+            playlists: PlaylistManager::new_default(),
             ui: UiState::new(settings),
         }
     }
