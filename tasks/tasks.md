@@ -13,13 +13,17 @@
 - [x] Onglets Genres/Folders avec panels dédiés.
 - [x] Recherche/tri appliqués aux listes.
 - [x] Module de lecture audio (`rodio`) branché à la sélection de pistes.
+- [x] Queue de lecture simple (Next/Previous) basée sur la sélection.
+- [x] Écrans Préférences (General/Appearance/Accessibility/Audio).
+- [x] Persistance des préférences (`~/.config/grape/preferences.json`).
 - [x] Vue playlist (placeholder UI).
 
 ## À faire (priorité MVP)
 
-- [ ] Connecter la playlist UI au modèle (`playlist.rs`).
-- [ ] Ajouter une file de lecture et la navigation Next/Previous réelle.
+- [ ] Connecter la playlist UI au modèle (`playlist.rs`) et afficher le contenu.
+- [ ] Exposer la queue dans l'UI (vue dédiée + état actif).
 - [ ] Persister les playlists (JSON local).
+- [ ] Brancher les actions Préférences (réindexation, logs, reset audio).
 
 ## À planifier (après MVP)
 
