@@ -40,7 +40,7 @@ chantiers. La plupart des blocs décrits ci-dessous ont déjà des composants Ic
 
 ## États UI
 
-- Onglet actif : `ActiveTab`
+- Onglet actif : `ActiveTab` (uniquement Artists/Genres/Albums/Folders)
 - Vue playlist : `ui.playlist_open` (`UiState`)
 - Sélections : `SelectionState` (artist/album/track)
 - Lecture : `PlaybackState` (position, durée, shuffle, repeat)
@@ -56,7 +56,8 @@ chantiers. La plupart des blocs décrits ci-dessous ont déjà des composants Ic
 
 - Les actions de lecture ne sont pas branchées au module `player`.
 - Les onglets Genres/Folders sont visibles mais non implémentés.
-- La playlist est désormais une vue séparée ouverte depuis le menu du logo (bouton "Grape").
+- La playlist est une vue séparée, ouverte via `UiMessage::OpenPlaylist` et
+  pilotée uniquement par `ui.playlist_open` (pas par `ActiveTab`).
 - Le tri/recherche n'impacte pas encore les listes.
 
 ## Pistes de travail (prochaines étapes)
