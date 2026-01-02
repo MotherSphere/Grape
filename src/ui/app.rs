@@ -20,11 +20,10 @@ use crate::ui::state::{
 };
 use crate::ui::style;
 use iced::font::Weight;
-use iced::theme::{Button, Container, TextInput};
 use iced::widget::{button, column, container, row, scrollable, slider, text, text_input};
 use iced::{
-    event, keyboard, mouse, window, Alignment, Application, Color, Command, Element, Length,
-    Settings, Subscription, Theme,
+    event, keyboard, mouse, window, Alignment, Color, Element, Length, Settings, Subscription,
+    Task, Theme,
 };
 use std::time::Duration;
 use tracing::{error, info};
@@ -37,16 +36,26 @@ pub struct GrapeApp {
 
 impl GrapeApp {
     pub fn run(catalog: Catalog) -> iced::Result {
-        <Self as Application>::run(Self::apply_font_settings(Settings::with_flags(catalog)))
+        let settings = Self::apply_font_settings(Settings::default());
+        iced::application(move || Self::new(catalog), Self::update, Self::view)
+            .settings(settings)
+            .title(Self::title)
+            .subscription(Self::subscription)
+            .theme(Self::theme)
+            .run()
     }
 
-    pub fn run_with(catalog: Catalog, settings: Settings<Catalog>) -> iced::Result {
-        let mut settings = settings;
-        settings.flags = catalog;
-        <Self as Application>::run(Self::apply_font_settings(settings))
+    pub fn run_with(catalog: Catalog, settings: Settings) -> iced::Result {
+        let settings = Self::apply_font_settings(settings);
+        iced::application(move || Self::new(catalog), Self::update, Self::view)
+            .settings(settings)
+            .title(Self::title)
+            .subscription(Self::subscription)
+            .theme(Self::theme)
+            .run()
     }
 
-    fn apply_font_settings(mut settings: Settings<Catalog>) -> Settings<Catalog> {
+    fn apply_font_settings(mut settings: Settings) -> Settings {
         settings.fonts = vec![
             include_bytes!(
                 "../../assets/fonts/JetBrainsMonoFont/JetBrainsMonoNerdFontPropo-Light.ttf"
@@ -297,10 +306,7 @@ impl GrapeApp {
                 .style(style::text_primary(theme)),
         )
         .padding([6, 10])
-        .style(Container::Custom(Box::new(style::SurfaceStyle::new(
-            style::Surface::Avatar,
-            theme,
-        ))));
+        .style(move |_| style::surface_style(theme, style::Surface::Avatar));
         let logo = row![
             logo_mark,
             text("Grape")
@@ -311,10 +317,7 @@ impl GrapeApp {
         .spacing(8)
         .align_items(Alignment::Center);
         let logo_button = button(logo)
-            .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                style::ButtonKind::Icon,
-                theme,
-            ))))
+            .style(move |_, status| style::button_style(theme, style::ButtonKind::Icon, status))
             .padding([2, 6])
             .on_press(UiMessage::ToggleLogoMenu);
         let menu_button = |label, message| {
@@ -324,10 +327,13 @@ impl GrapeApp {
                     .font(style::font_propo(Weight::Medium))
                     .style(style::text_primary(theme)),
             )
-            .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                style::ButtonKind::ListItem { selected: false },
-                theme,
-            ))))
+            .style(move |_, status| {
+                style::button_style(
+                    theme,
+                    style::ButtonKind::ListItem { selected: false },
+                    status,
+                )
+            })
             .padding([4, 8])
             .on_press(message)
         };
@@ -340,10 +346,7 @@ impl GrapeApp {
             .spacing(6),
         )
         .padding([8, 12])
-        .style(Container::Custom(Box::new(style::SurfaceStyle::new(
-            style::Surface::Panel,
-            theme,
-        ))));
+        .style(move |_| style::surface_style(theme, style::Surface::Panel));
         let logo_widget: Element<'_, UiMessage> = if self.ui.menu_open {
             AnchoredOverlay::new(logo_button, logo_menu).into()
         } else {
@@ -355,54 +358,66 @@ impl GrapeApp {
                     .font(style::font_propo(Weight::Medium))
                     .size(theme.size(14)),
             )
-            .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                style::ButtonKind::Tab {
-                    selected: self.ui.active_tab == ActiveTab::Artists,
-                },
-                theme,
-            ))))
+            .style(move |_, status| {
+                style::button_style(
+                    theme,
+                    style::ButtonKind::Tab {
+                        selected: self.ui.active_tab == ActiveTab::Artists,
+                    },
+                    status,
+                )
+            })
             .on_press(UiMessage::TabSelected(ActiveTab::Artists)),
             button(
                 text(self.tab_label(ActiveTab::Genres, "Genres"))
                     .font(style::font_propo(Weight::Medium))
                     .size(theme.size(14)),
             )
-            .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                style::ButtonKind::Tab {
-                    selected: self.ui.active_tab == ActiveTab::Genres,
-                },
-                theme,
-            ))))
+            .style(move |_, status| {
+                style::button_style(
+                    theme,
+                    style::ButtonKind::Tab {
+                        selected: self.ui.active_tab == ActiveTab::Genres,
+                    },
+                    status,
+                )
+            })
             .on_press(UiMessage::TabSelected(ActiveTab::Genres)),
             button(
                 text(self.tab_label(ActiveTab::Albums, "Albums"))
                     .font(style::font_propo(Weight::Medium))
                     .size(theme.size(14)),
             )
-            .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                style::ButtonKind::Tab {
-                    selected: self.ui.active_tab == ActiveTab::Albums,
-                },
-                theme,
-            ))))
+            .style(move |_, status| {
+                style::button_style(
+                    theme,
+                    style::ButtonKind::Tab {
+                        selected: self.ui.active_tab == ActiveTab::Albums,
+                    },
+                    status,
+                )
+            })
             .on_press(UiMessage::TabSelected(ActiveTab::Albums)),
             button(
                 text(self.tab_label(ActiveTab::Folders, "Folders"))
                     .font(style::font_propo(Weight::Medium))
                     .size(theme.size(14)),
             )
-            .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                style::ButtonKind::Tab {
-                    selected: self.ui.active_tab == ActiveTab::Folders,
-                },
-                theme,
-            ))))
+            .style(move |_, status| {
+                style::button_style(
+                    theme,
+                    style::ButtonKind::Tab {
+                        selected: self.ui.active_tab == ActiveTab::Folders,
+                    },
+                    status,
+                )
+            })
             .on_press(UiMessage::TabSelected(ActiveTab::Folders)),
         ]
         .spacing(12)
         .align_items(Alignment::Center);
         let search_input = text_input("Search...", &self.ui.search.query)
-            .style(TextInput::Custom(Box::new(style::SearchInput::new(theme))))
+            .style(move |_, status| style::text_input_style(theme, status))
             .on_input(|value| UiMessage::Search(SearchMessage::QueryChanged(value)));
         let search = row![
             search_input,
@@ -411,40 +426,28 @@ impl GrapeApp {
                     .font(style::font_propo(Weight::Medium))
                     .size(theme.size(14))
             )
-            .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                style::ButtonKind::Icon,
-                theme,
-            ))))
+            .style(move |_, status| style::button_style(theme, style::ButtonKind::Icon, status))
             .on_press(UiMessage::ToggleLogoMenu),
             button(
                 text("—")
                     .font(style::font_propo(Weight::Medium))
                     .size(theme.size(14))
             )
-            .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                style::ButtonKind::Icon,
-                theme,
-            ))))
+            .style(move |_, status| style::button_style(theme, style::ButtonKind::Icon, status))
             .on_press(UiMessage::WindowMinimize),
             button(
                 text("")
                     .font(style::font_propo(Weight::Medium))
                     .size(theme.size(14))
             )
-            .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                style::ButtonKind::Icon,
-                theme,
-            ))))
+            .style(move |_, status| style::button_style(theme, style::ButtonKind::Icon, status))
             .on_press(UiMessage::WindowToggleMaximize),
             button(
                 text("✕")
                     .font(style::font_propo(Weight::Medium))
                     .size(theme.size(14))
             )
-            .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                style::ButtonKind::Icon,
-                theme,
-            ))))
+            .style(move |_, status| style::button_style(theme, style::ButtonKind::Icon, status))
             .on_press(UiMessage::WindowClose)
         ]
         .spacing(8)
@@ -461,10 +464,7 @@ impl GrapeApp {
         container(layout)
             .padding([10, 16])
             .width(Length::Fill)
-            .style(Container::Custom(Box::new(style::SurfaceStyle::new(
-                style::Surface::TopBar,
-                theme,
-            ))))
+            .style(move |_| style::surface_style(theme, style::Surface::TopBar))
             .into()
     }
 
@@ -672,10 +672,13 @@ impl GrapeApp {
                     .font(style::font_propo(Weight::Medium))
                     .style(style::text_primary(theme)),
             )
-            .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                style::ButtonKind::ListItem { selected: false },
-                theme,
-            ))))
+            .style(move |_, status| {
+                style::button_style(
+                    theme,
+                    style::ButtonKind::ListItem { selected: false },
+                    status,
+                )
+            })
             .padding([6, 10])
             .on_press(UiMessage::ClosePreferences)
         ]
@@ -689,12 +692,15 @@ impl GrapeApp {
                     .font(style::font_propo(Weight::Medium))
                     .style(style::text_primary(theme)),
             )
-            .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                style::ButtonKind::ListItem {
-                    selected: self.ui.preferences_tab == tab,
-                },
-                theme,
-            ))))
+            .style(move |_, status| {
+                style::button_style(
+                    theme,
+                    style::ButtonKind::ListItem {
+                        selected: self.ui.preferences_tab == tab,
+                    },
+                    status,
+                )
+            })
             .padding([6, 10])
             .width(Length::Fill)
             .on_press(UiMessage::PreferencesTabSelected(tab))
@@ -724,10 +730,13 @@ impl GrapeApp {
                 .spacing(10)
                 .align_items(Alignment::Center),
             )
-            .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                style::ButtonKind::ListItem { selected: expanded },
-                theme,
-            ))))
+            .style(move |_, status| {
+                style::button_style(
+                    theme,
+                    style::ButtonKind::ListItem { selected: expanded },
+                    status,
+                )
+            })
             .padding([8, 12])
             .width(Length::Fill)
             .on_press(message)
@@ -759,10 +768,9 @@ impl GrapeApp {
                     .font(style::font_propo(Weight::Medium))
                     .style(style::text_primary(theme)),
             )
-            .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                style::ButtonKind::Tab { selected },
-                theme,
-            ))))
+            .style(move |_, status| {
+                style::button_style(theme, style::ButtonKind::Tab { selected }, status)
+            })
             .padding([6, 10])
             .on_press(message)
         };
@@ -787,19 +795,18 @@ impl GrapeApp {
                     .font(style::font_propo(Weight::Medium))
                     .style(style::text_primary(theme)),
             )
-            .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                style::ButtonKind::Control,
-                theme,
-            ))))
+            .style(move |_, status| {
+                style::button_style(theme, style::ButtonKind::Control, status)
+            })
             .padding([6, 10])
             .on_press(message)
         };
 
         let library_input = text_input("Dossier de bibliothèque", &self.ui.settings.library_folder)
-            .style(TextInput::Custom(Box::new(style::SearchInput::new(theme))))
+            .style(move |_, status| style::text_input_style(theme, status))
             .on_input(UiMessage::LibraryFolderChanged);
         let cache_input = text_input("Emplacement du cache", &self.ui.settings.cache_path)
-            .style(TextInput::Custom(Box::new(style::SearchInput::new(theme))))
+            .style(move |_, status| style::text_input_style(theme, status))
             .on_input(UiMessage::CachePathChanged);
 
         let startup_content = || {
@@ -1349,10 +1356,9 @@ impl GrapeApp {
                 .spacing(6)
                 .align_items(Alignment::Center),
             )
-            .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                style::ButtonKind::Tab { selected },
-                theme,
-            ))))
+            .style(move |_, status| {
+                style::button_style(theme, style::ButtonKind::Tab { selected }, status)
+            })
             .padding([6, 10])
             .on_press(UiMessage::SetAccentColor(accent))
         };
@@ -1791,10 +1797,7 @@ impl GrapeApp {
                 )
                 .padding(12)
                 .width(Length::Fill)
-                .style(Container::Custom(Box::new(style::SurfaceStyle::new(
-                    style::Surface::Panel,
-                    theme,
-                )))),
+                .style(move |_| style::surface_style(theme, style::Surface::Panel)),
             ]
             .spacing(12)
             .padding([4, 12, 0, 12])
@@ -2319,17 +2322,11 @@ impl GrapeApp {
             container(menu)
                 .padding(16)
                 .width(Length::Fixed(200.0))
-                .style(Container::Custom(Box::new(style::SurfaceStyle::new(
-                    style::Surface::Sidebar,
-                    theme,
-                )))),
+                .style(move |_| style::surface_style(theme, style::Surface::Sidebar)),
             container(content_panel)
                 .padding(20)
                 .width(Length::Fill)
-                .style(Container::Custom(Box::new(style::SurfaceStyle::new(
-                    style::Surface::Panel,
-                    theme,
-                ))))
+                .style(move |_| style::surface_style(theme, style::Surface::Panel))
         ]
         .spacing(16)
         .height(Length::Fill);
@@ -2341,13 +2338,8 @@ impl GrapeApp {
     }
 }
 
-impl Application for GrapeApp {
-    type Executor = iced::executor::Default;
-    type Message = UiMessage;
-    type Theme = Theme;
-    type Flags = Catalog;
-
-    fn new(flags: Self::Flags) -> (Self, Command<Self::Message>) {
+impl GrapeApp {
+    fn new(catalog: Catalog) -> Self {
         let player = match Player::new() {
             Ok(player) => Some(player),
             Err(err) => {
@@ -2356,21 +2348,18 @@ impl Application for GrapeApp {
             }
         };
         let settings = config::load_settings();
-        (
-            Self {
-                catalog: flags,
-                player,
-                ui: UiState::new(settings),
-            },
-            Command::none(),
-        )
+        Self {
+            catalog,
+            player,
+            ui: UiState::new(settings),
+        }
     }
 
     fn title(&self) -> String {
         "Grape".to_string()
     }
 
-    fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
+    fn update(&mut self, message: UiMessage) -> Task<UiMessage> {
         let should_persist = matches!(
             message,
             UiMessage::SetThemeMode(_)
@@ -2426,7 +2415,7 @@ impl Application for GrapeApp {
                 | UiMessage::SetLimitCpuDuringPlayback(_)
                 | UiMessage::ResetPreferences
         );
-        let mut command = Command::none();
+        let mut task = Task::none();
         match &message {
             UiMessage::SelectTrack(track) => {
                 self.handle_track_selection(track);
@@ -2441,16 +2430,16 @@ impl Application for GrapeApp {
                 self.ui.playlist_open = false;
             }
             UiMessage::WindowMinimize => {
-                command = window::minimize(window::Id::MAIN, true);
+                task = window::minimize(window::Id::MAIN, true);
             }
             UiMessage::WindowToggleMaximize => {
-                command = window::toggle_maximize(window::Id::MAIN);
+                task = window::toggle_maximize(window::Id::MAIN);
             }
             UiMessage::WindowClose => {
-                command = window::close(window::Id::MAIN);
+                task = window::close(window::Id::MAIN);
             }
             UiMessage::PickLibraryFolder => {
-                command = Command::perform(
+                task = Task::perform(
                     async {
                         rfd::FileDialog::new()
                             .pick_folder()
@@ -2492,10 +2481,10 @@ impl Application for GrapeApp {
             }
         }
         self.sync_playback_state();
-        command
+        task
     }
 
-    fn view(&self) -> Element<'_, Self::Message> {
+    fn view(&self) -> Element<'_, UiMessage> {
         let theme = self.theme_tokens();
         if self.ui.playlist_open {
             return self.playlist_view();
@@ -2549,10 +2538,7 @@ impl Application for GrapeApp {
         container(layout)
             .width(Length::Fill)
             .height(Length::Fill)
-            .style(Container::Custom(Box::new(style::SurfaceStyle::new(
-                style::Surface::AppBackground,
-                theme,
-            ))))
+            .style(move |_| style::surface_style(theme, style::Surface::AppBackground))
             .into()
     }
 
@@ -2564,7 +2550,7 @@ impl Application for GrapeApp {
         }
     }
 
-    fn subscription(&self) -> Subscription<Self::Message> {
+    fn subscription(&self) -> Subscription<UiMessage> {
         let mut subscriptions = Vec::new();
 
         if self.ui.menu_open {

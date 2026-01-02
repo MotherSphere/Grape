@@ -2,7 +2,7 @@ use iced::advanced::layout::{Limits, Node};
 use iced::advanced::renderer;
 use iced::advanced::widget;
 use iced::advanced::{self, Clipboard, Layout, Shell};
-use iced::event::{self, Event};
+use iced::event::Event;
 use iced::mouse;
 use iced::{Element, Length, Point, Rectangle, Size, Theme, Vector};
 
@@ -54,24 +54,29 @@ where
         self.content.as_widget().size_hint()
     }
 
-    fn layout(&self, tree: &mut widget::Tree, renderer: &iced::Renderer, limits: &Limits) -> Node {
+    fn layout(
+        &mut self,
+        tree: &mut widget::Tree,
+        renderer: &iced::Renderer,
+        limits: &Limits,
+    ) -> Node {
         self.content
             .as_widget()
             .layout(&mut tree.children[0], renderer, limits)
     }
 
-    fn on_event(
+    fn update(
         &mut self,
         tree: &mut widget::Tree,
-        event: Event,
+        event: &Event,
         layout: Layout<'_>,
         cursor: mouse::Cursor,
         renderer: &iced::Renderer,
         clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
         viewport: &Rectangle,
-    ) -> event::Status {
-        self.content.as_widget_mut().on_event(
+    ) {
+        self.content.as_widget_mut().update(
             &mut tree.children[0],
             event,
             layout,
@@ -80,7 +85,7 @@ where
             clipboard,
             shell,
             viewport,
-        )
+        );
     }
 
     fn draw(
@@ -109,6 +114,7 @@ where
         tree: &'b mut widget::Tree,
         layout: Layout<'_>,
         renderer: &iced::Renderer,
+        viewport: &Rectangle,
         translation: Vector,
     ) -> Option<advanced::overlay::Element<'b, Message, Theme, iced::Renderer>> {
         let mut children = tree.children.iter_mut();
@@ -116,6 +122,7 @@ where
             children.next().unwrap(),
             layout,
             renderer,
+            viewport,
             translation,
         );
         let anchored_overlay = Some(advanced::overlay::Element::new(Box::new(Overlay {
@@ -204,16 +211,16 @@ where
         );
     }
 
-    fn on_event(
+    fn update(
         &mut self,
-        event: Event,
+        event: &Event,
         layout: Layout<'_>,
         cursor: mouse::Cursor,
         renderer: &iced::Renderer,
         clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
-    ) -> event::Status {
-        self.overlay.as_widget_mut().on_event(
+    ) {
+        self.overlay.as_widget_mut().update(
             self.overlay_state,
             event,
             layout.children().next().unwrap(),
@@ -222,6 +229,6 @@ where
             clipboard,
             shell,
             &Rectangle::with_size(Size::INFINITY),
-        )
+        );
     }
 }

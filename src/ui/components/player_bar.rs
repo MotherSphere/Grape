@@ -4,7 +4,6 @@ use crate::ui::message::{PlaybackMessage, UiMessage};
 use crate::ui::state::{PlaybackState, RepeatMode};
 use crate::ui::style;
 use iced::font::Weight;
-use iced::theme::{Button, Container};
 use iced::widget::{button, column, container, image, progress_bar, row, text};
 use iced::{Alignment, Element, Length};
 
@@ -96,10 +95,7 @@ impl PlayerBar {
             .height(Length::Fixed(42.0))
             .center_x()
             .center_y()
-            .style(Container::Custom(Box::new(style::SurfaceStyle::new(
-                style::Surface::AlbumCover,
-                theme,
-            ))));
+            .style(move |_| style::surface_style(theme, style::Surface::AlbumCover));
         let left = row![
             cover,
             column![
@@ -121,36 +117,31 @@ impl PlayerBar {
 
         let controls = row![
             button(text(shuffle_icon(playback.shuffle)).font(style::font_propo(Weight::Medium)),)
-                .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                    style::ButtonKind::Icon,
-                    theme,
-                ))))
+                .style(move |_, status| {
+                    style::button_style(theme, style::ButtonKind::Icon, status)
+                })
                 .on_press(UiMessage::Playback(PlaybackMessage::ToggleShuffle)),
             button(text("\u{f04ae}").font(style::font_propo(Weight::Medium)))
-                .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                    style::ButtonKind::Control,
-                    theme,
-                ))))
+                .style(move |_, status| {
+                    style::button_style(theme, style::ButtonKind::Control, status)
+                })
                 .on_press(UiMessage::Playback(PlaybackMessage::PreviousTrack)),
             button(
                 text(play_pause_icon(playback.is_playing)).font(style::font_propo(Weight::Medium)),
             )
-            .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                style::ButtonKind::Control,
-                theme,
-            ))))
+            .style(move |_, status| {
+                style::button_style(theme, style::ButtonKind::Control, status)
+            })
             .on_press(UiMessage::Playback(PlaybackMessage::TogglePlayPause)),
             button(text("\u{f04ad}").font(style::font_propo(Weight::Medium)))
-                .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                    style::ButtonKind::Control,
-                    theme,
-                ))))
+                .style(move |_, status| {
+                    style::button_style(theme, style::ButtonKind::Control, status)
+                })
                 .on_press(UiMessage::Playback(PlaybackMessage::NextTrack)),
             button(text(repeat_icon(playback.repeat)).font(style::font_propo(Weight::Medium)))
-                .style(Button::Custom(Box::new(style::ButtonStyle::new(
-                    style::ButtonKind::Icon,
-                    theme,
-                ))))
+                .style(move |_, status| {
+                    style::button_style(theme, style::ButtonKind::Icon, status)
+                })
                 .on_press(UiMessage::Playback(PlaybackMessage::CycleRepeat)),
         ]
         .spacing(10)
@@ -201,10 +192,7 @@ impl PlayerBar {
         container(content)
             .padding([10, 16])
             .width(Length::Fill)
-            .style(Container::Custom(Box::new(style::SurfaceStyle::new(
-                style::Surface::PlayerBar,
-                theme,
-            ))))
+            .style(move |_| style::surface_style(theme, style::Surface::PlayerBar))
             .into()
     }
 
