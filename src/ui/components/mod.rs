@@ -1,6 +1,6 @@
 pub mod albums_grid;
-pub mod artists_panel;
 pub mod anchored_overlay;
+pub mod artists_panel;
 pub mod folders_panel;
 pub mod genres_panel;
 pub mod player_bar;

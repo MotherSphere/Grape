@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 use crate::library::Catalog;
 
 const CACHE_FILENAME: &str = ".grape_cache.json";
+const CACHE_DIRNAME: &str = ".grape_cache";
+const COVER_DIRNAME: &str = "covers";
 
 #[derive(Debug, Serialize, Deserialize)]
 struct CacheFile {
@@ -34,7 +36,9 @@ pub fn load(root: &Path) -> io::Result<Option<Catalog>> {
         return Ok(None);
     }
 
-    Ok(Some(cache.catalog))
+    let mut catalog = cache.catalog;
+    catalog.prune_missing_cover_art();
+    Ok(Some(catalog))
 }
 
 pub fn store(root: &Path, catalog: &Catalog) -> io::Result<()> {
@@ -56,11 +60,15 @@ fn cache_path(root: &Path) -> PathBuf {
     root.join(CACHE_FILENAME)
 }
 
+pub fn ensure_cover_cache_dir(root: &Path) -> io::Result<PathBuf> {
+    let dir = root.join(CACHE_DIRNAME).join(COVER_DIRNAME);
+    fs::create_dir_all(&dir)?;
+    Ok(dir)
+}
+
 fn root_modified_secs(root: &Path) -> io::Result<u64> {
     let metadata = fs::metadata(root)?;
     let modified = metadata.modified().unwrap_or(UNIX_EPOCH);
-    let duration = modified
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default();
+    let duration = modified.duration_since(UNIX_EPOCH).unwrap_or_default();
     Ok(duration.as_secs())
 }

@@ -36,6 +36,12 @@ pub struct Album {
     pub title: String,
     pub year: u16,
     pub tracks: Vec<Track>,
+    #[serde(default)]
+    pub path: PathBuf,
+    #[serde(default)]
+    pub total_duration_secs: u32,
+    #[serde(default)]
+    pub cover: Option<CoverArt>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -44,6 +50,13 @@ pub struct Track {
     pub title: String,
     pub duration_secs: u32,
     pub path: PathBuf,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverArt {
+    pub source_path: PathBuf,
+    pub cached_path: PathBuf,
+    pub modified_secs: u64,
 }
 
 impl Catalog {
@@ -98,6 +111,18 @@ impl Catalog {
         let track = album.tracks.first()?;
         Some((artist, album, track))
     }
+
+    pub fn prune_missing_cover_art(&mut self) {
+        for artist in &mut self.artists {
+            for album in &mut artist.albums {
+                if let Some(cover) = &album.cover {
+                    if !cover.cached_path.exists() {
+                        album.cover = None;
+                    }
+                }
+            }
+        }
+    }
 }
 
 pub fn scan_library(root: impl AsRef<Path>) -> io::Result<Catalog> {
@@ -118,13 +143,19 @@ pub fn scan_library(root: impl AsRef<Path>) -> io::Result<Catalog> {
 
         for album_entry in read_sorted_dirs(&artist_entry.path())? {
             let (year, title) = parse_album_folder(&album_entry.file_name().to_string_lossy());
-            let tracks = scan_tracks(&album_entry.path())?;
+            let album_path = album_entry.path();
+            let tracks = scan_tracks(&album_path)?;
 
             if !tracks.is_empty() {
+                let cover = scan_cover_art(root, &album_path)?;
+                let total_duration_secs = tracks.iter().map(|track| track.duration_secs).sum();
                 albums.push(Album {
                     title,
                     year,
                     tracks,
+                    path: album_path,
+                    total_duration_secs,
+                    cover,
                 });
             }
         }
@@ -213,6 +244,110 @@ fn scan_tracks(dir: &Path) -> io::Result<Vec<Track>> {
 
     tracks.sort_by_key(|track| track.number);
     Ok(tracks)
+}
+
+fn scan_cover_art(root: &Path, album_dir: &Path) -> io::Result<Option<CoverArt>> {
+    let Some(source_path) = find_cover_file(album_dir)? else {
+        return Ok(None);
+    };
+
+    let modified_secs = file_modified_secs(&source_path)?;
+    let cache_dir = cache::ensure_cover_cache_dir(root)?;
+    let cache_filename = cache_cover_filename(&source_path, modified_secs);
+    let cached_path = cache_dir.join(cache_filename);
+
+    if !cached_path.exists() {
+        fs::copy(&source_path, &cached_path)?;
+    }
+
+    Ok(Some(CoverArt {
+        source_path,
+        cached_path,
+        modified_secs,
+    }))
+}
+
+fn find_cover_file(album_dir: &Path) -> io::Result<Option<PathBuf>> {
+    let mut candidates = Vec::new();
+    let read_dir = match fs::read_dir(album_dir) {
+        Ok(read_dir) => read_dir,
+        Err(error) => {
+            warn!(
+                error = %error,
+                path = %album_dir.display(),
+                "Skipping cover scan: unable to read directory"
+            );
+            return Ok(None);
+        }
+    };
+
+    for entry_result in read_dir {
+        let entry = match entry_result {
+            Ok(entry) => entry,
+            Err(error) => {
+                warn!(
+                    error = %error,
+                    path = %album_dir.display(),
+                    "Skipping unreadable entry during cover scan"
+                );
+                continue;
+            }
+        };
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+        let Some(extension) = path.extension().and_then(|ext| ext.to_str()) else {
+            continue;
+        };
+        let extension = extension.to_lowercase();
+        if !matches!(extension.as_str(), "jpg" | "jpeg" | "png" | "webp") {
+            continue;
+        }
+        let stem = path
+            .file_stem()
+            .and_then(|value| value.to_str())
+            .unwrap_or_default()
+            .to_lowercase();
+        candidates.push((cover_priority(&stem), path));
+    }
+
+    candidates.sort_by(|(a_priority, a_path), (b_priority, b_path)| {
+        a_priority.cmp(b_priority).then_with(|| a_path.cmp(b_path))
+    });
+
+    Ok(candidates.into_iter().map(|(_, path)| path).next())
+}
+
+fn cover_priority(stem: &str) -> usize {
+    const PRIORITY: [&str; 5] = ["cover", "folder", "front", "artwork", "album"];
+    PRIORITY
+        .iter()
+        .position(|label| *label == stem)
+        .unwrap_or(PRIORITY.len())
+}
+
+fn cache_cover_filename(path: &Path, modified_secs: u64) -> String {
+    use std::hash::{Hash, Hasher};
+
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    path.hash(&mut hasher);
+    modified_secs.hash(&mut hasher);
+    let hash = hasher.finish();
+    let extension = path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .unwrap_or("img");
+    format!("{hash:x}.{extension}")
+}
+
+fn file_modified_secs(path: &Path) -> io::Result<u64> {
+    let metadata = fs::metadata(path)?;
+    let modified = metadata.modified().unwrap_or(std::time::UNIX_EPOCH);
+    let duration = modified
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default();
+    Ok(duration.as_secs())
 }
 
 fn read_sorted_dirs(root: &Path) -> io::Result<Vec<fs::DirEntry>> {

@@ -31,6 +31,7 @@ pub struct Album {
     pub title: String,
     pub artist: String,
     pub year: Option<u32>,
+    pub cover_path: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -56,6 +57,7 @@ pub struct Track {
     pub track_number: Option<u32>,
     pub duration: Duration,
     pub path: PathBuf,
+    pub cover_path: Option<PathBuf>,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
