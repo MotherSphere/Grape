@@ -159,138 +159,12 @@ impl UpdateChannel {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum AudioOutputDevice {
-    System,
-    UsbHeadset,
-}
-
-impl Default for AudioOutputDevice {
-    fn default() -> Self {
-        Self::System
-    }
-}
-
-impl AudioOutputDevice {
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::System => "Système",
-            Self::UsbHeadset => "Casque USB",
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum MissingDeviceBehavior {
-    SwitchToSystem,
-    PausePlayback,
-}
-
-impl Default for MissingDeviceBehavior {
-    fn default() -> Self {
-        Self::SwitchToSystem
-    }
-}
-
-impl MissingDeviceBehavior {
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::SwitchToSystem => "Basculer vers Système",
-            Self::PausePlayback => "Mettre en pause",
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum VolumeLevel {
-    Quiet,
-    Normal,
-    Loud,
-}
-
-impl Default for VolumeLevel {
-    fn default() -> Self {
-        Self::Normal
-    }
-}
-
-impl VolumeLevel {
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::Quiet => "Quiet",
-            Self::Normal => "Normal",
-            Self::Loud => "Loud",
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum EqPreset {
-    Flat,
-    Bass,
-    Treble,
-    Vocal,
-    Custom,
-}
-
-impl Default for EqPreset {
-    fn default() -> Self {
-        Self::Flat
-    }
-}
-
-impl EqPreset {
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::Flat => "Flat",
-            Self::Bass => "Bass",
-            Self::Treble => "Treble",
-            Self::Vocal => "Vocal",
-            Self::Custom => "Custom…",
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum AudioStabilityMode {
-    Auto,
-    Stable,
-    LowLatency,
-}
-
-impl Default for AudioStabilityMode {
-    fn default() -> Self {
-        Self::Auto
-    }
-}
-
-impl AudioStabilityMode {
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::Auto => "Auto",
-            Self::Stable => "Stable",
-            Self::LowLatency => "Low-latency",
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct UserSettings {
     pub theme_mode: ThemeMode,
     pub text_scale: TextScale,
     pub default_volume: u8,
-    pub output_device: AudioOutputDevice,
-    pub missing_device_behavior: MissingDeviceBehavior,
-    pub gapless_playback: bool,
-    pub crossfade_seconds: u8,
-    pub automix_enabled: bool,
-    pub normalize_volume: bool,
-    pub volume_level: VolumeLevel,
-    pub eq_enabled: bool,
-    pub eq_preset: EqPreset,
-    pub audio_stability_mode: AudioStabilityMode,
-    pub audio_debug_logs: bool,
     pub launch_at_startup: bool,
     pub restore_last_session: bool,
     pub open_on: StartupScreen,
@@ -317,17 +191,6 @@ impl Default for UserSettings {
             theme_mode: ThemeMode::Dark,
             text_scale: TextScale::Normal,
             default_volume: 72,
-            output_device: AudioOutputDevice::default(),
-            missing_device_behavior: MissingDeviceBehavior::default(),
-            gapless_playback: true,
-            crossfade_seconds: 4,
-            automix_enabled: false,
-            normalize_volume: true,
-            volume_level: VolumeLevel::default(),
-            eq_enabled: false,
-            eq_preset: EqPreset::default(),
-            audio_stability_mode: AudioStabilityMode::default(),
-            audio_debug_logs: false,
             launch_at_startup: false,
             restore_last_session: true,
             open_on: StartupScreen::Home,
@@ -353,7 +216,6 @@ impl Default for UserSettings {
 impl UserSettings {
     pub fn normalized(mut self) -> Self {
         self.default_volume = self.default_volume.min(100);
-        self.crossfade_seconds = self.crossfade_seconds.min(12);
         if self.library_folder.trim().is_empty() {
             self.library_folder = default_library_folder();
         }
