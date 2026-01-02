@@ -11,8 +11,10 @@ expérience rapide et claire pour explorer une bibliothèque locale et lancer la
 - **Cache local** : cache par dossier d'album + index global dans `.grape_cache/`.
 - **Jaquettes** : détection d'images locales et cache des couvertures d'album.
 - **Lecture audio** : module `player` basé sur `rodio`, branché à la sélection de pistes.
+- **File de lecture** : constitution d'une queue à partir de la sélection + actions Next/Previous.
 - **Navigation enrichie** : onglets Genres/Folders + recherche/tri appliqués aux listes.
-- **Playlist** : vue dédiée (contenu à connecter au modèle).
+- **Préférences UI** : écrans General/Appearance/Accessibility/Audio avec persistance locale.
+- **Playlist** : modèle en mémoire + vue dédiée (affichage encore placeholder).
 
 ## Stack technique
 
@@ -61,6 +63,9 @@ bibliothèque :
 
 Le cache est invalidé par dossier en comparant la date de modification du répertoire d'album.
 
+Les préférences exposent aussi un chemin de cache configurable (action “Vider le cache”), mais
+le scan actuel s'appuie toujours sur la cache locale de la bibliothèque.
+
 ## Documentation
 
 - Vue d'ensemble : `docs/docs.md`
@@ -70,6 +75,6 @@ Le cache est invalidé par dossier en comparant la date de modification du répe
 
 ## Feuille de route (résumé)
 
-- Finaliser la gestion des playlists (modèle + UI).
+- Finaliser la gestion des playlists (affichage, édition, persistance).
+- Brancher les préférences aux actions réelles (réindexation, logs, reset audio).
 - Améliorer l'indexation (métadonnées enrichies, cache plus fin, genres réels).
-- Ajouter un vrai moteur de navigation/lecture (queue, repeat, shuffle avancé).

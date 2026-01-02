@@ -10,6 +10,9 @@ Ce dossier contient le code applicatif Rust du lecteur Grape.
 
 ## Modules
 
+- `config.rs`
+  - Préférences utilisateur (thème, audio, accessibilité, stockage).
+  - Chargement/sauvegarde JSON dans `~/.config/grape/preferences.json`.
 - `library.rs`
   - Scan du disque et construction d'un `Catalog`.
   - Convention : dossiers `Artiste/Album` + fichiers audio.
@@ -26,6 +29,7 @@ Ce dossier contient le code applicatif Rust du lecteur Grape.
   - Méthodes : `load`, `play`, `pause`, `seek`.
 - `playlist.rs`
   - Modèle de playlist + sérialisation JSON.
+  - File de lecture `PlaybackQueue` utilisée par Next/Previous.
 - `ui/`
   - Layout et états UI.
   - Composants : `ArtistsPanel`, `AlbumsGrid`, `GenresPanel`, `FoldersPanel`,
@@ -36,3 +40,4 @@ Ce dossier contient le code applicatif Rust du lecteur Grape.
 
 - La lecture audio est branchée à la sélection de pistes dans l'UI.
 - La playlist est disponible comme vue, mais pas encore connectée aux données.
+- Les préférences modifient l'état UI et sont persistées.

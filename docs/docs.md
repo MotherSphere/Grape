@@ -25,10 +25,16 @@ Cette documentation couvre l'état actuel du projet, l'architecture et les choix
 - **Lecture audio** : `src/player.rs`
   - Player `rodio` (load/play/pause/seek).
   - Branché sur la sélection de piste dans l'UI.
+- **Playlists & queue** : `src/playlist.rs`
+  - Modèle de playlist + sérialisation JSON.
+  - Queue de lecture (`PlaybackQueue`) utilisée par Next/Previous.
 - **UI** : `src/ui/*`
   - Iced (layout en 3 colonnes + player bar).
   - État UI centralisé (`UiState`).
   - Vues dédiées pour Artists/Albums/Genres/Folders + playlist.
+- **Préférences** : `src/config.rs`
+  - Paramètres persistés dans `~/.config/grape/preferences.json`.
+  - Actions locales (clear cache, clear history) exposées dans l'UI.
 
 ## UI : layout et composants
 
@@ -57,6 +63,7 @@ Composants Iced :
 - `PlaybackState` : position, durée, lecture, shuffle, repeat.
 - `SearchState` : query + tri (`SortOption`).
 - `UiState` : menu, playlist ouverte, états combinés.
+- `UserSettings` : préférences (apparence, accessibilité, audio, stockage, etc.).
 
 ## Données du catalogue
 
@@ -71,12 +78,13 @@ Le dossier `assets/` est dédié aux éléments visuels (logos, fonts, captures,
 
 ## Limitations actuelles
 
-- La playlist est une vue placeholder (modèle non connecté à l'UI).
+- La playlist est une vue placeholder (modèle non encore affiché).
 - Les genres sont dérivés (actuellement un genre « Unknown » global).
+- Certaines actions de préférences sont encore déclaratives (réindexation, logs).
 - Le cache est indexé par dossier d'album, sans détection fine au niveau piste.
 
 ## Prochaines étapes suggérées
 
 - Relier le modèle de playlist (`playlist.rs`) à l'UI.
 - Enrichir les métadonnées (genres réels, jaquettes embarquées).
-- Ajouter une file de lecture et des actions Next/Previous réelles.
+- Étendre les préférences (réindexation, logs, reset audio réel).
