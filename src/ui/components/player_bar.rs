@@ -90,10 +90,9 @@ impl PlayerBar {
                 .style(move |_| style::text_style_muted(theme))
                 .into()
         };
-        let cover_size = 32.0;
         let cover = container(cover_content)
-            .width(Length::Fixed(cover_size))
-            .height(Length::Fixed(cover_size))
+            .width(Length::Fixed(42.0))
+            .height(Length::Fixed(42.0))
             .center_x(Length::Fill)
             .center_y(Length::Fill)
             .style(move |_| style::surface_style(theme, style::Surface::AlbumCover));
@@ -191,7 +190,7 @@ impl PlayerBar {
             .width(Length::Fill);
 
         container(content)
-            .padding([8, 16])
+            .padding([10, 16])
             .width(Length::Fill)
             .style(move |_| style::surface_style(theme, style::Surface::PlayerBar))
             .into()
