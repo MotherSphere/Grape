@@ -23,7 +23,6 @@ pub enum UiMessage {
     WindowMinimize,
     WindowToggleMaximize,
     WindowClose,
-    WindowDrag,
     OpenPlaylist,
     ClosePlaylist,
     ShowLibrary,
