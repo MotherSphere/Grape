@@ -21,7 +21,9 @@ use crate::ui::state::{
 use crate::ui::style;
 use iced::font::Weight;
 use iced::theme::{Button, Container, TextInput};
-use iced::widget::{button, column, container, row, scrollable, slider, text, text_input};
+use iced::widget::{
+    button, column, container, mouse_area, row, scrollable, slider, text, text_input,
+};
 use iced::{
     event, keyboard, mouse, window, Alignment, Application, Color, Command, Element, Length,
     Settings, Subscription, Theme,
@@ -47,6 +49,8 @@ impl GrapeApp {
     }
 
     fn apply_font_settings(mut settings: Settings<Catalog>) -> Settings<Catalog> {
+        settings.window.decorations = false;
+        settings.window.resizable = true;
         settings.fonts = vec![
             include_bytes!(
                 "../../assets/fonts/JetBrainsMonoFont/JetBrainsMonoNerdFontPropo-Light.ttf"
@@ -450,10 +454,21 @@ impl GrapeApp {
         .spacing(8)
         .align_items(Alignment::Center);
 
+        let drag_handle_height = theme.size(32) as f32;
+        let drag_handle = mouse_area(
+            container(row![]).height(Length::Fixed(drag_handle_height)),
+        )
+        .on_press(UiMessage::WindowDrag)
+        .interaction(mouse::Interaction::Grab);
+
+        let search_area = column![drag_handle, search]
+            .spacing(0)
+            .align_items(Alignment::Center);
+
         let layout = row![
             container(logo_widget).width(Length::Shrink),
             container(tabs).width(Length::Fill).center_x(),
-            container(search).width(Length::Shrink)
+            container(search_area).width(Length::Shrink)
         ]
         .spacing(24)
         .align_items(Alignment::Center);
@@ -2448,6 +2463,9 @@ impl Application for GrapeApp {
             }
             UiMessage::WindowClose => {
                 command = window::close(window::Id::MAIN);
+            }
+            UiMessage::WindowDrag => {
+                command = window::drag(window::Id::MAIN);
             }
             UiMessage::PickLibraryFolder => {
                 command = Command::perform(

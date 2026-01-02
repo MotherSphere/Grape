@@ -358,6 +358,7 @@ impl UiState {
             UiMessage::WindowMinimize => {}
             UiMessage::WindowToggleMaximize => {}
             UiMessage::WindowClose => {}
+            UiMessage::WindowDrag => {}
             UiMessage::OpenPlaylist => {
                 self.menu_open = false;
                 self.playlist_open = true;
