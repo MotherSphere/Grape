@@ -83,8 +83,8 @@ impl FoldersPanel {
         .align_items(Alignment::Center);
 
         let content = match self.layout {
-            FolderLayout::Grid => self.grid_view(header),
-            FolderLayout::List => self.list_view(header),
+            FolderLayout::Grid => self.grid_view(header.into()),
+            FolderLayout::List => self.list_view(header.into()),
         };
 
         container(scrollable(content))
