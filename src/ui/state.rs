@@ -44,11 +44,6 @@ pub enum PreferencesSection {
     Notifications,
     Performance,
     Advanced,
-    AudioOutput,
-    AudioPlayback,
-    AudioVolume,
-    AudioEqualizer,
-    AudioAdvanced,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -61,11 +56,6 @@ pub struct PreferencesSectionsState {
     pub notifications: bool,
     pub performance: bool,
     pub advanced: bool,
-    pub audio_output: bool,
-    pub audio_playback: bool,
-    pub audio_volume: bool,
-    pub audio_equalizer: bool,
-    pub audio_advanced: bool,
 }
 
 impl PreferencesSectionsState {
@@ -79,11 +69,6 @@ impl PreferencesSectionsState {
             PreferencesSection::Notifications => self.notifications = !self.notifications,
             PreferencesSection::Performance => self.performance = !self.performance,
             PreferencesSection::Advanced => self.advanced = !self.advanced,
-            PreferencesSection::AudioOutput => self.audio_output = !self.audio_output,
-            PreferencesSection::AudioPlayback => self.audio_playback = !self.audio_playback,
-            PreferencesSection::AudioVolume => self.audio_volume = !self.audio_volume,
-            PreferencesSection::AudioEqualizer => self.audio_equalizer = !self.audio_equalizer,
-            PreferencesSection::AudioAdvanced => self.audio_advanced = !self.audio_advanced,
         }
     }
 }
@@ -99,11 +84,6 @@ impl Default for PreferencesSectionsState {
             notifications: false,
             performance: false,
             advanced: false,
-            audio_output: true,
-            audio_playback: true,
-            audio_volume: true,
-            audio_equalizer: false,
-            audio_advanced: false,
         }
     }
 }
@@ -329,43 +309,6 @@ impl UiState {
             }
             UiMessage::SetDefaultVolume(volume) => {
                 self.settings.default_volume = volume.min(100);
-            }
-            UiMessage::SetAudioOutputDevice(device) => {
-                self.settings.output_device = device;
-            }
-            UiMessage::SetMissingDeviceBehavior(behavior) => {
-                self.settings.missing_device_behavior = behavior;
-            }
-            UiMessage::SetGaplessPlayback(enabled) => {
-                self.settings.gapless_playback = enabled;
-            }
-            UiMessage::SetCrossfadeSeconds(seconds) => {
-                self.settings.crossfade_seconds = seconds.min(12);
-            }
-            UiMessage::SetAutomixEnabled(enabled) => {
-                self.settings.automix_enabled = enabled;
-            }
-            UiMessage::SetNormalizeVolume(enabled) => {
-                self.settings.normalize_volume = enabled;
-            }
-            UiMessage::SetVolumeLevel(level) => {
-                self.settings.volume_level = level;
-            }
-            UiMessage::SetEqEnabled(enabled) => {
-                self.settings.eq_enabled = enabled;
-            }
-            UiMessage::SetEqPreset(preset) => {
-                self.settings.eq_preset = preset;
-            }
-            UiMessage::ResetEq => {
-                self.settings.eq_preset = crate::config::EqPreset::Flat;
-            }
-            UiMessage::SetAudioStabilityMode(mode) => {
-                self.settings.audio_stability_mode = mode;
-            }
-            UiMessage::ResetAudioEngine => {}
-            UiMessage::SetAudioDebugLogs(enabled) => {
-                self.settings.audio_debug_logs = enabled;
             }
             UiMessage::SetLaunchAtStartup(enabled) => {
                 self.settings.launch_at_startup = enabled;

@@ -1,9 +1,8 @@
 #![allow(dead_code)]
 
 use crate::config::{
-    AudioOutputDevice, AudioStabilityMode, CloseBehavior, EqPreset, InterfaceLanguage,
-    MissingDeviceBehavior, StartupScreen, TextScale, ThemeMode, TimeFormat, UpdateChannel,
-    VolumeLevel,
+    CloseBehavior, InterfaceLanguage, StartupScreen, TextScale, ThemeMode, TimeFormat,
+    UpdateChannel,
 };
 use crate::ui::state::{
     ActiveTab, Album, Artist, Folder, Genre, PreferencesSection, PreferencesTab, SortOption,
@@ -30,19 +29,6 @@ pub enum UiMessage {
     SetThemeMode(ThemeMode),
     SetTextScale(TextScale),
     SetDefaultVolume(u8),
-    SetAudioOutputDevice(AudioOutputDevice),
-    SetMissingDeviceBehavior(MissingDeviceBehavior),
-    SetGaplessPlayback(bool),
-    SetCrossfadeSeconds(u8),
-    SetAutomixEnabled(bool),
-    SetNormalizeVolume(bool),
-    SetVolumeLevel(VolumeLevel),
-    SetEqEnabled(bool),
-    SetEqPreset(EqPreset),
-    ResetEq,
-    SetAudioStabilityMode(AudioStabilityMode),
-    ResetAudioEngine,
-    SetAudioDebugLogs(bool),
     SetLaunchAtStartup(bool),
     SetRestoreLastSession(bool),
     SetOpenOn(StartupScreen),
