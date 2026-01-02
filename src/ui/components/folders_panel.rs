@@ -69,12 +69,13 @@ impl FoldersPanel {
     }
 
     pub fn view(self) -> Element<'static, UiMessage> {
+        let sort_label = self.sort_label.clone();
         let header = row![
             text(format!("{} Folders", self.folders.len()))
                 .size(16)
                 .font(style::font_propo(Weight::Semibold))
                 .style(style::text_primary()),
-            text(self.sort_label)
+            text(sort_label)
                 .size(12)
                 .font(style::font_propo(Weight::Light))
                 .style(style::text_muted())
