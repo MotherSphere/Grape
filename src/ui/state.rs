@@ -254,6 +254,73 @@ impl UiState {
             UiMessage::SetDefaultVolume(volume) => {
                 self.settings.default_volume = volume.min(100);
             }
+            UiMessage::SetLaunchAtStartup(enabled) => {
+                self.settings.launch_at_startup = enabled;
+            }
+            UiMessage::SetRestoreLastSession(enabled) => {
+                self.settings.restore_last_session = enabled;
+            }
+            UiMessage::SetOpenOn(open_on) => {
+                self.settings.open_on = open_on;
+            }
+            UiMessage::SetCloseBehavior(behavior) => {
+                self.settings.close_behavior = behavior;
+            }
+            UiMessage::SetInterfaceLanguage(language) => {
+                self.settings.interface_language = language;
+            }
+            UiMessage::SetTimeFormat(format) => {
+                self.settings.time_format = format;
+            }
+            UiMessage::SetAutoCheckUpdates(enabled) => {
+                self.settings.auto_check_updates = enabled;
+            }
+            UiMessage::SetUpdateChannel(channel) => {
+                self.settings.update_channel = channel;
+            }
+            UiMessage::SetAutoInstallUpdates(enabled) => {
+                self.settings.auto_install_updates = enabled;
+            }
+            UiMessage::SetSendErrorReports(enabled) => {
+                self.settings.send_error_reports = enabled;
+            }
+            UiMessage::SetSendUsageStats(enabled) => {
+                self.settings.send_usage_stats = enabled;
+            }
+            UiMessage::LibraryFolderChanged(path) => {
+                self.settings.library_folder = path;
+            }
+            UiMessage::PickLibraryFolder => {}
+            UiMessage::LibraryFolderPicked(path) => {
+                if let Some(path) = path {
+                    self.settings.library_folder = path;
+                }
+            }
+            UiMessage::SetAutoScanOnLaunch(enabled) => {
+                self.settings.auto_scan_on_launch = enabled;
+            }
+            UiMessage::CachePathChanged(path) => {
+                self.settings.cache_path = path;
+            }
+            UiMessage::ClearCache => {}
+            UiMessage::ClearHistory => {}
+            UiMessage::SetNotificationsEnabled(enabled) => {
+                self.settings.notifications_enabled = enabled;
+            }
+            UiMessage::SetNowPlayingNotifications(enabled) => {
+                self.settings.now_playing_notifications = enabled;
+            }
+            UiMessage::SetHardwareAcceleration(enabled) => {
+                self.settings.hardware_acceleration = enabled;
+            }
+            UiMessage::SetLimitCpuDuringPlayback(enabled) => {
+                self.settings.limit_cpu_during_playback = enabled;
+            }
+            UiMessage::OpenLogsFolder => {}
+            UiMessage::ReindexLibrary => {}
+            UiMessage::ResetPreferences => {
+                self.settings = UserSettings::default();
+            }
             UiMessage::CloseMenu => {
                 self.menu_open = false;
             }
