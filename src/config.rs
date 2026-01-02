@@ -41,84 +41,6 @@ impl Default for TextScale {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum AccessibleTextSize {
-    Standard,
-    Large,
-    ExtraLarge,
-}
-
-impl Default for AccessibleTextSize {
-    fn default() -> Self {
-        Self::Standard
-    }
-}
-
-impl AccessibleTextSize {
-    pub fn slider_value(self) -> f32 {
-        match self {
-            Self::Standard => 0.0,
-            Self::Large => 1.0,
-            Self::ExtraLarge => 2.0,
-        }
-    }
-
-    pub fn from_slider_value(value: f32) -> Self {
-        match value.round() as i32 {
-            0 => Self::Standard,
-            1 => Self::Large,
-            _ => Self::ExtraLarge,
-        }
-    }
-
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::Standard => "Standard",
-            Self::Large => "Grand",
-            Self::ExtraLarge => "Très grand",
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum SubtitleSize {
-    Small,
-    Medium,
-    Large,
-}
-
-impl Default for SubtitleSize {
-    fn default() -> Self {
-        Self::Medium
-    }
-}
-
-impl SubtitleSize {
-    pub fn slider_value(self) -> f32 {
-        match self {
-            Self::Small => 0.0,
-            Self::Medium => 1.0,
-            Self::Large => 2.0,
-        }
-    }
-
-    pub fn from_slider_value(value: f32) -> Self {
-        match value.round() as i32 {
-            0 => Self::Small,
-            1 => Self::Medium,
-            _ => Self::Large,
-        }
-    }
-
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::Small => "Petit",
-            Self::Medium => "Moyen",
-            Self::Large => "Grand",
-        }
-    }
-}
-
 impl TextScale {
     pub fn scale(self) -> f32 {
         match self {
@@ -438,17 +360,6 @@ pub struct UserSettings {
     pub interface_density: InterfaceDensity,
     pub transparency_blur: bool,
     pub ui_animations: bool,
-    pub increase_contrast: bool,
-    pub reduce_transparency: bool,
-    pub accessible_text_size: AccessibleTextSize,
-    pub reduce_animations: bool,
-    pub reduce_transitions: bool,
-    pub subtitles_enabled: bool,
-    pub subtitle_size: SubtitleSize,
-    pub highlight_keyboard_focus: bool,
-    pub enable_advanced_shortcuts: bool,
-    pub default_playback_speed: f32,
-    pub pause_on_focus_loss: bool,
     pub default_volume: u8,
     pub output_device: AudioOutputDevice,
     pub missing_device_behavior: MissingDeviceBehavior,
@@ -492,17 +403,6 @@ impl Default for UserSettings {
             interface_density: InterfaceDensity::default(),
             transparency_blur: true,
             ui_animations: true,
-            increase_contrast: false,
-            reduce_transparency: false,
-            accessible_text_size: AccessibleTextSize::default(),
-            reduce_animations: false,
-            reduce_transitions: false,
-            subtitles_enabled: false,
-            subtitle_size: SubtitleSize::default(),
-            highlight_keyboard_focus: true,
-            enable_advanced_shortcuts: false,
-            default_playback_speed: 1.0,
-            pause_on_focus_loss: true,
             default_volume: 72,
             output_device: AudioOutputDevice::default(),
             missing_device_behavior: MissingDeviceBehavior::default(),
@@ -541,10 +441,6 @@ impl UserSettings {
     pub fn normalized(mut self) -> Self {
         self.default_volume = self.default_volume.min(100);
         self.crossfade_seconds = self.crossfade_seconds.min(12);
-        if !self.default_playback_speed.is_finite() {
-            self.default_playback_speed = 1.0;
-        }
-        self.default_playback_speed = self.default_playback_speed.clamp(0.5, 2.0);
         if self.library_folder.trim().is_empty() {
             self.library_folder = default_library_folder();
         }
