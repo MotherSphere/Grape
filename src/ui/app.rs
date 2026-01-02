@@ -1,7 +1,7 @@
 use crate::config::{
-    self, AccentColor, AudioOutputDevice, AudioStabilityMode, CloseBehavior, EqPreset,
-    InterfaceDensity, InterfaceLanguage, MissingDeviceBehavior, StartupScreen, TextScale,
-    ThemeMode, TimeFormat, UpdateChannel, VolumeLevel,
+    self, AccessibleTextSize, AccentColor, AudioOutputDevice, AudioStabilityMode, CloseBehavior,
+    EqPreset, InterfaceDensity, InterfaceLanguage, MissingDeviceBehavior, StartupScreen,
+    SubtitleSize, TextScale, ThemeMode, TimeFormat, UpdateChannel, VolumeLevel,
 };
 use crate::library::Catalog;
 use crate::player::{PlaybackState as PlayerPlaybackState, Player};
@@ -1416,6 +1416,251 @@ impl GrapeApp {
             .spacing(12)
         };
 
+        let vision_group = || {
+            column![
+                text("Vision")
+                    .size(theme.size(16))
+                    .font(style::font_propo(Weight::Semibold))
+                    .style(style::text_primary(theme)),
+                row![
+                    setting_label("Augmenter le contraste", "Renforce les contrastes UI."),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.increase_contrast,
+                            UiMessage::SetIncreaseContrast(true),
+                            UiMessage::SetIncreaseContrast(false),
+                        )
+                        .into()
+                    ),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label(
+                        "Réduire la transparence",
+                        "Diminue les effets translucides."
+                    ),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.reduce_transparency,
+                            UiMessage::SetReduceTransparency(true),
+                            UiMessage::SetReduceTransparency(false),
+                        )
+                        .into()
+                    ),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label(
+                        "Taille de texte accessible",
+                        "Ajustez les textes d'aide et contenus."
+                    ),
+                    controls(
+                        column![
+                            slider(
+                                0.0..=2.0,
+                                self.ui.settings.accessible_text_size.slider_value(),
+                                |value| UiMessage::SetAccessibleTextSize(
+                                    AccessibleTextSize::from_slider_value(value)
+                                ),
+                            ),
+                            text(self.ui.settings.accessible_text_size.label())
+                                .size(theme.size(12))
+                                .font(style::font_propo(Weight::Light))
+                                .style(style::text_muted(theme)),
+                        ]
+                        .spacing(6)
+                        .into()
+                    ),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+            ]
+            .spacing(12)
+        };
+
+        let movement_group = || {
+            column![
+                text("Mouvement")
+                    .size(theme.size(16))
+                    .font(style::font_propo(Weight::Semibold))
+                    .style(style::text_primary(theme)),
+                row![
+                    setting_label(
+                        "Réduire les animations",
+                        "Limite les animations décoratives."
+                    ),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.reduce_animations,
+                            UiMessage::SetReduceAnimations(true),
+                            UiMessage::SetReduceAnimations(false),
+                        )
+                        .into()
+                    ),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label(
+                        "Réduire les transitions",
+                        "Simplifie les transitions d'écran."
+                    ),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.reduce_transitions,
+                            UiMessage::SetReduceTransitions(true),
+                            UiMessage::SetReduceTransitions(false),
+                        )
+                        .into()
+                    ),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+            ]
+            .spacing(12)
+        };
+
+        let audio_subtitles_group = || {
+            column![
+                text("Audio & sous-titres")
+                    .size(theme.size(16))
+                    .font(style::font_propo(Weight::Semibold))
+                    .style(style::text_primary(theme)),
+                row![
+                    setting_label(
+                        "Sous-titres par défaut",
+                        "Active automatiquement les sous-titres."
+                    ),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.subtitles_enabled,
+                            UiMessage::SetSubtitlesEnabled(true),
+                            UiMessage::SetSubtitlesEnabled(false),
+                        )
+                        .into()
+                    ),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label("Taille des sous-titres", "Ajustez la taille affichée."),
+                    controls(
+                        column![
+                            slider(
+                                0.0..=2.0,
+                                self.ui.settings.subtitle_size.slider_value(),
+                                |value| {
+                                    UiMessage::SetSubtitleSize(SubtitleSize::from_slider_value(
+                                        value
+                                    ))
+                                },
+                            ),
+                            text(self.ui.settings.subtitle_size.label())
+                                .size(theme.size(12))
+                                .font(style::font_propo(Weight::Light))
+                                .style(style::text_muted(theme)),
+                        ]
+                        .spacing(6)
+                        .into()
+                    ),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+            ]
+            .spacing(12)
+        };
+
+        let navigation_group = || {
+            column![
+                text("Navigation & interaction")
+                    .size(theme.size(16))
+                    .font(style::font_propo(Weight::Semibold))
+                    .style(style::text_primary(theme)),
+                row![
+                    setting_label(
+                        "Surligner le focus clavier",
+                        "Met en avant l'élément actif."
+                    ),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.highlight_keyboard_focus,
+                            UiMessage::SetHighlightKeyboardFocus(true),
+                            UiMessage::SetHighlightKeyboardFocus(false),
+                        )
+                        .into()
+                    ),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label(
+                        "Activer raccourcis avancés",
+                        "Débloque les raccourcis experts."
+                    ),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.enable_advanced_shortcuts,
+                            UiMessage::SetAdvancedShortcuts(true),
+                            UiMessage::SetAdvancedShortcuts(false),
+                        )
+                        .into()
+                    ),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+            ]
+            .spacing(12)
+        };
+
+        let playback_group = || {
+            let playback_speed = self.ui.settings.default_playback_speed;
+            column![
+                text("Lecture")
+                    .size(theme.size(16))
+                    .font(style::font_propo(Weight::Semibold))
+                    .style(style::text_primary(theme)),
+                row![
+                    setting_label("Vitesse de lecture par défaut", "Appliquée aux médias."),
+                    controls(
+                        column![
+                            slider(0.5..=2.0, playback_speed, |value| {
+                                UiMessage::SetDefaultPlaybackSpeed(
+                                    (value * 10.0).round() / 10.0
+                                )
+                            }),
+                            text(format!("{:.1}x", playback_speed))
+                                .size(theme.size(12))
+                                .font(style::font_propo(Weight::Light))
+                                .style(style::text_muted(theme)),
+                        ]
+                        .spacing(6)
+                        .into()
+                    ),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+                row![
+                    setting_label(
+                        "Pause auto sur perte de focus",
+                        "Met en pause si l'app perd le focus."
+                    ),
+                    controls(
+                        toggle_row(
+                            self.ui.settings.pause_on_focus_loss,
+                            UiMessage::SetPauseOnFocusLoss(true),
+                            UiMessage::SetPauseOnFocusLoss(false),
+                        )
+                        .into()
+                    ),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(12),
+            ]
+            .spacing(12)
+        };
+
         let appearance_panel = column![
             column![
                 text("Thème")
@@ -1576,7 +1821,14 @@ impl GrapeApp {
         ]
         .spacing(20);
 
-        let accessibility_panel = column![typography_group()].spacing(12);
+        let accessibility_panel = column![
+            vision_group(),
+            movement_group(),
+            audio_subtitles_group(),
+            navigation_group(),
+            playback_group(),
+        ]
+        .spacing(20);
 
         let volume_value = self.ui.settings.default_volume as f32;
         let crossfade_value = self.ui.settings.crossfade_seconds as f32;
@@ -2021,6 +2273,17 @@ impl Application for GrapeApp {
                 | UiMessage::SetInterfaceDensity(_)
                 | UiMessage::SetTransparencyBlur(_)
                 | UiMessage::SetUiAnimations(_)
+                | UiMessage::SetIncreaseContrast(_)
+                | UiMessage::SetReduceTransparency(_)
+                | UiMessage::SetAccessibleTextSize(_)
+                | UiMessage::SetReduceAnimations(_)
+                | UiMessage::SetReduceTransitions(_)
+                | UiMessage::SetSubtitlesEnabled(_)
+                | UiMessage::SetSubtitleSize(_)
+                | UiMessage::SetHighlightKeyboardFocus(_)
+                | UiMessage::SetAdvancedShortcuts(_)
+                | UiMessage::SetDefaultPlaybackSpeed(_)
+                | UiMessage::SetPauseOnFocusLoss(_)
                 | UiMessage::SetDefaultVolume(_)
                 | UiMessage::SetAudioOutputDevice(_)
                 | UiMessage::SetMissingDeviceBehavior(_)
