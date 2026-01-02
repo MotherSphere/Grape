@@ -49,29 +49,33 @@ impl SongsPanel {
             .map(UiMessage::SelectTrack)
     }
 
-    pub fn view(&self, selection: &SelectionState) -> Element<'static, UiMessage> {
+    pub fn view(
+        &self,
+        selection: &SelectionState,
+        theme: style::ThemeTokens,
+    ) -> Element<'static, UiMessage> {
         let selected_id = selection.selected_track.as_ref().map(|track| track.id);
         let header = row![
             text(format!("{} Songs", self.tracks.len()))
-                .size(16)
+                .size(theme.size(16))
                 .font(style::font_propo(Weight::Semibold))
-                .style(style::text_primary()),
+                .style(style::text_primary(theme)),
             text("By album")
-                .size(12)
+                .size(theme.size(12))
                 .font(style::font_propo(Weight::Light))
-                .style(style::text_muted())
+                .style(style::text_muted(theme))
         ]
         .spacing(8)
         .align_items(Alignment::Center);
         let album_info = column![
             text(self.album.clone())
-                .size(18)
+                .size(theme.size(18))
                 .font(style::font_propo(Weight::Medium))
-                .style(style::text_primary()),
+                .style(style::text_primary(theme)),
             text(self.artist.clone())
-                .size(12)
+                .size(theme.size(12))
                 .font(style::font_propo(Weight::Light))
-                .style(style::text_muted())
+                .style(style::text_muted(theme))
         ]
         .spacing(4)
         .align_items(Alignment::Start);
@@ -83,35 +87,36 @@ impl SongsPanel {
                 let is_selected = Some(track.id) == selected_id;
                 let number = track.track_number.unwrap_or((index + 1) as u32).to_string();
                 let number_label = text(number)
-                    .size(12)
+                    .size(theme.size(12))
                     .font(style::font_mono(Weight::Medium))
-                    .style(style::text_muted());
+                    .style(style::text_muted(theme));
                 let title = text(track.title.clone())
-                    .size(14)
+                    .size(theme.size(14))
                     .font(style::font_propo(Weight::Medium))
-                    .style(style::text_primary());
+                    .style(style::text_primary(theme));
                 let artist = text(track.artist.clone())
-                    .size(12)
+                    .size(theme.size(12))
                     .font(style::font_propo(Weight::Light))
-                    .style(style::text_muted());
+                    .style(style::text_muted(theme));
                 let details = column![title, artist]
                     .spacing(2)
                     .width(Length::Fill)
                     .align_items(Alignment::Start);
                 let duration = text(format_duration(track.duration))
-                    .size(12)
+                    .size(theme.size(12))
                     .font(style::font_mono(Weight::Medium))
-                    .style(style::text_muted());
+                    .style(style::text_muted(theme));
                 let row_content = row![number_label, details, duration]
                     .spacing(12)
                     .align_items(Alignment::Center)
                     .width(Length::Fill);
 
                 button(row_content)
-                    .style(Button::Custom(Box::new(style::ButtonStyle(
+                    .style(Button::Custom(Box::new(style::ButtonStyle::new(
                         style::ButtonKind::ListItem {
                             selected: is_selected,
                         },
+                        theme,
                     ))))
                     .on_press(UiMessage::SelectTrack(track.clone()))
                     .width(Length::Fill)
@@ -131,8 +136,9 @@ impl SongsPanel {
             .width(Length::Fill)
             .height(Length::Fill)
             .padding(12)
-            .style(Container::Custom(Box::new(style::SurfaceStyle(
+            .style(Container::Custom(Box::new(style::SurfaceStyle::new(
                 style::Surface::Panel,
+                theme,
             ))))
             .into()
     }

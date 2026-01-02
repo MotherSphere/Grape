@@ -1,3 +1,4 @@
+use crate::config::{self, TextScale, ThemeMode};
 use crate::library::Catalog;
 use crate::player::{PlaybackState as PlayerPlaybackState, Player};
 use crate::ui::components::albums_grid::AlbumsGrid;
@@ -11,12 +12,12 @@ use crate::ui::components::songs_panel::SongsPanel;
 use crate::ui::message::{PlaybackMessage, SearchMessage, UiMessage};
 use crate::ui::state::{
     ActiveTab, Album as UiAlbum, Artist as UiArtist, Folder as UiFolder, Genre as UiGenre,
-    SortOption, Track as UiTrack, UiState,
+    PreferencesTab, SortOption, Track as UiTrack, UiState,
 };
 use crate::ui::style;
 use iced::font::Weight;
 use iced::theme::{Button, Container, TextInput};
-use iced::widget::{button, column, container, row, text, text_input};
+use iced::widget::{button, column, container, row, slider, text, text_input};
 use iced::{Alignment, Application, Command, Element, Length, Settings, event, keyboard, mouse};
 use iced::{Subscription, Theme};
 use std::time::Duration;
@@ -76,6 +77,13 @@ impl GrapeApp {
 
     fn tab_label(&self, _tab: ActiveTab, label: &str) -> String {
         label.to_string()
+    }
+
+    fn theme_tokens(&self) -> style::ThemeTokens {
+        style::ThemeTokens::new(
+            self.ui.settings.theme_mode,
+            self.ui.settings.text_scale.scale(),
+        )
     }
 
     fn normalized_query(&self) -> Option<String> {
@@ -275,55 +283,60 @@ impl GrapeApp {
     }
 
     fn top_bar(&self) -> Element<'_, UiMessage> {
+        let theme = self.theme_tokens();
         let logo_mark = container(
             text("G")
-                .size(18)
+                .size(theme.size(18))
                 .font(style::font_propo(Weight::Bold))
-                .style(style::text_primary()),
+                .style(style::text_primary(theme)),
         )
         .padding([6, 10])
-        .style(Container::Custom(Box::new(style::SurfaceStyle(
+        .style(Container::Custom(Box::new(style::SurfaceStyle::new(
             style::Surface::Avatar,
+            theme,
         ))));
         let logo = row![
             logo_mark,
             text("Grape")
-                .size(20)
+                .size(theme.size(20))
                 .font(style::font_propo(Weight::Semibold))
-                .style(style::text_primary())
+                .style(style::text_primary(theme))
         ]
         .spacing(8)
         .align_items(Alignment::Center);
         let logo_button = button(logo)
-            .style(Button::Custom(Box::new(style::ButtonStyle(
+            .style(Button::Custom(Box::new(style::ButtonStyle::new(
                 style::ButtonKind::Icon,
+                theme,
             ))))
             .padding([2, 6])
             .on_press(UiMessage::ToggleLogoMenu);
         let menu_button = |label, message| {
             button(
                 text(label)
-                    .size(13)
+                    .size(theme.size(13))
                     .font(style::font_propo(Weight::Medium))
-                    .style(style::text_primary()),
+                    .style(style::text_primary(theme)),
             )
-            .style(Button::Custom(Box::new(style::ButtonStyle(
+            .style(Button::Custom(Box::new(style::ButtonStyle::new(
                 style::ButtonKind::ListItem { selected: false },
+                theme,
             ))))
             .padding([4, 8])
             .on_press(message)
         };
         let logo_menu = container(
             column![
-                menu_button("Bibliothèque", UiMessage::CloseMenu),
+                menu_button("Bibliothèque", UiMessage::ShowLibrary),
                 menu_button("Playlist", UiMessage::OpenPlaylist),
-                menu_button("Préférences", UiMessage::CloseMenu),
+                menu_button("Préférences", UiMessage::OpenPreferences),
             ]
             .spacing(6),
         )
         .padding([8, 12])
-        .style(Container::Custom(Box::new(style::SurfaceStyle(
+        .style(Container::Custom(Box::new(style::SurfaceStyle::new(
             style::Surface::Panel,
+            theme,
         ))));
         let logo_widget: Element<'_, UiMessage> = if self.ui.menu_open {
             AnchoredOverlay::new(logo_button, logo_menu).into()
@@ -333,64 +346,96 @@ impl GrapeApp {
         let tabs = row![
             button(
                 text(self.tab_label(ActiveTab::Artists, "Artists"))
-                    .font(style::font_propo(Weight::Medium)),
+                    .font(style::font_propo(Weight::Medium))
+                    .size(theme.size(14)),
             )
-            .style(Button::Custom(Box::new(style::ButtonStyle(
+            .style(Button::Custom(Box::new(style::ButtonStyle::new(
                 style::ButtonKind::Tab {
                     selected: self.ui.active_tab == ActiveTab::Artists,
                 },
+                theme,
             ))))
             .on_press(UiMessage::TabSelected(ActiveTab::Artists)),
             button(
                 text(self.tab_label(ActiveTab::Genres, "Genres"))
-                    .font(style::font_propo(Weight::Medium)),
+                    .font(style::font_propo(Weight::Medium))
+                    .size(theme.size(14)),
             )
-            .style(Button::Custom(Box::new(style::ButtonStyle(
+            .style(Button::Custom(Box::new(style::ButtonStyle::new(
                 style::ButtonKind::Tab {
                     selected: self.ui.active_tab == ActiveTab::Genres,
                 },
+                theme,
             ))))
             .on_press(UiMessage::TabSelected(ActiveTab::Genres)),
             button(
                 text(self.tab_label(ActiveTab::Albums, "Albums"))
-                    .font(style::font_propo(Weight::Medium)),
+                    .font(style::font_propo(Weight::Medium))
+                    .size(theme.size(14)),
             )
-            .style(Button::Custom(Box::new(style::ButtonStyle(
+            .style(Button::Custom(Box::new(style::ButtonStyle::new(
                 style::ButtonKind::Tab {
                     selected: self.ui.active_tab == ActiveTab::Albums,
                 },
+                theme,
             ))))
             .on_press(UiMessage::TabSelected(ActiveTab::Albums)),
             button(
                 text(self.tab_label(ActiveTab::Folders, "Folders"))
-                    .font(style::font_propo(Weight::Medium)),
+                    .font(style::font_propo(Weight::Medium))
+                    .size(theme.size(14)),
             )
-            .style(Button::Custom(Box::new(style::ButtonStyle(
+            .style(Button::Custom(Box::new(style::ButtonStyle::new(
                 style::ButtonKind::Tab {
                     selected: self.ui.active_tab == ActiveTab::Folders,
                 },
+                theme,
             ))))
             .on_press(UiMessage::TabSelected(ActiveTab::Folders)),
         ]
         .spacing(12)
         .align_items(Alignment::Center);
         let search_input = text_input("Search...", &self.ui.search.query)
-            .style(TextInput::Custom(Box::new(style::SearchInput)))
+            .style(TextInput::Custom(Box::new(style::SearchInput::new(theme))))
             .on_input(|value| UiMessage::Search(SearchMessage::QueryChanged(value)));
         let search = row![
             search_input,
-            button(text("≡").font(style::font_propo(Weight::Medium))).style(Button::Custom(
-                Box::new(style::ButtonStyle(style::ButtonKind::Icon))
-            ),),
-            button(text("—").font(style::font_propo(Weight::Medium))).style(Button::Custom(
-                Box::new(style::ButtonStyle(style::ButtonKind::Icon))
-            ),),
-            button(text("▢").font(style::font_propo(Weight::Medium))).style(Button::Custom(
-                Box::new(style::ButtonStyle(style::ButtonKind::Icon))
-            ),),
-            button(text("✕").font(style::font_propo(Weight::Medium))).style(Button::Custom(
-                Box::new(style::ButtonStyle(style::ButtonKind::Icon))
-            ),)
+            button(
+                text("≡")
+                    .font(style::font_propo(Weight::Medium))
+                    .size(theme.size(14))
+            )
+            .style(Button::Custom(Box::new(style::ButtonStyle::new(
+                style::ButtonKind::Icon,
+                theme,
+            )))),
+            button(
+                text("—")
+                    .font(style::font_propo(Weight::Medium))
+                    .size(theme.size(14))
+            )
+            .style(Button::Custom(Box::new(style::ButtonStyle::new(
+                style::ButtonKind::Icon,
+                theme,
+            )))),
+            button(
+                text("▢")
+                    .font(style::font_propo(Weight::Medium))
+                    .size(theme.size(14))
+            )
+            .style(Button::Custom(Box::new(style::ButtonStyle::new(
+                style::ButtonKind::Icon,
+                theme,
+            )))),
+            button(
+                text("✕")
+                    .font(style::font_propo(Weight::Medium))
+                    .size(theme.size(14))
+            )
+            .style(Button::Custom(Box::new(style::ButtonStyle::new(
+                style::ButtonKind::Icon,
+                theme,
+            ))))
         ]
         .spacing(8)
         .align_items(Alignment::Center);
@@ -406,13 +451,15 @@ impl GrapeApp {
         container(layout)
             .padding([10, 16])
             .width(Length::Fill)
-            .style(Container::Custom(Box::new(style::SurfaceStyle(
+            .style(Container::Custom(Box::new(style::SurfaceStyle::new(
                 style::Surface::TopBar,
+                theme,
             ))))
             .into()
     }
 
     fn artists_panel(&self) -> Element<'_, UiMessage> {
+        let theme = self.theme_tokens();
         let selected_id = self
             .ui
             .selection
@@ -421,10 +468,11 @@ impl GrapeApp {
             .map(|artist| artist.id);
         let artists = self.filtered_artists_from_catalog();
         let panel = ArtistsPanel::new(artists).with_selection(selected_id);
-        panel.view(&self.ui.selection)
+        panel.view(&self.ui.selection, theme)
     }
 
     fn albums_panel(&self) -> Element<'_, UiMessage> {
+        let theme = self.theme_tokens();
         let sort_label = match self.ui.search.sort {
             SortOption::Alphabetical => "A–Z",
             SortOption::ByAlbum => "By album",
@@ -439,7 +487,7 @@ impl GrapeApp {
         let grid = AlbumsGrid::new(albums)
             .with_sort_label(sort_label)
             .with_selection(selected_id)
-            .view();
+            .view(theme);
 
         container(grid)
             .width(Length::Fill)
@@ -448,6 +496,7 @@ impl GrapeApp {
     }
 
     fn songs_panel(&self) -> Element<'_, UiMessage> {
+        let theme = self.theme_tokens();
         let selected_album = self.ui.selection.selected_album.as_ref().and_then(|album| {
             self.album_entry_by_id(album.id)
                 .map(|(artist, entry)| (artist, entry))
@@ -471,10 +520,11 @@ impl GrapeApp {
             .as_ref()
             .map(|track| track.id);
         let panel = SongsPanel::new(album_title, artist_name, tracks).with_selection(selected_id);
-        panel.view(&self.ui.selection)
+        panel.view(&self.ui.selection, theme)
     }
 
     fn genres_panel(&self) -> Element<'_, UiMessage> {
+        let theme = self.theme_tokens();
         let selected_id = self
             .ui
             .selection
@@ -483,10 +533,11 @@ impl GrapeApp {
             .map(|genre| genre.id);
         let genres = self.filtered_genres_from_catalog();
         let panel = GenresPanel::new(genres).with_selection(selected_id);
-        panel.view()
+        panel.view(theme)
     }
 
     fn folders_panel(&self) -> Element<'_, UiMessage> {
+        let theme = self.theme_tokens();
         let sort_label = match self.ui.search.sort {
             SortOption::Alphabetical => "A–Z",
             SortOption::ByAlbum => "By album",
@@ -501,10 +552,11 @@ impl GrapeApp {
         FoldersPanel::new(folders)
             .with_sort_label(sort_label)
             .with_selection(selected_id)
-            .view()
+            .view(theme)
     }
 
     fn player_bar(&self) -> Element<'_, UiMessage> {
+        let theme = self.theme_tokens();
         let (title, artist, cover_path) = self
             .ui
             .selection
@@ -537,9 +589,9 @@ impl GrapeApp {
         PlayerBar::new(title, artist)
             .with_cover(cover_path)
             .with_playback(self.ui.playback)
-            .with_volume(72)
+            .with_volume(self.ui.settings.default_volume)
             .with_queue(false)
-            .view()
+            .view(theme)
     }
 
     fn handle_track_selection(&mut self, track: &UiTrack) {
@@ -593,7 +645,217 @@ impl GrapeApp {
     }
 
     fn playlist_view(&self) -> Element<'_, UiMessage> {
-        PlaylistView::view()
+        let theme = self.theme_tokens();
+        PlaylistView::view(theme)
+    }
+
+    fn preferences_view(&self) -> Element<'_, UiMessage> {
+        let theme = self.theme_tokens();
+        let header = row![
+            text("Préférences")
+                .size(theme.size(22))
+                .font(style::font_propo(Weight::Semibold))
+                .style(style::text_primary(theme)),
+            button(
+                text("Fermer")
+                    .size(theme.size(13))
+                    .font(style::font_propo(Weight::Medium))
+                    .style(style::text_primary(theme)),
+            )
+            .style(Button::Custom(Box::new(style::ButtonStyle::new(
+                style::ButtonKind::ListItem { selected: false },
+                theme,
+            ))))
+            .padding([6, 10])
+            .on_press(UiMessage::ClosePreferences)
+        ]
+        .align_items(Alignment::Center)
+        .spacing(12);
+
+        let menu_button = |tab: PreferencesTab, label: &str| {
+            button(
+                text(label)
+                    .size(theme.size(14))
+                    .font(style::font_propo(Weight::Medium))
+                    .style(style::text_primary(theme)),
+            )
+            .style(Button::Custom(Box::new(style::ButtonStyle::new(
+                style::ButtonKind::ListItem {
+                    selected: self.ui.preferences_tab == tab,
+                },
+                theme,
+            ))))
+            .padding([6, 10])
+            .width(Length::Fill)
+            .on_press(UiMessage::PreferencesTabSelected(tab))
+        };
+        let menu = column![
+            menu_button(PreferencesTab::General, "Général"),
+            menu_button(PreferencesTab::Appearance, "Apparences"),
+            menu_button(PreferencesTab::Accessibility, "Accessibility"),
+            menu_button(PreferencesTab::Audio, "Audio"),
+        ]
+        .spacing(6)
+        .width(Length::Fill);
+
+        let general_panel = column![
+            text("Paramètres généraux")
+                .size(theme.size(16))
+                .font(style::font_propo(Weight::Semibold))
+                .style(style::text_primary(theme)),
+            text("Les préférences sont enregistrées automatiquement.")
+                .size(theme.size(13))
+                .font(style::font_propo(Weight::Light))
+                .style(style::text_muted(theme))
+        ]
+        .spacing(8);
+
+        let appearance_panel = column![
+            text("Thème")
+                .size(theme.size(16))
+                .font(style::font_propo(Weight::Semibold))
+                .style(style::text_primary(theme)),
+            row![
+                button(
+                    text("Sombre")
+                        .size(theme.size(13))
+                        .font(style::font_propo(Weight::Medium))
+                        .style(style::text_primary(theme)),
+                )
+                .style(Button::Custom(Box::new(style::ButtonStyle::new(
+                    style::ButtonKind::Tab {
+                        selected: self.ui.settings.theme_mode == ThemeMode::Dark,
+                    },
+                    theme,
+                ))))
+                .padding([6, 10])
+                .on_press(UiMessage::SetThemeMode(ThemeMode::Dark)),
+                button(
+                    text("Clair")
+                        .size(theme.size(13))
+                        .font(style::font_propo(Weight::Medium))
+                        .style(style::text_primary(theme)),
+                )
+                .style(Button::Custom(Box::new(style::ButtonStyle::new(
+                    style::ButtonKind::Tab {
+                        selected: self.ui.settings.theme_mode == ThemeMode::Light,
+                    },
+                    theme,
+                ))))
+                .padding([6, 10])
+                .on_press(UiMessage::SetThemeMode(ThemeMode::Light)),
+            ]
+            .spacing(10),
+            text("Les couleurs d'accent et les surfaces s'ajustent automatiquement.")
+                .size(theme.size(13))
+                .font(style::font_propo(Weight::Light))
+                .style(style::text_muted(theme))
+        ]
+        .spacing(8);
+
+        let accessibility_panel = column![
+            text("Taille de texte")
+                .size(theme.size(16))
+                .font(style::font_propo(Weight::Semibold))
+                .style(style::text_primary(theme)),
+            row![
+                button(
+                    text(TextScale::Normal.label())
+                        .size(theme.size(13))
+                        .font(style::font_propo(Weight::Medium))
+                        .style(style::text_primary(theme)),
+                )
+                .style(Button::Custom(Box::new(style::ButtonStyle::new(
+                    style::ButtonKind::Tab {
+                        selected: self.ui.settings.text_scale == TextScale::Normal,
+                    },
+                    theme,
+                ))))
+                .padding([6, 10])
+                .on_press(UiMessage::SetTextScale(TextScale::Normal)),
+                button(
+                    text(TextScale::Large.label())
+                        .size(theme.size(13))
+                        .font(style::font_propo(Weight::Medium))
+                        .style(style::text_primary(theme)),
+                )
+                .style(Button::Custom(Box::new(style::ButtonStyle::new(
+                    style::ButtonKind::Tab {
+                        selected: self.ui.settings.text_scale == TextScale::Large,
+                    },
+                    theme,
+                ))))
+                .padding([6, 10])
+                .on_press(UiMessage::SetTextScale(TextScale::Large)),
+                button(
+                    text(TextScale::ExtraLarge.label())
+                        .size(theme.size(13))
+                        .font(style::font_propo(Weight::Medium))
+                        .style(style::text_primary(theme)),
+                )
+                .style(Button::Custom(Box::new(style::ButtonStyle::new(
+                    style::ButtonKind::Tab {
+                        selected: self.ui.settings.text_scale == TextScale::ExtraLarge,
+                    },
+                    theme,
+                ))))
+                .padding([6, 10])
+                .on_press(UiMessage::SetTextScale(TextScale::ExtraLarge)),
+            ]
+            .spacing(10),
+            text("Ajustez la taille de texte pour améliorer la lisibilité.")
+                .size(theme.size(13))
+                .font(style::font_propo(Weight::Light))
+                .style(style::text_muted(theme))
+        ]
+        .spacing(8);
+
+        let volume_value = self.ui.settings.default_volume as f32;
+        let audio_panel = column![
+            text("Volume par défaut")
+                .size(theme.size(16))
+                .font(style::font_propo(Weight::Semibold))
+                .style(style::text_primary(theme)),
+            slider(0.0..=100.0, volume_value, |value| {
+                UiMessage::SetDefaultVolume(value.round().clamp(0.0, 100.0) as u8)
+            }),
+            text(format!("{} %", self.ui.settings.default_volume))
+                .size(theme.size(13))
+                .font(style::font_propo(Weight::Medium))
+                .style(style::text_muted(theme))
+        ]
+        .spacing(8);
+
+        let content_panel: Element<'_, UiMessage> = match self.ui.preferences_tab {
+            PreferencesTab::General => general_panel.into(),
+            PreferencesTab::Appearance => appearance_panel.into(),
+            PreferencesTab::Accessibility => accessibility_panel.into(),
+            PreferencesTab::Audio => audio_panel.into(),
+        };
+
+        let body = row![
+            container(menu)
+                .padding(16)
+                .width(Length::Fixed(200.0))
+                .style(Container::Custom(Box::new(style::SurfaceStyle::new(
+                    style::Surface::Sidebar,
+                    theme,
+                )))),
+            container(content_panel)
+                .padding(20)
+                .width(Length::Fill)
+                .style(Container::Custom(Box::new(style::SurfaceStyle::new(
+                    style::Surface::Panel,
+                    theme,
+                ))))
+        ]
+        .spacing(16)
+        .height(Length::Fill);
+
+        column![header, body]
+            .spacing(16)
+            .height(Length::Fill)
+            .into()
     }
 }
 
@@ -611,11 +873,12 @@ impl Application for GrapeApp {
                 None
             }
         };
+        let settings = config::load_settings();
         (
             Self {
                 catalog: flags,
                 player,
-                ui: UiState::default(),
+                ui: UiState::new(settings),
             },
             Command::none(),
         )
@@ -626,6 +889,12 @@ impl Application for GrapeApp {
     }
 
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
+        let should_persist = matches!(
+            message,
+            UiMessage::SetThemeMode(_)
+                | UiMessage::SetTextScale(_)
+                | UiMessage::SetDefaultVolume(_)
+        );
         match &message {
             UiMessage::SelectTrack(track) => {
                 self.handle_track_selection(track);
@@ -642,49 +911,60 @@ impl Application for GrapeApp {
             _ => {}
         }
         self.ui.update(message);
+        if should_persist {
+            if let Err(err) = config::save_settings(&self.ui.settings) {
+                error!(error = %err, "Failed to save preferences");
+            }
+        }
         self.sync_playback_state();
         Command::none()
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
+        let theme = self.theme_tokens();
         if self.ui.playlist_open {
             return self.playlist_view();
         }
 
-        let content = match self.ui.active_tab {
-            ActiveTab::Artists | ActiveTab::Albums => row![
-                container(self.artists_panel())
-                    .width(Length::FillPortion(2))
-                    .height(Length::Fill),
-                container(self.albums_panel())
-                    .width(Length::FillPortion(5))
-                    .height(Length::Fill),
-                container(self.songs_panel())
-                    .width(Length::FillPortion(3))
-                    .height(Length::Fill),
-            ],
-            ActiveTab::Genres => row![
-                container(self.genres_panel())
-                    .width(Length::FillPortion(2))
-                    .height(Length::Fill),
-                container(self.albums_panel())
-                    .width(Length::FillPortion(5))
-                    .height(Length::Fill),
-                container(self.songs_panel())
-                    .width(Length::FillPortion(3))
-                    .height(Length::Fill),
-            ],
-            ActiveTab::Folders => row![
-                container(self.folders_panel())
-                    .width(Length::FillPortion(7))
-                    .height(Length::Fill),
-                container(self.songs_panel())
-                    .width(Length::FillPortion(3))
-                    .height(Length::Fill),
-            ],
-        }
-        .spacing(16)
-        .height(Length::Fill);
+        let content = if self.ui.preferences_open {
+            self.preferences_view()
+        } else {
+            match self.ui.active_tab {
+                ActiveTab::Artists | ActiveTab::Albums => row![
+                    container(self.artists_panel())
+                        .width(Length::FillPortion(2))
+                        .height(Length::Fill),
+                    container(self.albums_panel())
+                        .width(Length::FillPortion(5))
+                        .height(Length::Fill),
+                    container(self.songs_panel())
+                        .width(Length::FillPortion(3))
+                        .height(Length::Fill),
+                ],
+                ActiveTab::Genres => row![
+                    container(self.genres_panel())
+                        .width(Length::FillPortion(2))
+                        .height(Length::Fill),
+                    container(self.albums_panel())
+                        .width(Length::FillPortion(5))
+                        .height(Length::Fill),
+                    container(self.songs_panel())
+                        .width(Length::FillPortion(3))
+                        .height(Length::Fill),
+                ],
+                ActiveTab::Folders => row![
+                    container(self.folders_panel())
+                        .width(Length::FillPortion(7))
+                        .height(Length::Fill),
+                    container(self.songs_panel())
+                        .width(Length::FillPortion(3))
+                        .height(Length::Fill),
+                ],
+            }
+            .spacing(16)
+            .height(Length::Fill)
+            .into()
+        };
 
         let layout = column![self.top_bar(), content, self.player_bar()]
             .spacing(16)
@@ -694,14 +974,18 @@ impl Application for GrapeApp {
         container(layout)
             .width(Length::Fill)
             .height(Length::Fill)
-            .style(Container::Custom(Box::new(style::SurfaceStyle(
+            .style(Container::Custom(Box::new(style::SurfaceStyle::new(
                 style::Surface::AppBackground,
+                theme,
             ))))
             .into()
     }
 
     fn theme(&self) -> Theme {
-        Theme::Dark
+        match self.ui.settings.theme_mode {
+            ThemeMode::Dark => Theme::Dark,
+            ThemeMode::Light => Theme::Light,
+        }
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
@@ -729,6 +1013,17 @@ impl Application for GrapeApp {
                     if matches!(key, keyboard::Key::Named(keyboard::key::Named::Escape)) =>
                 {
                     Some(UiMessage::ClosePlaylist)
+                }
+                _ => None,
+            }));
+        }
+
+        if self.ui.preferences_open {
+            subscriptions.push(event::listen_with(|event, _status| match event {
+                event::Event::Keyboard(keyboard::Event::KeyPressed { key, .. })
+                    if matches!(key, keyboard::Key::Named(keyboard::key::Named::Escape)) =>
+                {
+                    Some(UiMessage::ClosePreferences)
                 }
                 _ => None,
             }));

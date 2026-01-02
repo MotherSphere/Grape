@@ -60,16 +60,16 @@ impl AlbumsGrid {
             .map(UiMessage::SelectAlbum)
     }
 
-    pub fn view(self) -> Element<'static, UiMessage> {
+    pub fn view(self, theme: style::ThemeTokens) -> Element<'static, UiMessage> {
         let header = row![
             text(format!("{} Albums", self.albums.len()))
-                .size(16)
+                .size(theme.size(16))
                 .font(style::font_propo(Weight::Semibold))
-                .style(style::text_primary()),
+                .style(style::text_primary(theme)),
             text(format!("{} ", self.sort_label))
-                .size(12)
+                .size(theme.size(12))
                 .font(style::font_propo(Weight::Light))
-                .style(style::text_muted())
+                .style(style::text_muted(theme))
         ]
         .spacing(8)
         .align_items(Alignment::Center);
@@ -89,9 +89,9 @@ impl AlbumsGrid {
                                     .into()
                             } else {
                                 text("♪")
-                                    .size(26)
+                                    .size(theme.size(26))
                                     .font(style::font_propo(Weight::Medium))
-                                    .style(style::text_muted())
+                                    .style(style::text_muted(theme))
                                     .into()
                             };
                         let cover = container(cover_content)
@@ -99,28 +99,30 @@ impl AlbumsGrid {
                             .height(Length::Fixed(120.0))
                             .center_x()
                             .center_y()
-                            .style(Container::Custom(Box::new(style::SurfaceStyle(
+                            .style(Container::Custom(Box::new(style::SurfaceStyle::new(
                                 style::Surface::AlbumCover,
+                                theme,
                             ))));
 
                         let title = text(album.title.clone())
-                            .size(14)
+                            .size(theme.size(14))
                             .font(style::font_propo(Weight::Medium))
-                            .style(style::text_primary());
+                            .style(style::text_primary(theme));
                         let artist = text(album.artist.clone())
-                            .size(12)
+                            .size(theme.size(12))
                             .font(style::font_propo(Weight::Light))
-                            .style(style::text_muted());
+                            .style(style::text_muted(theme));
                         let card = column![cover, title, artist]
                             .spacing(6)
                             .align_items(Alignment::Center)
                             .width(Length::Fill);
 
                         button(card)
-                            .style(Button::Custom(Box::new(style::ButtonStyle(
+                            .style(Button::Custom(Box::new(style::ButtonStyle::new(
                                 style::ButtonKind::AlbumCard {
                                     selected: is_selected,
                                 },
+                                theme,
                             ))))
                             .on_press(UiMessage::SelectAlbum(album.clone()))
                             .width(Length::FillPortion(1))
@@ -148,8 +150,9 @@ impl AlbumsGrid {
             .width(Length::Fill)
             .height(Length::Fill)
             .padding(12)
-            .style(Container::Custom(Box::new(style::SurfaceStyle(
+            .style(Container::Custom(Box::new(style::SurfaceStyle::new(
                 style::Surface::Panel,
+                theme,
             ))))
             .into()
     }

@@ -1,3 +1,4 @@
+mod config;
 mod library;
 mod player;
 mod playlist;

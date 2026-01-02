@@ -12,20 +12,21 @@ impl PlaylistView {
         Self
     }
 
-    pub fn view() -> Element<'static, UiMessage> {
+    pub fn view(theme: style::ThemeTokens) -> Element<'static, UiMessage> {
         let header = row![
             text("Playlist")
-                .size(24)
+                .size(theme.size(24))
                 .font(style::font_propo(Weight::Semibold))
-                .style(style::text_primary()),
+                .style(style::text_primary(theme)),
             button(
                 text("✕")
-                    .size(16)
+                    .size(theme.size(16))
                     .font(style::font_propo(Weight::Medium))
-                    .style(style::text_primary()),
+                    .style(style::text_primary(theme)),
             )
-            .style(Button::Custom(Box::new(style::ButtonStyle(
+            .style(Button::Custom(Box::new(style::ButtonStyle::new(
                 style::ButtonKind::Icon,
+                theme,
             ))))
             .on_press(UiMessage::ClosePlaylist)
         ]
@@ -34,17 +35,18 @@ impl PlaylistView {
 
         let body = column![
             text("Votre playlist apparaîtra ici.")
-                .size(14)
+                .size(theme.size(14))
                 .font(style::font_propo(Weight::Medium))
-                .style(style::text_muted())
+                .style(style::text_muted(theme))
         ]
         .spacing(8);
 
         let panel = container(column![header, body].spacing(16))
             .padding(24)
             .width(Length::FillPortion(2))
-            .style(Container::Custom(Box::new(style::SurfaceStyle(
+            .style(Container::Custom(Box::new(style::SurfaceStyle::new(
                 style::Surface::Panel,
+                theme,
             ))));
 
         container(panel)
@@ -52,8 +54,9 @@ impl PlaylistView {
             .height(Length::Fill)
             .center_x()
             .center_y()
-            .style(Container::Custom(Box::new(style::SurfaceStyle(
+            .style(Container::Custom(Box::new(style::SurfaceStyle::new(
                 style::Surface::AppBackground,
+                theme,
             ))))
             .into()
     }

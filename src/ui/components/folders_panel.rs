@@ -68,37 +68,42 @@ impl FoldersPanel {
         self
     }
 
-    pub fn view(self) -> Element<'static, UiMessage> {
+    pub fn view(self, theme: style::ThemeTokens) -> Element<'static, UiMessage> {
         let sort_label = self.sort_label.clone();
         let header = row![
             text(format!("{} Folders", self.folders.len()))
-                .size(16)
+                .size(theme.size(16))
                 .font(style::font_propo(Weight::Semibold))
-                .style(style::text_primary()),
+                .style(style::text_primary(theme)),
             text(sort_label)
-                .size(12)
+                .size(theme.size(12))
                 .font(style::font_propo(Weight::Light))
-                .style(style::text_muted())
+                .style(style::text_muted(theme))
         ]
         .spacing(8)
         .align_items(Alignment::Center);
 
         let content = match self.layout {
-            FolderLayout::Grid => self.grid_view(header.into()),
-            FolderLayout::List => self.list_view(header.into()),
+            FolderLayout::Grid => self.grid_view(header.into(), theme),
+            FolderLayout::List => self.list_view(header.into(), theme),
         };
 
         container(scrollable(content))
             .width(Length::Fill)
             .height(Length::Fill)
             .padding(12)
-            .style(Container::Custom(Box::new(style::SurfaceStyle(
+            .style(Container::Custom(Box::new(style::SurfaceStyle::new(
                 style::Surface::Panel,
+                theme,
             ))))
             .into()
     }
 
-    fn grid_view(&self, header: Element<'static, UiMessage>) -> Element<'static, UiMessage> {
+    fn grid_view(
+        &self,
+        header: Element<'static, UiMessage>,
+        theme: style::ThemeTokens,
+    ) -> Element<'static, UiMessage> {
         let rows = self
             .folders
             .chunks(self.columns)
@@ -109,35 +114,36 @@ impl FoldersPanel {
                         let is_selected = Some(folder.id) == self.selected_folder_id;
                         let icon = container(
                             text("▣")
-                                .size(26)
+                                .size(theme.size(26))
                                 .font(style::font_propo(Weight::Medium))
-                                .style(style::text_muted()),
+                                .style(style::text_muted(theme)),
                         )
                         .width(Length::Fixed(120.0))
                         .height(Length::Fixed(120.0))
                         .center_x()
                         .center_y()
                         .style(Container::Custom(Box::new(
-                            style::SurfaceStyle(style::Surface::AlbumCover),
+                            style::SurfaceStyle::new(style::Surface::AlbumCover, theme),
                         )));
                         let title = text(folder.name.clone())
-                            .size(14)
+                            .size(theme.size(14))
                             .font(style::font_propo(Weight::Medium))
-                            .style(style::text_primary());
+                            .style(style::text_primary(theme));
                         let count = text(format!("{} tracks", folder.track_count))
-                            .size(12)
+                            .size(theme.size(12))
                             .font(style::font_propo(Weight::Light))
-                            .style(style::text_muted());
+                            .style(style::text_muted(theme));
                         let card = column![icon, title, count]
                             .spacing(6)
                             .align_items(Alignment::Center)
                             .width(Length::Fill);
 
                         button(card)
-                            .style(Button::Custom(Box::new(style::ButtonStyle(
+                            .style(Button::Custom(Box::new(style::ButtonStyle::new(
                                 style::ButtonKind::AlbumCard {
                                     selected: is_selected,
                                 },
+                                theme,
                             ))))
                             .on_press(UiMessage::SelectFolder(folder.clone()))
                             .width(Length::FillPortion(1))
@@ -163,53 +169,58 @@ impl FoldersPanel {
             .into()
     }
 
-    fn list_view(&self, header: Element<'static, UiMessage>) -> Element<'static, UiMessage> {
-        let list_items = self
-            .folders
-            .iter()
-            .map(|folder| {
-                let is_selected = Some(folder.id) == self.selected_folder_id;
-                let icon = container(
-                    text("▣")
-                        .size(16)
+    fn list_view(
+        &self,
+        header: Element<'static, UiMessage>,
+        theme: style::ThemeTokens,
+    ) -> Element<'static, UiMessage> {
+        let list_items =
+            self.folders
+                .iter()
+                .map(|folder| {
+                    let is_selected = Some(folder.id) == self.selected_folder_id;
+                    let icon = container(
+                        text("▣")
+                            .size(theme.size(16))
+                            .font(style::font_propo(Weight::Medium))
+                            .style(style::text_primary(theme)),
+                    )
+                    .width(Length::Fixed(28.0))
+                    .height(Length::Fixed(28.0))
+                    .center_x()
+                    .center_y()
+                    .style(Container::Custom(Box::new(
+                        style::SurfaceStyle::new(style::Surface::AlbumCover, theme),
+                    )));
+                    let title = text(folder.name.clone())
+                        .size(theme.size(14))
                         .font(style::font_propo(Weight::Medium))
-                        .style(style::text_primary()),
-                )
-                .width(Length::Fixed(28.0))
-                .height(Length::Fixed(28.0))
-                .center_x()
-                .center_y()
-                .style(Container::Custom(Box::new(style::SurfaceStyle(
-                    style::Surface::AlbumCover,
-                ))));
-                let title = text(folder.name.clone())
-                    .size(14)
-                    .font(style::font_propo(Weight::Medium))
-                    .style(style::text_primary());
-                let count = text(format!("{} tracks", folder.track_count))
-                    .size(12)
-                    .font(style::font_propo(Weight::Light))
-                    .style(style::text_muted());
-                let details = column![title, count]
-                    .spacing(2)
-                    .width(Length::Fill)
-                    .align_items(Alignment::Start);
-                let row_content = row![icon, details]
-                    .spacing(10)
-                    .align_items(Alignment::Center)
-                    .width(Length::Fill);
+                        .style(style::text_primary(theme));
+                    let count = text(format!("{} tracks", folder.track_count))
+                        .size(theme.size(12))
+                        .font(style::font_propo(Weight::Light))
+                        .style(style::text_muted(theme));
+                    let details = column![title, count]
+                        .spacing(2)
+                        .width(Length::Fill)
+                        .align_items(Alignment::Start);
+                    let row_content = row![icon, details]
+                        .spacing(10)
+                        .align_items(Alignment::Center)
+                        .width(Length::Fill);
 
-                button(row_content)
-                    .style(Button::Custom(Box::new(style::ButtonStyle(
-                        style::ButtonKind::ListItem {
-                            selected: is_selected,
-                        },
-                    ))))
-                    .on_press(UiMessage::SelectFolder(folder.clone()))
-                    .width(Length::Fill)
-                    .into()
-            })
-            .collect::<Vec<Element<UiMessage>>>();
+                    button(row_content)
+                        .style(Button::Custom(Box::new(style::ButtonStyle::new(
+                            style::ButtonKind::ListItem {
+                                selected: is_selected,
+                            },
+                            theme,
+                        ))))
+                        .on_press(UiMessage::SelectFolder(folder.clone()))
+                        .width(Length::Fill)
+                        .into()
+                })
+                .collect::<Vec<Element<UiMessage>>>();
         let list = column(list_items)
             .spacing(8)
             .width(Length::Fill)
