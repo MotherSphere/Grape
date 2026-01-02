@@ -128,6 +128,14 @@ impl Catalog {
 pub fn scan_library(root: impl AsRef<Path>) -> io::Result<Catalog> {
     let root = root.as_ref();
     let mut artists = Vec::new();
+    let mut cache_index = match cache::load_index(root) {
+        Ok(index) => index,
+        Err(error) => {
+            warn!(error = %error, "Unable to load cache index; scanning without cache");
+            cache::CacheIndex::default()
+        }
+    };
+    let mut used_cache_keys = std::collections::HashSet::new();
 
     if !root.exists() {
         return Ok(Catalog::empty());
@@ -144,19 +152,45 @@ pub fn scan_library(root: impl AsRef<Path>) -> io::Result<Catalog> {
         for album_entry in read_sorted_dirs(&artist_entry.path())? {
             let (year, title) = parse_album_folder(&album_entry.file_name().to_string_lossy());
             let album_path = album_entry.path();
-            let tracks = scan_tracks(&album_path)?;
+            let cached_album = match cache::load_album(root, &cache_index, &album_path) {
+                Ok(cached) => cached,
+                Err(error) => {
+                    warn!(
+                        error = %error,
+                        path = %album_path.display(),
+                        "Unable to load cached album; rescanning"
+                    );
+                    None
+                }
+            };
 
-            if !tracks.is_empty() {
+            let album = if let Some(mut album) = cached_album {
+                album.title = title.clone();
+                album.year = year;
+                album.path = album_path.clone();
+                album
+            } else {
+                let tracks = scan_tracks(&album_path)?;
+                if tracks.is_empty() {
+                    continue;
+                }
                 let cover = scan_cover_art(root, &album_path)?;
                 let total_duration_secs = tracks.iter().map(|track| track.duration_secs).sum();
-                albums.push(Album {
-                    title,
+                Album {
+                    title: title.clone(),
                     year,
                     tracks,
-                    path: album_path,
+                    path: album_path.clone(),
                     total_duration_secs,
                     cover,
-                });
+                }
+            };
+
+            if !album.tracks.is_empty() {
+                if let Ok(key) = cache::store_album(root, &mut cache_index, &album_path, &album) {
+                    used_cache_keys.insert(key);
+                }
+                albums.push(album);
             }
         }
 
@@ -168,7 +202,14 @@ pub fn scan_library(root: impl AsRef<Path>) -> io::Result<Catalog> {
         }
     }
 
-    Ok(Catalog { artists })
+    let mut catalog = Catalog { artists };
+    catalog.prune_missing_cover_art();
+
+    if let Err(error) = cache::finalize(root, &mut cache_index, &used_cache_keys) {
+        warn!(error = %error, "Unable to persist cache index");
+    }
+
+    Ok(catalog)
 }
 
 fn scan_tracks(dir: &Path) -> io::Result<Vec<Track>> {
