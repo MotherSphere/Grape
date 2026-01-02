@@ -1,6 +1,9 @@
 #![allow(dead_code)]
 
-use crate::ui::state::{ActiveTab, Album, Artist, Folder, Genre, SortOption, Track};
+use crate::config::{TextScale, ThemeMode};
+use crate::ui::state::{
+    ActiveTab, Album, Artist, Folder, Genre, PreferencesTab, SortOption, Track,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum UiMessage {
@@ -15,6 +18,13 @@ pub enum UiMessage {
     ToggleLogoMenu,
     OpenPlaylist,
     ClosePlaylist,
+    ShowLibrary,
+    OpenPreferences,
+    ClosePreferences,
+    PreferencesTabSelected(PreferencesTab),
+    SetThemeMode(ThemeMode),
+    SetTextScale(TextScale),
+    SetDefaultVolume(u8),
     CloseMenu,
 }
 

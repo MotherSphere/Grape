@@ -40,64 +40,65 @@ impl GenresPanel {
         self
     }
 
-    pub fn view(&self) -> Element<'static, UiMessage> {
+    pub fn view(&self, theme: style::ThemeTokens) -> Element<'static, UiMessage> {
         let header = row![
             text(format!("{} Genres", self.total_count))
-                .size(16)
+                .size(theme.size(16))
                 .font(style::font_propo(Weight::Semibold))
-                .style(style::text_primary()),
+                .style(style::text_primary(theme)),
             text("A–Z")
-                .size(12)
+                .size(theme.size(12))
                 .font(style::font_propo(Weight::Light))
-                .style(style::text_muted())
+                .style(style::text_muted(theme))
         ]
         .spacing(8)
         .align_items(Alignment::Center);
-        let list_items = self
-            .genres
-            .iter()
-            .map(|genre| {
-                let is_selected = Some(genre.id) == self.selected_genre_id;
-                let badge = container(
-                    text(genre.name.chars().next().unwrap_or('?').to_string())
-                        .size(12)
+        let list_items =
+            self.genres
+                .iter()
+                .map(|genre| {
+                    let is_selected = Some(genre.id) == self.selected_genre_id;
+                    let badge = container(
+                        text(genre.name.chars().next().unwrap_or('?').to_string())
+                            .size(theme.size(12))
+                            .font(style::font_propo(Weight::Medium))
+                            .style(style::text_primary(theme)),
+                    )
+                    .width(Length::Fixed(24.0))
+                    .height(Length::Fixed(24.0))
+                    .center_x()
+                    .center_y()
+                    .style(Container::Custom(Box::new(
+                        style::SurfaceStyle::new(style::Surface::Avatar, theme),
+                    )));
+                    let name = text(genre.name.clone())
                         .font(style::font_propo(Weight::Medium))
-                        .style(style::text_primary()),
-                )
-                .width(Length::Fixed(24.0))
-                .height(Length::Fixed(24.0))
-                .center_x()
-                .center_y()
-                .style(Container::Custom(Box::new(style::SurfaceStyle(
-                    style::Surface::Avatar,
-                ))));
-                let name = text(genre.name.clone())
-                    .font(style::font_propo(Weight::Medium))
-                    .style(style::text_primary())
-                    .size(14);
-                let count = text(format!("{} tracks", genre.track_count))
-                    .font(style::font_propo(Weight::Light))
-                    .style(style::text_muted())
-                    .size(12);
-                let details = column![name, count]
-                    .spacing(2)
-                    .align_items(Alignment::Start)
-                    .width(Length::Fill);
-                let row_content = row![badge, details]
-                    .spacing(10)
-                    .align_items(Alignment::Center)
-                    .width(Length::Fill);
-                button(row_content)
-                    .style(Button::Custom(Box::new(style::ButtonStyle(
-                        style::ButtonKind::ListItem {
-                            selected: is_selected,
-                        },
-                    ))))
-                    .on_press(UiMessage::SelectGenre(genre.clone()))
-                    .width(Length::Fill)
-                    .into()
-            })
-            .collect::<Vec<Element<UiMessage>>>();
+                        .style(style::text_primary(theme))
+                        .size(theme.size(14));
+                    let count = text(format!("{} tracks", genre.track_count))
+                        .font(style::font_propo(Weight::Light))
+                        .style(style::text_muted(theme))
+                        .size(theme.size(12));
+                    let details = column![name, count]
+                        .spacing(2)
+                        .align_items(Alignment::Start)
+                        .width(Length::Fill);
+                    let row_content = row![badge, details]
+                        .spacing(10)
+                        .align_items(Alignment::Center)
+                        .width(Length::Fill);
+                    button(row_content)
+                        .style(Button::Custom(Box::new(style::ButtonStyle::new(
+                            style::ButtonKind::ListItem {
+                                selected: is_selected,
+                            },
+                            theme,
+                        ))))
+                        .on_press(UiMessage::SelectGenre(genre.clone()))
+                        .width(Length::Fill)
+                        .into()
+                })
+                .collect::<Vec<Element<UiMessage>>>();
         let list = column(list_items)
             .spacing(6)
             .width(Length::Fill)
@@ -111,8 +112,9 @@ impl GenresPanel {
             .width(Length::Fill)
             .height(Length::Fill)
             .padding(12)
-            .style(Container::Custom(Box::new(style::SurfaceStyle(
+            .style(Container::Custom(Box::new(style::SurfaceStyle::new(
                 style::Surface::Sidebar,
+                theme,
             ))))
             .into()
     }
