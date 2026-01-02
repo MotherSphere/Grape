@@ -47,6 +47,7 @@ impl GrapeApp {
     }
 
     fn apply_font_settings(mut settings: Settings<Catalog>) -> Settings<Catalog> {
+        settings.window.decorations = false;
         settings.fonts = vec![
             include_bytes!(
                 "../../assets/fonts/JetBrainsMonoFont/JetBrainsMonoNerdFontPropo-Light.ttf"
