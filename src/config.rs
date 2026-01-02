@@ -327,7 +327,7 @@ impl Default for AudioOutputDevice {
 impl AudioOutputDevice {
     pub fn label(self) -> &'static str {
         match self {
-            Self::System => "Système",
+            Self::System => "Système (par défaut)",
             Self::UsbHeadset => "Casque USB",
         }
     }

@@ -2055,12 +2055,12 @@ impl GrapeApp {
                         row![
                             option_button(
                                 self.ui.settings.output_device == AudioOutputDevice::System,
-                                "Système (par défaut)",
+                                AudioOutputDevice::System.label(),
                                 UiMessage::SetAudioOutputDevice(AudioOutputDevice::System)
                             ),
                             option_button(
                                 self.ui.settings.output_device == AudioOutputDevice::UsbHeadset,
-                                "Casque USB",
+                                AudioOutputDevice::UsbHeadset.label(),
                                 UiMessage::SetAudioOutputDevice(AudioOutputDevice::UsbHeadset)
                             ),
                         ]
@@ -2080,7 +2080,7 @@ impl GrapeApp {
                             option_button(
                                 self.ui.settings.missing_device_behavior
                                     == MissingDeviceBehavior::SwitchToSystem,
-                                "Basculer vers Système",
+                                MissingDeviceBehavior::SwitchToSystem.label(),
                                 UiMessage::SetMissingDeviceBehavior(
                                     MissingDeviceBehavior::SwitchToSystem
                                 )
@@ -2088,7 +2088,7 @@ impl GrapeApp {
                             option_button(
                                 self.ui.settings.missing_device_behavior
                                     == MissingDeviceBehavior::PausePlayback,
-                                "Mettre en pause",
+                                MissingDeviceBehavior::PausePlayback.label(),
                                 UiMessage::SetMissingDeviceBehavior(
                                     MissingDeviceBehavior::PausePlayback
                                 )
