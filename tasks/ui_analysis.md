@@ -6,26 +6,26 @@ chantiers. La plupart des blocs décrits ci-dessous ont déjà des composants Ic
 ## Résumé visuel
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────────────────────────────┐
 │ Top bar                                                                      │
 │ - Logo/app icon (gauche)                                                     │
 │   - Menu vertical: Bibliothèque | Playlist | Préférences                     │
 │ - Tabs navigation: Artists | Genres | Albums | Folders                       │
 │ - Search box + boutons fenêtre (droite)                                      │
-├───────────────────────┬─────────────────────────────────┬──────────────────┤
-│ Colonne gauche         │ Zone centrale                   │ Colonne droite   │
-│ (Artists/Genres list)  │ (Albums grid/Folders grid)      │ (Songs list)     │
+├────────────────────────┬─────────────────────────────────┬───────────────────┤
+│ Colonne gauche         │ Zone centrale                   │ Colonne droite    │
+│ (Artists/Genres list)  │ (Albums grid/Folders grid)      │ (Songs list)      │
 │ - Index A–Z            │ - Album/folder covers en grille │ - Titre album     │
 │ - Nombre d’entrées     │ - Titre + artiste sous cover    │ - Liste des       │
 │ - Scroll vertical      │ - Scroll vertical               │   pistes          │
 │ - Sélection active     │ - Sélection active              │ - Durée à droite  │
-├─────────────────────────────────────────────────────────────────────────────┤
+├──────────────────────────────────────────────────────────────────────────────┤
 │ Footer / Player bar                                                          │
 │ - Artwork + titre en cours (gauche)                                          │
 │ - Contrôles playback (centre)                                                │
 │ - Progression + durée (droite)                                               │
-│ - Options audio (volume, playlist, etc.)                                      │
-└─────────────────────────────────────────────────────────────────────────────┘
+│ - Options audio (volume, playlist, etc.)                                     │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Mapping composants → code
