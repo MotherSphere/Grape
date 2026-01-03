@@ -167,6 +167,7 @@ pub fn scan_library_full(root: impl AsRef<Path>) -> io::Result<Catalog> {
 fn scan_library_with_cache(root: impl AsRef<Path>, use_cache: bool) -> io::Result<Catalog> {
     let root = root.as_ref();
     let mut artists = Vec::new();
+    let mut root_artist_albums = Vec::new();
     let mut seen_artist_dirs = std::collections::HashSet::new();
     let mut cache_index = if use_cache {
         match cache::load_index(root) {
@@ -186,12 +187,7 @@ fn scan_library_with_cache(root: impl AsRef<Path>, use_cache: bool) -> io::Resul
     }
 
     if let Some(album) = scan_root_album(root, use_cache, &mut cache_index, &mut used_cache_keys)? {
-        let genre = dominant_genre(album.tracks.iter().flat_map(|track| track.genre.as_deref()));
-        artists.push(Artist {
-            name: ROOT_ARTIST_NAME.to_string(),
-            albums: vec![album],
-            genre,
-        });
+        root_artist_albums.push(album);
     }
 
     for artist_entry in read_sorted_dirs(root)? {
@@ -209,6 +205,23 @@ fn scan_library_with_cache(root: impl AsRef<Path>, use_cache: bool) -> io::Resul
             .to_string_lossy()
             .trim()
             .to_string();
+
+        if dir_has_audio_files(&artist_path)? {
+            let (year, title) = parse_album_folder(&artist_name);
+            if let Some(album) = scan_album_dir(
+                root,
+                &artist_path,
+                year,
+                title,
+                use_cache,
+                &mut cache_index,
+                &mut used_cache_keys,
+            )? {
+                root_artist_albums.push(album);
+            }
+            continue;
+        }
+
         let mut albums = Vec::new();
         let mut seen_album_dirs = std::collections::HashSet::new();
 
@@ -303,6 +316,23 @@ fn scan_library_with_cache(root: impl AsRef<Path>, use_cache: bool) -> io::Resul
         }
     }
 
+    if !root_artist_albums.is_empty() {
+        let genre = dominant_genre(
+            root_artist_albums
+                .iter()
+                .flat_map(|album| album.tracks.iter())
+                .flat_map(|track| track.genre.as_deref()),
+        );
+        artists.insert(
+            0,
+            Artist {
+                name: ROOT_ARTIST_NAME.to_string(),
+                albums: root_artist_albums,
+                genre,
+            },
+        );
+    }
+
     let mut catalog = Catalog { artists };
     catalog.prune_missing_cover_art();
 
@@ -315,6 +345,79 @@ fn scan_library_with_cache(root: impl AsRef<Path>, use_cache: bool) -> io::Resul
 
 fn scan_tracks(dir: &Path) -> io::Result<Vec<Track>> {
     scan_tracks_in_dir(dir, true)
+}
+
+fn scan_album_dir(
+    root: &Path,
+    album_path: &Path,
+    year: u16,
+    title: String,
+    use_cache: bool,
+    cache_index: &mut cache::CacheIndex,
+    used_cache_keys: &mut std::collections::HashSet<String>,
+) -> io::Result<Option<Album>> {
+    let cached_album = if use_cache {
+        match cache::load_album(root, cache_index, album_path) {
+            Ok(cached) => cached,
+            Err(error) => {
+                warn!(
+                    error = %error,
+                    path = %album_path.display(),
+                    "Unable to load cached album; rescanning"
+                );
+                None
+            }
+        }
+    } else {
+        None
+    };
+
+    let album = if let Some(cached) = cached_album {
+        let tracks = scan_tracks_with_cache_in_dir(
+            root,
+            album_path,
+            &cached.album.tracks,
+            &cached.track_entries,
+            true,
+        )?;
+        if tracks.is_empty() {
+            return Ok(None);
+        }
+        let genre = dominant_genre(tracks.iter().flat_map(|track| track.genre.as_deref()));
+        let total_duration_secs = tracks.iter().map(|track| track.duration_secs).sum();
+        Album {
+            title,
+            year,
+            tracks,
+            genre,
+            path: album_path.to_path_buf(),
+            total_duration_secs,
+            cover: cached.album.cover,
+        }
+    } else {
+        let tracks = scan_tracks(album_path)?;
+        if tracks.is_empty() {
+            return Ok(None);
+        }
+        let genre = dominant_genre(tracks.iter().flat_map(|track| track.genre.as_deref()));
+        let cover = scan_cover_art(root, album_path)?;
+        let total_duration_secs = tracks.iter().map(|track| track.duration_secs).sum();
+        Album {
+            title,
+            year,
+            tracks,
+            genre,
+            path: album_path.to_path_buf(),
+            total_duration_secs,
+            cover,
+        }
+    };
+
+    if let Ok(key) = cache::store_album(root, cache_index, album_path, &album) {
+        used_cache_keys.insert(key);
+    }
+
+    Ok(Some(album))
 }
 
 fn scan_tracks_in_dir(dir: &Path, warn_on_dirs: bool) -> io::Result<Vec<Track>> {
@@ -735,6 +838,40 @@ fn sorted_track_paths(dir: &Path, warn_on_dirs: bool) -> io::Result<Vec<PathBuf>
     Ok(entries)
 }
 
+fn dir_has_audio_files(dir: &Path) -> io::Result<bool> {
+    let read_dir = match fs::read_dir(dir) {
+        Ok(read_dir) => read_dir,
+        Err(error) => {
+            warn!(
+                error = %error,
+                path = %dir.display(),
+                "Skipping directory scan: unable to read directory"
+            );
+            return Ok(false);
+        }
+    };
+
+    for entry_result in read_dir {
+        match entry_result {
+            Ok(entry) => {
+                let path = entry.path();
+                if path.is_file() && is_audio_file(&path) {
+                    return Ok(true);
+                }
+            }
+            Err(error) => {
+                warn!(
+                    error = %error,
+                    path = %dir.display(),
+                    "Skipping unreadable entry during directory scan"
+                );
+            }
+        }
+    }
+
+    Ok(false)
+}
+
 fn dominant_genre<'a>(genres: impl Iterator<Item = &'a str>) -> Option<String> {
     let mut counts: std::collections::HashMap<&'a str, usize> = std::collections::HashMap::new();
     for genre in genres {
@@ -937,6 +1074,25 @@ mod tests {
         let album = &artist.albums[0];
         assert_eq!(album.title, root_album_title(dir.path()));
         assert_eq!(album.year, 0);
+        assert_eq!(album.tracks.len(), 2);
+    }
+
+    #[test]
+    fn scan_library_supports_albums_directly_under_root() {
+        let dir = tempdir().expect("tempdir");
+        let album_dir = dir.path().join("2023 - Album Racine");
+        fs::create_dir_all(&album_dir).expect("create album dir");
+        File::create(album_dir.join("01 - Intro.mp3")).expect("create track");
+        File::create(album_dir.join("02 - Suite.flac")).expect("create track");
+
+        let catalog = scan_library(dir.path()).expect("scan library");
+        assert_eq!(catalog.artists.len(), 1);
+        let artist = &catalog.artists[0];
+        assert_eq!(artist.name, ROOT_ARTIST_NAME);
+        assert_eq!(artist.albums.len(), 1);
+        let album = &artist.albums[0];
+        assert_eq!(album.title, "Album Racine");
+        assert_eq!(album.year, 2023);
         assert_eq!(album.tracks.len(), 2);
     }
 
