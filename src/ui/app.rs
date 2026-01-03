@@ -915,7 +915,16 @@ impl GrapeApp {
         };
         match scan_result {
             Ok(catalog) => {
-                info!(path = %root.display(), "Library scan completed");
+                let root_path = root.to_path_buf();
+                let has_root_album = catalog
+                    .artists
+                    .iter()
+                    .any(|artist| artist.albums.iter().any(|album| album.path == root_path));
+                info!(
+                    path = %root.display(),
+                    root_tracks = has_root_album,
+                    "Library scan completed"
+                );
                 self.catalog = catalog;
                 self.ui.selection = SelectionState::default();
             }
