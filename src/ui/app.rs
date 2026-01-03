@@ -27,7 +27,7 @@ use iced::{
     keyboard, mouse, window,
 };
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tracing::{error, info, warn};
 use unicode_normalization::UnicodeNormalization;
@@ -907,14 +907,11 @@ impl GrapeApp {
         Ok(())
     }
 
-    fn rescan_library(&mut self, use_cache: bool) {
-        let Some(root) = self.library_root() else {
-            return;
-        };
+    fn scan_library_at_root(&mut self, root: &Path, use_cache: bool) {
         let scan_result = if use_cache {
-            library::scan_library(&root)
+            library::scan_library(root)
         } else {
-            library::scan_library_full(&root)
+            library::scan_library_full(root)
         };
         match scan_result {
             Ok(catalog) => {
@@ -926,6 +923,13 @@ impl GrapeApp {
                 error!(error = %err, path = %root.display(), "Failed to scan library");
             }
         }
+    }
+
+    fn rescan_library(&mut self, use_cache: bool) {
+        let Some(root) = self.library_root() else {
+            return;
+        };
+        self.scan_library_at_root(&root, use_cache);
     }
 
     fn reset_audio_engine(&mut self) {
@@ -1381,7 +1385,7 @@ impl GrapeApp {
                     controls(
                         row![
                             library_input.width(Length::Fill),
-                            action_button("Choisir", UiMessage::PickLibraryFolder),
+                            action_button("Ajouter un dossier", UiMessage::PickLibraryFolder),
                         ]
                         .spacing(8)
                         .into(),
@@ -2760,6 +2764,19 @@ impl GrapeApp {
                         Task::none()
                     }
                 });
+            }
+            UiMessage::LibraryFolderPicked(path) => {
+                if let Some(path) = path {
+                    let root = PathBuf::from(path);
+                    if !root.is_dir() {
+                        warn!(
+                            path = %root.display(),
+                            "Selected library folder is invalid"
+                        );
+                    } else {
+                        self.scan_library_at_root(&root, false);
+                    }
+                }
             }
             UiMessage::PickLibraryFolder => {
                 task = Task::perform(
