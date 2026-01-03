@@ -1,7 +1,8 @@
+use crate::playlist::Playlist;
 use crate::ui::message::UiMessage;
 use crate::ui::style;
 use iced::font::Weight;
-use iced::widget::{button, column, container, row, text};
+use iced::widget::{button, column, container, row, scrollable, text};
 use iced::{Alignment, Element, Length};
 
 pub struct PlaylistView;
@@ -11,7 +12,10 @@ impl PlaylistView {
         Self
     }
 
-    pub fn view(theme: style::ThemeTokens) -> Element<'static, UiMessage> {
+    pub fn view<'a>(
+        theme: style::ThemeTokens,
+        playlist: Option<&'a Playlist>,
+    ) -> Element<'a, UiMessage> {
         let header = row![
             text("Playlist")
                 .size(theme.size(24))
@@ -29,13 +33,36 @@ impl PlaylistView {
         .align_y(Alignment::Center)
         .spacing(12);
 
-        let body = column![
-            text("Votre playlist apparaîtra ici.")
-                .size(theme.size(14))
-                .font(style::font_propo(Weight::Medium))
-                .style(move |_| style::text_style_muted(theme))
-        ]
-        .spacing(8);
+        let body = match playlist {
+            Some(playlist) if !playlist.items.is_empty() => {
+                let mut rows: Vec<Element<'a, UiMessage>> = Vec::new();
+                for (index, item) in playlist.items.iter().enumerate() {
+                    let index_label = text(format!("{:02}", index + 1))
+                        .size(theme.size(12))
+                        .font(style::font_propo(Weight::Medium))
+                        .style(move |_| style::text_style_muted(theme));
+                    let title = text(item.title.clone())
+                        .size(theme.size(14))
+                        .font(style::font_propo(Weight::Semibold))
+                        .style(move |_| style::text_style_primary(theme));
+                    let subtitle = text(format!("{} — {}", item.artist, item.album))
+                        .size(theme.size(12))
+                        .font(style::font_propo(Weight::Medium))
+                        .style(move |_| style::text_style_muted(theme));
+                    let track = column![title, subtitle].spacing(2);
+                    rows.push(row![index_label, track].spacing(12).into());
+                }
+                scrollable(column(rows).spacing(12)).into()
+            }
+            _ => column![
+                text("Votre playlist apparaîtra ici.")
+                    .size(theme.size(14))
+                    .font(style::font_propo(Weight::Medium))
+                    .style(move |_| style::text_style_muted(theme))
+            ]
+            .spacing(8)
+            .into(),
+        };
 
         let panel = container(column![header, body].spacing(16))
             .padding(24)
