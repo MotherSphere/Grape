@@ -560,7 +560,6 @@ impl UiState {
             UiMessage::CloseMenu => {
                 self.menu_open = false;
             }
-            UiMessage::PlaybackTick => {}
         }
     }
 }
