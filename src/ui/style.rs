@@ -43,43 +43,83 @@ pub struct Palette {
 }
 
 impl Palette {
-    pub fn dark() -> Self {
+    pub fn latte() -> Self {
         Self {
-            background: Color::from_rgb8(0x12, 0x12, 0x12),
-            panel: Color::from_rgb8(0x18, 0x18, 0x18),
-            elevated: Color::from_rgb8(0x1f, 0x1f, 0x1f),
-            hover: Color::from_rgb8(0x2a, 0x2a, 0x2a),
-            selected: Color::from_rgb8(0x24, 0x2f, 0x47),
-            accent: Color::from_rgb8(0x3d, 0x7c, 0xff),
-            text_primary: Color::from_rgb8(0xf1, 0xf1, 0xf1),
-            text_muted: Color::from_rgb8(0xa7, 0xa7, 0xa7),
-            border: Color::from_rgb8(0x26, 0x26, 0x26),
-            border_subtle: Color::from_rgb8(0x2a, 0x2a, 0x2a),
-            avatar: Color::from_rgb8(0x2f, 0x3b, 0x55),
-            player_bar: Color::from_rgb8(0x0f, 0x0f, 0x0f),
-            album_cover: Color::from_rgb8(0x27, 0x27, 0x27),
-            input_background: Color::from_rgb8(0x1b, 0x1b, 0x1b),
-            input_border: Color::from_rgb8(0x2c, 0x2c, 0x2c),
+            background: Color::from_rgb8(0xef, 0xf1, 0xf5),
+            panel: Color::from_rgb8(0xe6, 0xe9, 0xef),
+            elevated: Color::from_rgb8(0xcc, 0xd0, 0xda),
+            hover: Color::from_rgb8(0xbc, 0xc0, 0xcc),
+            selected: Color::from_rgb8(0x72, 0x87, 0xfd),
+            accent: Color::from_rgb8(0x1e, 0x66, 0xf5),
+            text_primary: Color::from_rgb8(0x4c, 0x4f, 0x69),
+            text_muted: Color::from_rgb8(0x6c, 0x6f, 0x85),
+            border: Color::from_rgb8(0xac, 0xb0, 0xbe),
+            border_subtle: Color::from_rgb8(0xbc, 0xc0, 0xcc),
+            avatar: Color::from_rgb8(0xcc, 0xd0, 0xda),
+            player_bar: Color::from_rgb8(0xdc, 0xe0, 0xe8),
+            album_cover: Color::from_rgb8(0xcc, 0xd0, 0xda),
+            input_background: Color::from_rgb8(0xe6, 0xe9, 0xef),
+            input_border: Color::from_rgb8(0xac, 0xb0, 0xbe),
         }
     }
 
-    pub fn light() -> Self {
+    pub fn frappe() -> Self {
         Self {
-            background: Color::from_rgb8(0xf6, 0xf7, 0xfb),
-            panel: Color::from_rgb8(0xff, 0xff, 0xff),
-            elevated: Color::from_rgb8(0xee, 0xf1, 0xf7),
-            hover: Color::from_rgb8(0xe3, 0xe7, 0xf0),
-            selected: Color::from_rgb8(0xd9, 0xe6, 0xff),
-            accent: Color::from_rgb8(0x2f, 0x6b, 0xff),
-            text_primary: Color::from_rgb8(0x1f, 0x23, 0x2a),
-            text_muted: Color::from_rgb8(0x5c, 0x64, 0x6f),
-            border: Color::from_rgb8(0xdd, 0xe2, 0xee),
-            border_subtle: Color::from_rgb8(0xe5, 0xe9, 0xf2),
-            avatar: Color::from_rgb8(0xc8, 0xd5, 0xf4),
-            player_bar: Color::from_rgb8(0xe9, 0xed, 0xf4),
-            album_cover: Color::from_rgb8(0xf1, 0xf4, 0xfa),
-            input_background: Color::from_rgb8(0xff, 0xff, 0xff),
-            input_border: Color::from_rgb8(0xd0, 0xd7, 0xe2),
+            background: Color::from_rgb8(0x30, 0x34, 0x46),
+            panel: Color::from_rgb8(0x29, 0x2c, 0x3c),
+            elevated: Color::from_rgb8(0x41, 0x45, 0x59),
+            hover: Color::from_rgb8(0x51, 0x57, 0x6d),
+            selected: Color::from_rgb8(0xba, 0xbb, 0xf1),
+            accent: Color::from_rgb8(0x8c, 0xaa, 0xee),
+            text_primary: Color::from_rgb8(0xc6, 0xd0, 0xf5),
+            text_muted: Color::from_rgb8(0xa5, 0xad, 0xce),
+            border: Color::from_rgb8(0x62, 0x68, 0x80),
+            border_subtle: Color::from_rgb8(0x51, 0x57, 0x6d),
+            avatar: Color::from_rgb8(0x41, 0x45, 0x59),
+            player_bar: Color::from_rgb8(0x23, 0x26, 0x34),
+            album_cover: Color::from_rgb8(0x41, 0x45, 0x59),
+            input_background: Color::from_rgb8(0x29, 0x2c, 0x3c),
+            input_border: Color::from_rgb8(0x62, 0x68, 0x80),
+        }
+    }
+
+    pub fn macchiato() -> Self {
+        Self {
+            background: Color::from_rgb8(0x24, 0x27, 0x3a),
+            panel: Color::from_rgb8(0x1e, 0x20, 0x30),
+            elevated: Color::from_rgb8(0x36, 0x3a, 0x4f),
+            hover: Color::from_rgb8(0x49, 0x4d, 0x64),
+            selected: Color::from_rgb8(0xb7, 0xbd, 0xf8),
+            accent: Color::from_rgb8(0x8a, 0xad, 0xf4),
+            text_primary: Color::from_rgb8(0xca, 0xd3, 0xf5),
+            text_muted: Color::from_rgb8(0xa5, 0xad, 0xcb),
+            border: Color::from_rgb8(0x5b, 0x60, 0x78),
+            border_subtle: Color::from_rgb8(0x49, 0x4d, 0x64),
+            avatar: Color::from_rgb8(0x36, 0x3a, 0x4f),
+            player_bar: Color::from_rgb8(0x18, 0x19, 0x26),
+            album_cover: Color::from_rgb8(0x36, 0x3a, 0x4f),
+            input_background: Color::from_rgb8(0x1e, 0x20, 0x30),
+            input_border: Color::from_rgb8(0x5b, 0x60, 0x78),
+        }
+    }
+
+    pub fn mocha() -> Self {
+        Self {
+            background: Color::from_rgb8(0x1e, 0x1e, 0x2e),
+            panel: Color::from_rgb8(0x18, 0x18, 0x25),
+            elevated: Color::from_rgb8(0x31, 0x32, 0x44),
+            hover: Color::from_rgb8(0x45, 0x47, 0x5a),
+            selected: Color::from_rgb8(0xb4, 0xbe, 0xfe),
+            accent: Color::from_rgb8(0x89, 0xb4, 0xfa),
+            text_primary: Color::from_rgb8(0xcd, 0xd6, 0xf4),
+            text_muted: Color::from_rgb8(0xa6, 0xad, 0xc8),
+            border: Color::from_rgb8(0x58, 0x5b, 0x70),
+            border_subtle: Color::from_rgb8(0x45, 0x47, 0x5a),
+            avatar: Color::from_rgb8(0x31, 0x32, 0x44),
+            player_bar: Color::from_rgb8(0x11, 0x11, 0x1b),
+            album_cover: Color::from_rgb8(0x31, 0x32, 0x44),
+            input_background: Color::from_rgb8(0x18, 0x18, 0x25),
+            input_border: Color::from_rgb8(0x58, 0x5b, 0x70),
         }
     }
 }
@@ -93,9 +133,10 @@ pub struct ThemeTokens {
 impl ThemeTokens {
     pub fn new(mode: ThemeMode, scale: f32) -> Self {
         let palette = match mode {
-            ThemeMode::Dark => Palette::dark(),
-            ThemeMode::Light => Palette::light(),
-            ThemeMode::System => Palette::dark(),
+            ThemeMode::Latte => Palette::latte(),
+            ThemeMode::Frappe => Palette::frappe(),
+            ThemeMode::Macchiato => Palette::macchiato(),
+            ThemeMode::Mocha => Palette::mocha(),
         };
         Self { palette, scale }
     }
