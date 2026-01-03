@@ -13,9 +13,6 @@ pub enum ThemeMode {
     Latte,
     Frappe,
     Macchiato,
-    Gruvbox,
-    Everblush,
-    Kanagawa,
     #[serde(alias = "Dark", alias = "System")]
     Mocha,
 }
@@ -32,9 +29,6 @@ impl ThemeMode {
             Self::Latte => "Latte",
             Self::Frappe => "Frappé",
             Self::Macchiato => "Macchiato",
-            Self::Gruvbox => "Gruvbox",
-            Self::Everblush => "Everblush",
-            Self::Kanagawa => "Kanagawa",
             Self::Mocha => "Mocha",
         }
     }

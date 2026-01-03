@@ -2063,21 +2063,6 @@ impl GrapeApp {
                         UiMessage::SetThemeMode(ThemeMode::Macchiato),
                     ),
                     option_button(
-                        self.ui.settings.theme_mode == ThemeMode::Gruvbox,
-                        ThemeMode::Gruvbox.label(),
-                        UiMessage::SetThemeMode(ThemeMode::Gruvbox),
-                    ),
-                    option_button(
-                        self.ui.settings.theme_mode == ThemeMode::Everblush,
-                        ThemeMode::Everblush.label(),
-                        UiMessage::SetThemeMode(ThemeMode::Everblush),
-                    ),
-                    option_button(
-                        self.ui.settings.theme_mode == ThemeMode::Kanagawa,
-                        ThemeMode::Kanagawa.label(),
-                        UiMessage::SetThemeMode(ThemeMode::Kanagawa),
-                    ),
-                    option_button(
                         self.ui.settings.theme_mode == ThemeMode::Mocha,
                         ThemeMode::Mocha.label(),
                         UiMessage::SetThemeMode(ThemeMode::Mocha),
@@ -3000,12 +2985,7 @@ impl GrapeApp {
     fn theme(&self) -> Theme {
         match self.ui.settings.theme_mode {
             ThemeMode::Latte => Theme::Light,
-            ThemeMode::Frappe
-            | ThemeMode::Macchiato
-            | ThemeMode::Gruvbox
-            | ThemeMode::Everblush
-            | ThemeMode::Kanagawa
-            | ThemeMode::Mocha => Theme::Dark,
+            ThemeMode::Frappe | ThemeMode::Macchiato | ThemeMode::Mocha => Theme::Dark,
         }
     }
 
