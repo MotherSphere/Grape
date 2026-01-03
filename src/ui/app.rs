@@ -281,6 +281,25 @@ impl GrapeApp {
         None
     }
 
+    fn folder_entry_by_id(
+        &self,
+        folder_id: usize,
+    ) -> Option<(&crate::library::Artist, &crate::library::Album)> {
+        let mut id = 0usize;
+        for artist in &self.catalog.artists {
+            for album in &artist.albums {
+                if album.tracks.is_empty() {
+                    continue;
+                }
+                if id == folder_id {
+                    return Some((artist, album));
+                }
+                id += 1;
+            }
+        }
+        None
+    }
+
     fn tracks_for_album(
         &self,
         artist: &crate::library::Artist,
@@ -605,10 +624,25 @@ impl GrapeApp {
 
     fn songs_panel(&self) -> Element<'_, UiMessage> {
         let theme = self.theme_tokens();
-        let selected_album = self.ui.selection.selected_album.as_ref().and_then(|album| {
-            self.album_entry_by_id(album.id)
-                .map(|(artist, entry)| (artist, entry))
-        });
+        let selected_album = self
+            .ui
+            .selection
+            .selected_album
+            .as_ref()
+            .and_then(|album| {
+                self.album_entry_by_id(album.id)
+                    .map(|(artist, entry)| (artist, entry))
+            })
+            .or_else(|| {
+                self.ui
+                    .selection
+                    .selected_folder
+                    .as_ref()
+                    .and_then(|folder| {
+                        self.folder_entry_by_id(folder.id)
+                            .map(|(artist, entry)| (artist, entry))
+                    })
+            });
         let (album_title, artist_name, tracks) = match selected_album {
             Some((artist, album)) => (
                 album.title.clone(),
@@ -752,6 +786,42 @@ impl GrapeApp {
                             path: track.path.clone(),
                             cover_path: album.cover.as_ref().map(|cover| cover.cached_path.clone()),
                         };
+                    }
+                }
+            }
+        }
+        let normalized_title = Self::normalize_text(&now_playing.title);
+        if !normalized_title.is_empty() {
+            let normalized_album = Self::normalize_text(&now_playing.album);
+            let normalized_artist = Self::normalize_text(&now_playing.artist);
+            for artist in &self.catalog.artists {
+                let artist_match = normalized_artist.is_empty()
+                    || Self::normalize_text(&artist.name) == normalized_artist;
+                if !artist_match {
+                    continue;
+                }
+                for album in &artist.albums {
+                    let album_match = normalized_album.is_empty()
+                        || Self::normalize_text(&album.title) == normalized_album;
+                    if !album_match {
+                        continue;
+                    }
+                    for (id, track) in album.tracks.iter().enumerate() {
+                        if Self::normalize_text(&track.title) == normalized_title {
+                            return UiTrack {
+                                id,
+                                title: track.title.clone(),
+                                album: album.title.clone(),
+                                artist: artist.name.clone(),
+                                track_number: Some(track.number as u32),
+                                duration: Duration::from_secs(track.duration_secs as u64),
+                                path: track.path.clone(),
+                                cover_path: album
+                                    .cover
+                                    .as_ref()
+                                    .map(|cover| cover.cached_path.clone()),
+                            };
+                        }
                     }
                 }
             }
