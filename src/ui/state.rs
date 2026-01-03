@@ -388,14 +388,12 @@ impl UiState {
             }
             UiMessage::SetThemeMode(theme_mode) => {
                 self.settings.theme_mode = theme_mode;
-                self.settings.follow_system_theme = theme_mode == ThemeMode::System;
+                self.settings.follow_system_theme = false;
             }
             UiMessage::SetFollowSystemTheme(enabled) => {
                 self.settings.follow_system_theme = enabled;
                 if enabled {
-                    self.settings.theme_mode = ThemeMode::System;
-                } else if self.settings.theme_mode == ThemeMode::System {
-                    self.settings.theme_mode = ThemeMode::Dark;
+                    self.settings.theme_mode = ThemeMode::Mocha;
                 }
             }
             UiMessage::SetAccentColor(color) => {

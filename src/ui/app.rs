@@ -2047,38 +2047,27 @@ impl GrapeApp {
             column![
                 row![
                     option_button(
-                        self.ui.settings.theme_mode == ThemeMode::Dark,
-                        ThemeMode::Dark.label(),
-                        UiMessage::SetThemeMode(ThemeMode::Dark),
+                        self.ui.settings.theme_mode == ThemeMode::Latte,
+                        ThemeMode::Latte.label(),
+                        UiMessage::SetThemeMode(ThemeMode::Latte),
                     ),
                     option_button(
-                        self.ui.settings.theme_mode == ThemeMode::Light,
-                        ThemeMode::Light.label(),
-                        UiMessage::SetThemeMode(ThemeMode::Light),
+                        self.ui.settings.theme_mode == ThemeMode::Frappe,
+                        ThemeMode::Frappe.label(),
+                        UiMessage::SetThemeMode(ThemeMode::Frappe),
                     ),
                     option_button(
-                        self.ui.settings.theme_mode == ThemeMode::System,
-                        ThemeMode::System.label(),
-                        UiMessage::SetThemeMode(ThemeMode::System),
+                        self.ui.settings.theme_mode == ThemeMode::Macchiato,
+                        ThemeMode::Macchiato.label(),
+                        UiMessage::SetThemeMode(ThemeMode::Macchiato),
+                    ),
+                    option_button(
+                        self.ui.settings.theme_mode == ThemeMode::Mocha,
+                        ThemeMode::Mocha.label(),
+                        UiMessage::SetThemeMode(ThemeMode::Mocha),
                     ),
                 ]
                 .spacing(8),
-                row![
-                    setting_label(
-                        "Suivre le thème du système",
-                        "Synchronise automatiquement clair / sombre."
-                    ),
-                    controls(
-                        toggle_row(
-                            self.ui.settings.follow_system_theme,
-                            UiMessage::SetFollowSystemTheme(true),
-                            UiMessage::SetFollowSystemTheme(false),
-                        )
-                        .into()
-                    ),
-                ]
-                .align_y(Alignment::Center)
-                .spacing(12),
             ]
             .spacing(12)
             .padding(section_padding)
@@ -2993,9 +2982,8 @@ impl GrapeApp {
 
     fn theme(&self) -> Theme {
         match self.ui.settings.theme_mode {
-            ThemeMode::Dark => Theme::Dark,
-            ThemeMode::Light => Theme::Light,
-            ThemeMode::System => Theme::Dark,
+            ThemeMode::Latte => Theme::Light,
+            ThemeMode::Frappe | ThemeMode::Macchiato | ThemeMode::Mocha => Theme::Dark,
         }
     }
 

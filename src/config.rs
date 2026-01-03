@@ -9,23 +9,27 @@ use crate::eq::EqModel;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ThemeMode {
-    Dark,
-    Light,
-    System,
+    #[serde(alias = "Light")]
+    Latte,
+    Frappe,
+    Macchiato,
+    #[serde(alias = "Dark", alias = "System")]
+    Mocha,
 }
 
 impl Default for ThemeMode {
     fn default() -> Self {
-        Self::Dark
+        Self::Mocha
     }
 }
 
 impl ThemeMode {
     pub fn label(self) -> &'static str {
         match self {
-            Self::Dark => "Sombre",
-            Self::Light => "Clair",
-            Self::System => "Système",
+            Self::Latte => "Latte",
+            Self::Frappe => "Frappé",
+            Self::Macchiato => "Macchiato",
+            Self::Mocha => "Mocha",
         }
     }
 }
@@ -488,7 +492,7 @@ pub struct UserSettings {
 impl Default for UserSettings {
     fn default() -> Self {
         Self {
-            theme_mode: ThemeMode::Dark,
+            theme_mode: ThemeMode::Mocha,
             follow_system_theme: false,
             accent_color: AccentColor::default(),
             accent_auto: true,
