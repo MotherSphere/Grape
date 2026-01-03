@@ -89,7 +89,6 @@ pub enum UiMessage {
     ResetPreferences,
     TogglePreferencesSection(PreferencesSection),
     CloseMenu,
-    PlaybackTick,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
