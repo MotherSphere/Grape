@@ -5,8 +5,6 @@ use std::io;
 use std::path::PathBuf;
 use tracing::warn;
 
-use crate::eq::EqModel;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ThemeMode {
     Dark,
@@ -429,7 +427,7 @@ impl AudioStabilityMode {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct UserSettings {
     pub theme_mode: ThemeMode,
@@ -453,7 +451,6 @@ pub struct UserSettings {
     pub pause_on_focus_loss: bool,
     pub default_volume: u8,
     pub output_device: AudioOutputDevice,
-    pub output_sample_rate_hz: Option<u32>,
     pub missing_device_behavior: MissingDeviceBehavior,
     pub gapless_playback: bool,
     pub crossfade_seconds: u8,
@@ -462,7 +459,6 @@ pub struct UserSettings {
     pub volume_level: VolumeLevel,
     pub eq_enabled: bool,
     pub eq_preset: EqPreset,
-    pub eq_model: EqModel,
     pub audio_stability_mode: AudioStabilityMode,
     pub audio_debug_logs: bool,
     pub launch_at_startup: bool,
@@ -509,7 +505,6 @@ impl Default for UserSettings {
             pause_on_focus_loss: true,
             default_volume: 72,
             output_device: AudioOutputDevice::default(),
-            output_sample_rate_hz: None,
             missing_device_behavior: MissingDeviceBehavior::default(),
             gapless_playback: true,
             crossfade_seconds: 4,
@@ -518,7 +513,6 @@ impl Default for UserSettings {
             volume_level: VolumeLevel::default(),
             eq_enabled: false,
             eq_preset: EqPreset::default(),
-            eq_model: EqModel::default(),
             audio_stability_mode: AudioStabilityMode::default(),
             audio_debug_logs: false,
             launch_at_startup: false,
@@ -548,12 +542,6 @@ impl UserSettings {
         self.default_volume = self.default_volume.min(100);
         self.crossfade_seconds = self.crossfade_seconds.min(12);
         self.default_playback_speed = self.default_playback_speed.clamp(5, 20);
-        if let Some(sample_rate) = self.output_sample_rate_hz {
-            if !(8_000..=192_000).contains(&sample_rate) {
-                self.output_sample_rate_hz = None;
-            }
-        }
-        self.eq_model = self.eq_model.normalized();
         if self.library_folder.trim().is_empty() {
             self.library_folder = default_library_folder();
         }
