@@ -230,7 +230,7 @@ impl Default for RepeatMode {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct PlaybackState {
     pub position: Duration,
     pub duration: Duration,
