@@ -139,14 +139,26 @@ impl Catalog {
 }
 
 pub fn scan_library(root: impl AsRef<Path>) -> io::Result<Catalog> {
+    scan_library_with_cache(root, true)
+}
+
+pub fn scan_library_full(root: impl AsRef<Path>) -> io::Result<Catalog> {
+    scan_library_with_cache(root, false)
+}
+
+fn scan_library_with_cache(root: impl AsRef<Path>, use_cache: bool) -> io::Result<Catalog> {
     let root = root.as_ref();
     let mut artists = Vec::new();
-    let mut cache_index = match cache::load_index(root) {
-        Ok(index) => index,
-        Err(error) => {
-            warn!(error = %error, "Unable to load cache index; scanning without cache");
-            cache::CacheIndex::default()
+    let mut cache_index = if use_cache {
+        match cache::load_index(root) {
+            Ok(index) => index,
+            Err(error) => {
+                warn!(error = %error, "Unable to load cache index; scanning without cache");
+                cache::CacheIndex::default()
+            }
         }
+    } else {
+        cache::CacheIndex::default()
     };
     let mut used_cache_keys = std::collections::HashSet::new();
 
@@ -165,21 +177,29 @@ pub fn scan_library(root: impl AsRef<Path>) -> io::Result<Catalog> {
         for album_entry in read_sorted_dirs(&artist_entry.path())? {
             let (year, title) = parse_album_folder(&album_entry.file_name().to_string_lossy());
             let album_path = album_entry.path();
-            let cached_album = match cache::load_album(root, &cache_index, &album_path) {
-                Ok(cached) => cached,
-                Err(error) => {
-                    warn!(
-                        error = %error,
-                        path = %album_path.display(),
-                        "Unable to load cached album; rescanning"
-                    );
-                    None
+            let cached_album = if use_cache {
+                match cache::load_album(root, &cache_index, &album_path) {
+                    Ok(cached) => cached,
+                    Err(error) => {
+                        warn!(
+                            error = %error,
+                            path = %album_path.display(),
+                            "Unable to load cached album; rescanning"
+                        );
+                        None
+                    }
                 }
+            } else {
+                None
             };
 
             let album = if let Some(cached) = cached_album {
-                let tracks =
-                    scan_tracks_with_cache(root, &album_path, &cached.album.tracks, &cached.track_entries)?;
+                let tracks = scan_tracks_with_cache(
+                    root,
+                    &album_path,
+                    &cached.album.tracks,
+                    &cached.track_entries,
+                )?;
                 if tracks.is_empty() {
                     continue;
                 }

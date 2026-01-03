@@ -3,7 +3,7 @@ use crate::config::{
     EqPreset, InterfaceDensity, InterfaceLanguage, MissingDeviceBehavior, StartupScreen,
     SubtitleSize, TextScale, ThemeMode, TimeFormat, UpdateChannel, VolumeLevel,
 };
-use crate::library::Catalog;
+use crate::library::{self, Catalog};
 use crate::player::{NowPlaying, PlaybackState as PlayerPlaybackState, Player};
 use crate::playlist::{PlaybackQueue, PlaylistManager};
 use crate::ui::components::albums_grid::AlbumsGrid;
@@ -17,7 +17,7 @@ use crate::ui::components::songs_panel::SongsPanel;
 use crate::ui::message::{PlaybackMessage, SearchMessage, UiMessage};
 use crate::ui::state::{
     ActiveTab, Album as UiAlbum, Artist as UiArtist, Folder as UiFolder, Genre as UiGenre,
-    PreferencesSection, PreferencesTab, SortOption, Track as UiTrack, UiState,
+    PreferencesSection, PreferencesTab, SelectionState, SortOption, Track as UiTrack, UiState,
 };
 use crate::ui::style;
 use iced::font::Weight;
@@ -26,6 +26,8 @@ use iced::{
     Alignment, Color, Element, Length, Padding, Settings, Subscription, Task, Theme, event,
     keyboard, mouse, window,
 };
+use std::fs;
+use std::path::PathBuf;
 use std::time::Duration;
 use tracing::{error, info, warn};
 
@@ -721,9 +723,7 @@ impl GrapeApp {
                 current
                     .as_ref()
                     .and_then(|now_playing| {
-                        items
-                            .iter()
-                            .position(|item| item.path == now_playing.path)
+                        items.iter().position(|item| item.path == now_playing.path)
                     })
                     .unwrap_or(0)
             }
@@ -793,6 +793,58 @@ impl GrapeApp {
             .as_ref()
             .map(|track| track.duration)
             .unwrap_or(Duration::ZERO);
+    }
+
+    fn library_root(&self) -> Option<PathBuf> {
+        let root = self.ui.settings.library_folder.trim();
+        if root.is_empty() {
+            warn!("Library folder is not set; skipping library scan");
+            return None;
+        }
+        Some(PathBuf::from(root))
+    }
+
+    fn clear_library_cache(&self, root: &PathBuf) -> std::io::Result<()> {
+        let cache_dir = root.join(".grape_cache");
+        if cache_dir.exists() {
+            fs::remove_dir_all(&cache_dir)?;
+        }
+        Ok(())
+    }
+
+    fn rescan_library(&mut self, use_cache: bool) {
+        let Some(root) = self.library_root() else {
+            return;
+        };
+        let scan_result = if use_cache {
+            library::scan_library(&root)
+        } else {
+            library::scan_library_full(&root)
+        };
+        match scan_result {
+            Ok(catalog) => {
+                info!(path = %root.display(), "Library scan completed");
+                self.catalog = catalog;
+                self.ui.selection = SelectionState::default();
+            }
+            Err(err) => {
+                error!(error = %err, path = %root.display(), "Failed to scan library");
+            }
+        }
+    }
+
+    fn reset_audio_engine(&mut self) {
+        info!("Resetting audio engine");
+        self.player = match Player::new() {
+            Ok(player) => Some(player),
+            Err(err) => {
+                error!(error = %err, "Failed to reinitialize audio player");
+                None
+            }
+        };
+        self.ui.playback = crate::ui::state::PlaybackState::default();
+        self.ui.selection = SelectionState::default();
+        self.playback_queue = Self::playback_queue_from_playlist(&self.playlists);
     }
 
     fn playlist_view(&self) -> Element<'_, UiMessage> {
@@ -2623,10 +2675,17 @@ impl GrapeApp {
                 );
             }
             UiMessage::ClearCache => {
-                if let Err(err) = config::clear_cache(&self.ui.settings) {
-                    error!(error = %err, "Failed to clear cache");
-                } else {
-                    info!("Cache cleared");
+                info!("Cache clear requested");
+                if let Some(root) = self.library_root() {
+                    match self.clear_library_cache(&root) {
+                        Ok(()) => {
+                            info!(path = %root.display(), "Library cache cleared");
+                            self.rescan_library(true);
+                        }
+                        Err(err) => {
+                            error!(error = %err, path = %root.display(), "Failed to clear cache");
+                        }
+                    }
                 }
             }
             UiMessage::ClearHistory => {
@@ -2642,9 +2701,11 @@ impl GrapeApp {
             }
             UiMessage::ReindexLibrary => {
                 info!("Library reindex requested");
+                self.rescan_library(false);
             }
             UiMessage::ResetAudioEngine => {
                 info!("Audio engine reset requested");
+                self.reset_audio_engine();
             }
             _ => {}
         }
