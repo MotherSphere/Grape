@@ -12,7 +12,7 @@ const CACHE_DIRNAME: &str = ".grape_cache";
 const INDEX_FILENAME: &str = "index.json";
 const FOLDERS_DIRNAME: &str = "folders";
 const COVER_DIRNAME: &str = "covers";
-const CACHE_VERSION: u32 = 1;
+const CACHE_VERSION: u32 = 2;
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct CacheIndex {
