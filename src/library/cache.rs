@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::fs;
+use std::hash::{Hash, Hasher};
 use std::io;
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
@@ -12,22 +13,36 @@ const CACHE_DIRNAME: &str = ".grape_cache";
 const INDEX_FILENAME: &str = "index.json";
 const FOLDERS_DIRNAME: &str = "folders";
 const COVER_DIRNAME: &str = "covers";
-const CACHE_VERSION: u32 = 2;
+const CACHE_VERSION: u32 = 3;
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct CacheIndex {
     version: u32,
     entries: HashMap<String, FolderEntry>,
+    #[serde(skip)]
+    legacy_version: Option<u32>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct FolderEntry {
-    modified_secs: u64,
+    #[serde(default)]
+    tracks: HashMap<String, TrackEntry>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct FolderCacheFile {
     album: Album,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+pub struct TrackEntry {
+    modified_secs: u64,
+    hash: u64,
+}
+
+pub struct CachedAlbum {
+    pub album: Album,
+    pub track_entries: HashMap<String, TrackEntry>,
 }
 
 pub fn load_index(root: &Path) -> io::Result<CacheIndex> {
@@ -44,23 +59,20 @@ pub fn load_index(root: &Path) -> io::Result<CacheIndex> {
     let mut index: CacheIndex = serde_json::from_str(&contents)
         .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
     if index.version != CACHE_VERSION {
-        index = CacheIndex::default();
+        index.legacy_version = Some(index.version);
+        index.version = CACHE_VERSION;
+        index.entries.clear();
     }
 
     Ok(index)
 }
 
-pub fn load_album(root: &Path, index: &CacheIndex, album_path: &Path) -> io::Result<Option<Album>> {
+pub fn load_album(
+    root: &Path,
+    index: &CacheIndex,
+    album_path: &Path,
+) -> io::Result<Option<CachedAlbum>> {
     let key = album_key(root, album_path)?;
-    let Some(entry) = index.entries.get(&key) else {
-        return Ok(None);
-    };
-
-    let current_modified = folder_modified_secs(album_path)?;
-    if current_modified != entry.modified_secs {
-        return Ok(None);
-    }
-
     let cache_path = folder_cache_path(root, &key);
     if !cache_path.exists() {
         return Ok(None);
@@ -70,7 +82,16 @@ pub fn load_album(root: &Path, index: &CacheIndex, album_path: &Path) -> io::Res
     let mut cache_file: FolderCacheFile = serde_json::from_str(&contents)
         .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
     cache_file.album.path = album_path.to_path_buf();
-    Ok(Some(cache_file.album))
+    let track_entries = index
+        .entries
+        .get(&key)
+        .map(|entry| entry.tracks.clone())
+        .filter(|tracks| !tracks.is_empty())
+        .unwrap_or_else(|| build_track_entries(root, &cache_file.album));
+    Ok(Some(CachedAlbum {
+        album: cache_file.album,
+        track_entries,
+    }))
 }
 
 pub fn store_album(
@@ -91,10 +112,10 @@ pub fn store_album(
         .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
     fs::write(folder_cache_path(root, &key), contents)?;
 
-    let modified_secs = folder_modified_secs(album_path)?;
+    let track_entries = build_track_entries(root, album);
     index
         .entries
-        .insert(key.clone(), FolderEntry { modified_secs });
+        .insert(key.clone(), FolderEntry { tracks: track_entries });
 
     Ok(key)
 }
@@ -148,25 +169,49 @@ fn folder_cache_path(root: &Path, key: &str) -> PathBuf {
 }
 
 fn album_key(root: &Path, album_path: &Path) -> io::Result<String> {
-    let relative = album_path
-        .strip_prefix(root)
-        .unwrap_or(album_path)
-        .to_string_lossy()
-        .replace('\\', "/");
+    let relative = relative_path(root, album_path);
     Ok(hash_key(&relative))
 }
 
 fn hash_key(value: &str) -> String {
-    use std::hash::{Hash, Hasher};
-
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     value.hash(&mut hasher);
     format!("{:x}", hasher.finish())
 }
 
-fn folder_modified_secs(path: &Path) -> io::Result<u64> {
+pub fn track_key(root: &Path, track_path: &Path) -> String {
+    relative_path(root, track_path)
+}
+
+pub fn track_signature(path: &Path) -> io::Result<TrackEntry> {
     let metadata = fs::metadata(path)?;
     let modified = metadata.modified().unwrap_or(UNIX_EPOCH);
     let duration = modified.duration_since(UNIX_EPOCH).unwrap_or_default();
-    Ok(duration.as_secs())
+    let modified_secs = duration.as_secs();
+    let file_len = metadata.len();
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    file_len.hash(&mut hasher);
+    modified_secs.hash(&mut hasher);
+    Ok(TrackEntry {
+        modified_secs,
+        hash: hasher.finish(),
+    })
+}
+
+fn relative_path(root: &Path, path: &Path) -> String {
+    path.strip_prefix(root)
+        .unwrap_or(path)
+        .to_string_lossy()
+        .replace('\\', "/")
+}
+
+fn build_track_entries(root: &Path, album: &Album) -> HashMap<String, TrackEntry> {
+    let mut entries = HashMap::new();
+    for track in &album.tracks {
+        if let Ok(signature) = track_signature(&track.path) {
+            let key = track_key(root, &track.path);
+            entries.insert(key, signature);
+        }
+    }
+    entries
 }
