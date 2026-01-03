@@ -165,6 +165,7 @@ pub fn scan_library_full(root: impl AsRef<Path>) -> io::Result<Catalog> {
 fn scan_library_with_cache(root: impl AsRef<Path>, use_cache: bool) -> io::Result<Catalog> {
     let root = root.as_ref();
     let mut artists = Vec::new();
+    let mut seen_artist_dirs = std::collections::HashSet::new();
     let mut cache_index = if use_cache {
         match cache::load_index(root) {
             Ok(index) => index,
@@ -183,16 +184,34 @@ fn scan_library_with_cache(root: impl AsRef<Path>, use_cache: bool) -> io::Resul
     }
 
     for artist_entry in read_sorted_dirs(root)? {
+        let artist_path = artist_entry.path();
+        let artist_key = normalized_path_key(root, &artist_path);
+        if !seen_artist_dirs.insert(artist_key) {
+            warn!(
+                path = %artist_path.display(),
+                "Skipping duplicate artist directory"
+            );
+            continue;
+        }
         let artist_name = artist_entry
             .file_name()
             .to_string_lossy()
             .trim()
             .to_string();
         let mut albums = Vec::new();
+        let mut seen_album_dirs = std::collections::HashSet::new();
 
-        for album_entry in read_sorted_dirs(&artist_entry.path())? {
+        for album_entry in read_sorted_dirs(&artist_path)? {
             let (year, title) = parse_album_folder(&album_entry.file_name().to_string_lossy());
             let album_path = album_entry.path();
+            let album_key = normalized_path_key(root, &album_path);
+            if !seen_album_dirs.insert(album_key) {
+                warn!(
+                    path = %album_path.display(),
+                    "Skipping duplicate album directory"
+                );
+                continue;
+            }
             let cached_album = if use_cache {
                 match cache::load_album(root, &cache_index, &album_path) {
                     Ok(cached) => cached,
@@ -285,10 +304,16 @@ fn scan_library_with_cache(root: impl AsRef<Path>, use_cache: bool) -> io::Resul
 fn scan_tracks(dir: &Path) -> io::Result<Vec<Track>> {
     let mut tracks = Vec::new();
     let mut index = 1u8;
+    let mut seen_tracks = std::collections::HashSet::new();
 
     let entries = sorted_track_paths(dir)?;
 
     for path in entries {
+        let dedupe_key = normalized_path_key(dir, &path);
+        if !seen_tracks.insert(dedupe_key) {
+            warn!(path = %path.display(), "Skipping duplicate track path");
+            continue;
+        }
         if !is_audio_file(&path) {
             info!(path = %path.display(), "Ignoring non-audio file");
             continue;
@@ -340,6 +365,7 @@ fn scan_tracks_with_cache(
 ) -> io::Result<Vec<Track>> {
     let mut tracks = Vec::new();
     let mut index = 1u8;
+    let mut seen_tracks = std::collections::HashSet::new();
     let entries = sorted_track_paths(dir)?;
     let cached_by_path: std::collections::HashMap<PathBuf, &Track> = cached_tracks
         .iter()
@@ -347,6 +373,11 @@ fn scan_tracks_with_cache(
         .collect();
 
     for path in entries {
+        let dedupe_key = normalized_path_key(root, &path);
+        if !seen_tracks.insert(dedupe_key) {
+            warn!(path = %path.display(), "Skipping duplicate track path");
+            continue;
+        }
         if !is_audio_file(&path) {
             info!(path = %path.display(), "Ignoring non-audio file");
             continue;
@@ -526,10 +557,41 @@ fn file_modified_secs(path: &Path) -> io::Result<u64> {
 }
 
 fn read_sorted_dirs(root: &Path) -> io::Result<Vec<fs::DirEntry>> {
-    let mut entries: Vec<_> = fs::read_dir(root)?
-        .filter_map(Result::ok)
-        .filter(|entry| entry.path().is_dir())
-        .collect();
+    let read_dir = match fs::read_dir(root) {
+        Ok(read_dir) => read_dir,
+        Err(error) => {
+            warn!(
+                error = %error,
+                path = %root.display(),
+                "Skipping directory scan: unable to read directory"
+            );
+            return Ok(Vec::new());
+        }
+    };
+
+    let mut entries = Vec::new();
+    for entry_result in read_dir {
+        let entry = match entry_result {
+            Ok(entry) => entry,
+            Err(error) => {
+                warn!(
+                    error = %error,
+                    path = %root.display(),
+                    "Skipping unreadable entry during directory scan"
+                );
+                continue;
+            }
+        };
+        let path = entry.path();
+        if path.is_dir() {
+            entries.push(entry);
+        } else {
+            warn!(
+                path = %path.display(),
+                "Ignoring non-conforming entry; expected a directory"
+            );
+        }
+    }
     entries.sort_by_key(|entry| entry.file_name());
     Ok(entries)
 }
@@ -551,8 +613,14 @@ fn sorted_track_paths(dir: &Path) -> io::Result<Vec<PathBuf>> {
     for entry_result in read_dir {
         match entry_result {
             Ok(entry) => {
-                if entry.path().is_file() {
-                    entries.push(entry.path());
+                let path = entry.path();
+                if path.is_file() {
+                    entries.push(path);
+                } else if path.is_dir() {
+                    warn!(
+                        path = %path.display(),
+                        "Ignoring non-conforming subdirectory inside album"
+                    );
                 }
             }
             Err(error) => {
@@ -587,8 +655,32 @@ fn dominant_genre<'a>(genres: impl Iterator<Item = &'a str>) -> Option<String> {
 fn is_audio_file(path: &Path) -> bool {
     matches!(
         path.extension().and_then(|ext| ext.to_str()).map(str::to_lowercase),
-        Some(ext) if matches!(ext.as_str(), "mp3" | "flac" | "wav" | "ogg" | "m4a")
+        Some(ext)
+            if matches!(
+                ext.as_str(),
+                "mp3" | "flac" | "wav" | "ogg" | "m4a" | "aac" | "opus" | "aif" | "aiff"
+                    | "wma"
+            )
     )
+}
+
+fn normalized_path_key(root: &Path, path: &Path) -> String {
+    let normalized = match path.canonicalize() {
+        Ok(path) => path,
+        Err(error) => {
+            warn!(
+                error = %error,
+                path = %path.display(),
+                "Failed to canonicalize path for deduplication"
+            );
+            path.to_path_buf()
+        }
+    };
+    let relative = normalized.strip_prefix(root).unwrap_or(&normalized);
+    relative
+        .to_string_lossy()
+        .replace('\\', "/")
+        .to_lowercase()
 }
 
 fn parse_album_folder(name: &str) -> (u16, String) {
