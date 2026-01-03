@@ -1,8 +1,12 @@
 #![allow(dead_code)]
 
+use std::env;
+use std::fs;
+use std::io;
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
+use tracing::warn;
 
 use crate::player::NowPlaying;
 
@@ -134,6 +138,39 @@ impl PlaylistManager {
         }
     }
 
+    pub fn load_or_default() -> Self {
+        let path = playlist_path();
+        let contents = match fs::read_to_string(&path) {
+            Ok(contents) => contents,
+            Err(err) if err.kind() == io::ErrorKind::NotFound => {
+                return Self::new_default();
+            }
+            Err(err) => {
+                warn!(error = %err, path = %path.display(), "Failed to read playlist");
+                return Self::new_default();
+            }
+        };
+
+        match Self::from_json(&contents) {
+            Ok(manager) => manager,
+            Err(err) => {
+                warn!(error = %err, path = %path.display(), "Failed to parse playlist");
+                Self::new_default()
+            }
+        }
+    }
+
+    pub fn save(&self) -> io::Result<()> {
+        let path = playlist_path();
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        let payload =
+            self.to_json()
+                .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
+        fs::write(path, payload)
+    }
+
     pub fn active(&self) -> Option<&Playlist> {
         self.playlists.get(self.active_index)
     }
@@ -161,6 +198,43 @@ impl PlaylistManager {
             playlist.clear();
         }
     }
+
+    pub fn to_exchange(&self) -> PlaylistManagerExchange {
+        PlaylistManagerExchange {
+            version: PlaylistManagerExchange::VERSION,
+            playlists: self
+                .playlists
+                .iter()
+                .map(Playlist::to_exchange)
+                .collect(),
+            active_index: self.active_index,
+        }
+    }
+
+    pub fn from_exchange(exchange: PlaylistManagerExchange) -> Self {
+        let mut playlists: Vec<Playlist> = exchange
+            .playlists
+            .into_iter()
+            .map(Playlist::from_exchange)
+            .collect();
+        if playlists.is_empty() {
+            playlists.push(Playlist::empty("Queue"));
+        }
+        let active_index = exchange.active_index.min(playlists.len().saturating_sub(1));
+        Self {
+            playlists,
+            active_index,
+        }
+    }
+
+    pub fn to_json(&self) -> Result<String, serde_json::Error> {
+        serde_json::to_string_pretty(&self.to_exchange())
+    }
+
+    pub fn from_json(payload: &str) -> Result<Self, serde_json::Error> {
+        let exchange: PlaylistManagerExchange = serde_json::from_str(payload)?;
+        Ok(Self::from_exchange(exchange))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -171,6 +245,17 @@ pub struct PlaylistExchange {
 }
 
 impl PlaylistExchange {
+    pub const VERSION: u32 = 1;
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PlaylistManagerExchange {
+    pub version: u32,
+    pub playlists: Vec<PlaylistExchange>,
+    pub active_index: usize,
+}
+
+impl PlaylistManagerExchange {
     pub const VERSION: u32 = 1;
 }
 
@@ -205,6 +290,20 @@ impl From<PlaylistItem> for NowPlaying {
             path: PathBuf::from(item.path),
         }
     }
+}
+
+fn config_root() -> PathBuf {
+    if let Ok(home) = env::var("HOME") {
+        PathBuf::from(home).join(".config").join("grape")
+    } else if let Ok(profile) = env::var("USERPROFILE") {
+        PathBuf::from(profile).join(".config").join("grape")
+    } else {
+        PathBuf::from(".")
+    }
+}
+
+fn playlist_path() -> PathBuf {
+    config_root().join("playlist.json")
 }
 
 #[cfg(test)]
@@ -270,5 +369,17 @@ mod tests {
         let parsed = Playlist::from_json(&json).expect("deserialize playlist");
 
         assert_eq!(playlist, parsed);
+    }
+
+    #[test]
+    fn manager_json_roundtrip() {
+        let mut manager = PlaylistManager::new_default();
+        manager.add(sample_track(1));
+        manager.add(sample_track(2));
+
+        let json = manager.to_json().expect("serialize manager");
+        let parsed = PlaylistManager::from_json(&json).expect("deserialize manager");
+
+        assert_eq!(manager, parsed);
     }
 }
