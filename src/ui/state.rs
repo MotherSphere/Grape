@@ -237,6 +237,7 @@ pub struct PlaybackState {
     pub is_playing: bool,
     pub shuffle: bool,
     pub repeat: RepeatMode,
+    pub displayed_progress: f32,
 }
 
 impl PlaybackState {
@@ -257,6 +258,25 @@ impl PlaybackState {
             | PlaybackMessage::PreviousTrack => {}
         }
     }
+
+    pub fn update_displayed_progress(&mut self) {
+        let target = progress_ratio(self.position, self.duration);
+        let delta = target - self.displayed_progress;
+        if delta.abs() < 0.001 {
+            self.displayed_progress = target;
+        } else {
+            self.displayed_progress = (self.displayed_progress + delta * 0.2).clamp(0.0, 1.0);
+        }
+    }
+}
+
+pub fn progress_ratio(position: Duration, duration: Duration) -> f32 {
+    let total = duration.as_secs_f32();
+    if total <= 0.0 {
+        return 0.0;
+    }
+    let current = position.as_secs_f32().min(total);
+    (current / total).clamp(0.0, 1.0)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -560,6 +580,7 @@ impl UiState {
             UiMessage::CloseMenu => {
                 self.menu_open = false;
             }
+            UiMessage::PlaybackTick => {}
         }
     }
 }
