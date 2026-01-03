@@ -7,96 +7,8 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use rodio::{Decoder, OutputStream, Sink, source::Source};
+use rodio::{Decoder, OutputStream, OutputStreamBuilder, Sink, source::Source};
 use tracing::{error, info};
-
-mod audio_options {
-    use rodio::{OutputStream, OutputStreamBuilder, cpal};
-    use rodio::cpal::traits::HostTrait;
-    use tracing::{info, warn};
-
-    use crate::config::{AudioOutputDevice, UserSettings};
-    use crate::player::PlayerError;
-
-    #[derive(Debug, Clone)]
-    pub struct AudioOptions {
-        pub output_device: AudioOutputDevice,
-        pub sample_rate_hz: Option<u32>,
-    }
-
-    impl AudioOptions {
-        pub fn from_settings(settings: &UserSettings) -> Self {
-            Self {
-                output_device: settings.output_device,
-                sample_rate_hz: settings.output_sample_rate_hz,
-            }
-        }
-
-        pub fn open_stream(&self) -> Result<OutputStream, PlayerError> {
-            let builder = self.builder()?;
-            match builder.open_stream() {
-                Ok(stream) => Ok(stream),
-                Err(err) => {
-                    if self.is_default() {
-                        Err(err.into())
-                    } else {
-                        warn!(error = %err, "Failed to open stream with custom options, falling back");
-                        OutputStreamBuilder::open_default_stream().map_err(PlayerError::from)
-                    }
-                }
-            }
-        }
-
-        fn builder(&self) -> Result<OutputStreamBuilder, PlayerError> {
-            let builder = if let Some(device) = self.resolve_device()? {
-                OutputStreamBuilder::from_device(device)?
-            } else {
-                OutputStreamBuilder::from_default_device()?
-            };
-            let builder = if let Some(sample_rate) = self.sample_rate_hz {
-                builder.with_sample_rate(sample_rate)
-            } else {
-                builder
-            };
-            Ok(builder)
-        }
-
-        fn resolve_device(&self) -> Result<Option<cpal::Device>, PlayerError> {
-            match self.output_device {
-                AudioOutputDevice::System => Ok(None),
-                AudioOutputDevice::UsbHeadset => {
-                    let host = cpal::default_host();
-                    let devices = host.output_devices().map_err(PlayerError::StreamError)?;
-                    for device in devices {
-                        let name = device.name().unwrap_or_default();
-                        let lowered = name.to_lowercase();
-                        if lowered.contains("usb") || lowered.contains("headset") {
-                            info!(device = %name, "Selected USB headset output device");
-                            return Ok(Some(device));
-                        }
-                    }
-                    warn!("USB headset output device not found, using default");
-                    Ok(None)
-                }
-            }
-        }
-
-        fn is_default(&self) -> bool {
-            self.output_device == AudioOutputDevice::System && self.sample_rate_hz.is_none()
-        }
-    }
-
-    impl Default for AudioOptions {
-        fn default() -> Self {
-            Self {
-                output_device: AudioOutputDevice::System,
-                sample_rate_hz: None,
-            }
-        }
-    }
-}
-
-pub use audio_options::AudioOptions;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NowPlaying {
@@ -188,11 +100,7 @@ pub struct Player {
 
 impl Player {
     pub fn new() -> Result<Self, PlayerError> {
-        Self::new_with_options(AudioOptions::default())
-    }
-
-    pub fn new_with_options(options: AudioOptions) -> Result<Self, PlayerError> {
-        let stream = options.open_stream()?;
+        let stream = OutputStreamBuilder::open_default_stream()?;
         let sink = Sink::connect_new(stream.mixer());
         Ok(Self {
             stream,
