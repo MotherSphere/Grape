@@ -30,6 +30,8 @@ use std::fs;
 use std::path::PathBuf;
 use std::time::Duration;
 use tracing::{error, info, warn};
+use unicode_normalization::UnicodeNormalization;
+use unicode_normalization::char::is_combining_mark;
 
 pub struct GrapeApp {
     catalog: Catalog,
@@ -106,9 +108,30 @@ impl GrapeApp {
         )
     }
 
+    fn normalize_text(value: &str) -> String {
+        value
+            .nfkd()
+            .filter(|character| !is_combining_mark(*character))
+            .collect::<String>()
+            .to_lowercase()
+    }
+
+    fn normalized_contains(query: &str, value: &str) -> bool {
+        Self::normalize_text(value).contains(query)
+    }
+
+    fn year_matches(query: &str, year: Option<u32>) -> bool {
+        year.map(|year| year.to_string().contains(query))
+            .unwrap_or(false)
+    }
+
     fn normalized_query(&self) -> Option<String> {
-        let query = self.ui.search.query.trim().to_lowercase();
-        if query.is_empty() { None } else { Some(query) }
+        let query = self.ui.search.query.trim();
+        if query.is_empty() {
+            None
+        } else {
+            Some(Self::normalize_text(query))
+        }
     }
 
     fn albums_from_catalog(&self) -> Vec<UiAlbum> {
@@ -126,6 +149,7 @@ impl GrapeApp {
                     } else {
                         Some(album.year as u32)
                     },
+                    total_duration: Duration::from_secs(album.total_duration_secs as u64),
                     cover_path: album.cover.as_ref().map(|cover| cover.cached_path.clone()),
                 });
                 id += 1;
@@ -139,26 +163,55 @@ impl GrapeApp {
         let mut albums = self.albums_from_catalog();
         if let Some(query) = self.normalized_query() {
             albums.retain(|album| {
-                album.title.to_lowercase().contains(&query)
-                    || album.artist.to_lowercase().contains(&query)
+                Self::normalized_contains(&query, &album.title)
+                    || Self::normalized_contains(&query, &album.artist)
+                    || Self::year_matches(&query, album.year)
             });
         }
         match self.ui.search.sort {
             SortOption::Alphabetical => {
                 albums.sort_by(|a, b| {
-                    a.title
-                        .to_lowercase()
-                        .cmp(&b.title.to_lowercase())
-                        .then_with(|| a.artist.to_lowercase().cmp(&b.artist.to_lowercase()))
+                    Self::normalize_text(&a.title)
+                        .cmp(&Self::normalize_text(&b.title))
+                        .then_with(|| {
+                            Self::normalize_text(&a.artist).cmp(&Self::normalize_text(&b.artist))
+                        })
                 });
             }
             SortOption::ByAlbum => {
                 albums.sort_by(|a, b| {
-                    a.artist
-                        .to_lowercase()
-                        .cmp(&b.artist.to_lowercase())
-                        .then_with(|| a.title.to_lowercase().cmp(&b.title.to_lowercase()))
+                    Self::normalize_text(&a.artist)
+                        .cmp(&Self::normalize_text(&b.artist))
+                        .then_with(|| {
+                            Self::normalize_text(&a.title).cmp(&Self::normalize_text(&b.title))
+                        })
                         .then_with(|| a.year.cmp(&b.year))
+                });
+            }
+            SortOption::ByYear => {
+                albums.sort_by(|a, b| {
+                    let year_a = a.year.unwrap_or(u32::MAX);
+                    let year_b = b.year.unwrap_or(u32::MAX);
+                    year_a
+                        .cmp(&year_b)
+                        .then_with(|| {
+                            Self::normalize_text(&a.title).cmp(&Self::normalize_text(&b.title))
+                        })
+                        .then_with(|| {
+                            Self::normalize_text(&a.artist).cmp(&Self::normalize_text(&b.artist))
+                        })
+                });
+            }
+            SortOption::ByDuration => {
+                albums.sort_by(|a, b| {
+                    a.total_duration
+                        .cmp(&b.total_duration)
+                        .then_with(|| {
+                            Self::normalize_text(&a.title).cmp(&Self::normalize_text(&b.title))
+                        })
+                        .then_with(|| {
+                            Self::normalize_text(&a.artist).cmp(&Self::normalize_text(&b.artist))
+                        })
                 });
             }
         }
@@ -180,9 +233,11 @@ impl GrapeApp {
     fn filtered_artists_from_catalog(&self) -> Vec<UiArtist> {
         let mut artists = self.artists_from_catalog();
         if let Some(query) = self.normalized_query() {
-            artists.retain(|artist| artist.name.to_lowercase().contains(&query));
+            artists.retain(|artist| Self::normalized_contains(&query, &artist.name));
         }
-        artists.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+        artists.sort_by(|a, b| {
+            Self::normalize_text(&a.name).cmp(&Self::normalize_text(&b.name))
+        });
         artists
     }
 
@@ -202,9 +257,11 @@ impl GrapeApp {
     fn filtered_genres_from_catalog(&self) -> Vec<UiGenre> {
         let mut genres = self.genres_from_catalog();
         if let Some(query) = self.normalized_query() {
-            genres.retain(|genre| genre.name.to_lowercase().contains(&query));
+            genres.retain(|genre| Self::normalized_contains(&query, &genre.name));
         }
-        genres.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+        genres.sort_by(|a, b| {
+            Self::normalize_text(&a.name).cmp(&Self::normalize_text(&b.name))
+        });
         genres
     }
 
@@ -252,19 +309,24 @@ impl GrapeApp {
         album: &crate::library::Album,
     ) -> Vec<UiTrack> {
         let mut tracks = self.tracks_for_album(artist, album);
+        let album_year = if album.year == 0 {
+            None
+        } else {
+            Some(album.year as u32)
+        };
         if let Some(query) = self.normalized_query() {
             tracks.retain(|track| {
-                track.title.to_lowercase().contains(&query)
-                    || track.artist.to_lowercase().contains(&query)
-                    || track.album.to_lowercase().contains(&query)
+                Self::normalized_contains(&query, &track.title)
+                    || Self::normalized_contains(&query, &track.artist)
+                    || Self::normalized_contains(&query, &track.album)
+                    || Self::year_matches(&query, album_year)
             });
         }
         match self.ui.search.sort {
             SortOption::Alphabetical => {
                 tracks.sort_by(|a, b| {
-                    a.title
-                        .to_lowercase()
-                        .cmp(&b.title.to_lowercase())
+                    Self::normalize_text(&a.title)
+                        .cmp(&Self::normalize_text(&b.title))
                         .then_with(|| a.track_number.cmp(&b.track_number))
                 });
             }
@@ -273,7 +335,34 @@ impl GrapeApp {
                     a.track_number
                         .unwrap_or(u32::MAX)
                         .cmp(&b.track_number.unwrap_or(u32::MAX))
-                        .then_with(|| a.title.to_lowercase().cmp(&b.title.to_lowercase()))
+                        .then_with(|| {
+                            Self::normalize_text(&a.title).cmp(&Self::normalize_text(&b.title))
+                        })
+                });
+            }
+            SortOption::ByYear => {
+                let year_key = album_year.unwrap_or(u32::MAX);
+                tracks.sort_by(|a, b| {
+                    year_key
+                        .cmp(&year_key)
+                        .then_with(|| {
+                            a.track_number
+                                .unwrap_or(u32::MAX)
+                                .cmp(&b.track_number.unwrap_or(u32::MAX))
+                        })
+                        .then_with(|| {
+                            Self::normalize_text(&a.title).cmp(&Self::normalize_text(&b.title))
+                        })
+                });
+            }
+            SortOption::ByDuration => {
+                tracks.sort_by(|a, b| {
+                    a.duration
+                        .cmp(&b.duration)
+                        .then_with(|| {
+                            Self::normalize_text(&a.title).cmp(&Self::normalize_text(&b.title))
+                        })
+                        .then_with(|| a.track_number.cmp(&b.track_number))
                 });
             }
         }
@@ -296,9 +385,11 @@ impl GrapeApp {
     fn filtered_folders_from_catalog(&self) -> Vec<UiFolder> {
         let mut folders = self.folders_from_catalog();
         if let Some(query) = self.normalized_query() {
-            folders.retain(|folder| folder.name.to_lowercase().contains(&query));
+            folders.retain(|folder| Self::normalized_contains(&query, &folder.name));
         }
-        folders.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+        folders.sort_by(|a, b| {
+            Self::normalize_text(&a.name).cmp(&Self::normalize_text(&b.name))
+        });
         folders
     }
 
@@ -491,6 +582,8 @@ impl GrapeApp {
         let sort_label = match self.ui.search.sort {
             SortOption::Alphabetical => "A–Z",
             SortOption::ByAlbum => "By album",
+            SortOption::ByYear => "By year",
+            SortOption::ByDuration => "By duration",
         };
         let selected_id = self
             .ui
@@ -556,6 +649,8 @@ impl GrapeApp {
         let sort_label = match self.ui.search.sort {
             SortOption::Alphabetical => "A–Z",
             SortOption::ByAlbum => "By album",
+            SortOption::ByYear => "By year",
+            SortOption::ByDuration => "By duration",
         };
         let selected_id = self
             .ui
