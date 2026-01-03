@@ -4,7 +4,7 @@ use crate::config::{
     SubtitleSize, TextScale, ThemeMode, TimeFormat, UpdateChannel, VolumeLevel,
 };
 use crate::library::{self, Catalog};
-use crate::player::{NowPlaying, PlaybackState as PlayerPlaybackState, Player};
+use crate::player::{AudioOptions, NowPlaying, PlaybackState as PlayerPlaybackState, Player};
 use crate::playlist::{PlaybackQueue, PlaylistManager};
 use crate::ui::components::albums_grid::AlbumsGrid;
 use crate::ui::components::anchored_overlay::AnchoredOverlay;
@@ -930,7 +930,8 @@ impl GrapeApp {
 
     fn reset_audio_engine(&mut self) {
         info!("Resetting audio engine");
-        self.player = match Player::new() {
+        let options = AudioOptions::from_settings(&self.ui.settings);
+        self.player = match Player::new_with_options(options) {
             Ok(player) => Some(player),
             Err(err) => {
                 error!(error = %err, "Failed to reinitialize audio player");
@@ -2639,14 +2640,15 @@ impl GrapeApp {
 
 impl GrapeApp {
     fn new(catalog: Catalog) -> Self {
-        let player = match Player::new() {
+        let settings = config::load_settings();
+        let options = AudioOptions::from_settings(&settings);
+        let player = match Player::new_with_options(options) {
             Ok(player) => Some(player),
             Err(err) => {
                 error!(error = %err, "Failed to initialize audio player");
                 None
             }
         };
-        let settings = config::load_settings();
         let playlists = PlaylistManager::load_or_default();
         let playback_queue = Self::playback_queue_from_playlist(&playlists);
         Self {

@@ -2,7 +2,7 @@ use std::path::Path;
 
 use lofty::file::{AudioFile, TaggedFileExt};
 use lofty::picture::PictureType;
-use lofty::tag::{ItemKey, TagExt};
+use lofty::tag::ItemKey;
 use tracing::warn;
 
 use crate::library::EmbeddedCover;
