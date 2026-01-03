@@ -24,7 +24,7 @@ use iced::font::Weight;
 use iced::widget::{button, column, container, row, scrollable, slider, text, text_input};
 use iced::{
     Alignment, Color, Element, Length, Padding, Settings, Subscription, Task, Theme, event,
-    keyboard, mouse, window,
+    keyboard, mouse, time, window,
 };
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -2901,6 +2901,7 @@ impl GrapeApp {
                 info!("Audio engine reset requested");
                 self.reset_audio_engine();
             }
+            UiMessage::PlaybackTick => {}
             _ => {}
         }
         self.ui.update(message);
@@ -2989,6 +2990,15 @@ impl GrapeApp {
 
     fn subscription(&self) -> Subscription<UiMessage> {
         let mut subscriptions = Vec::new();
+
+        if matches!(
+            self.player.as_ref().map(|player| player.state()),
+            Some(PlayerPlaybackState::Playing)
+        ) {
+            subscriptions.push(
+                time::every(Duration::from_millis(200)).map(|_| UiMessage::PlaybackTick),
+            );
+        }
 
         if self.ui.menu_open {
             subscriptions.push(event::listen_with(|event, status, _| match event {
