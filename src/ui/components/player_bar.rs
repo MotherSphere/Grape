@@ -148,10 +148,7 @@ impl PlayerBar {
 
         let elapsed = format_duration(playback.position);
         let duration = format_duration(playback.duration);
-        let progress = container(progress_bar(
-            0.0..=1.0,
-            progress_ratio(playback.position, playback.duration),
-        ))
+        let progress = container(progress_bar(0.0..=1.0, playback.displayed_progress))
         .width(Length::Fill);
         let progress_row = row![
             text(elapsed)
@@ -252,15 +249,6 @@ fn volume_icon(volume: u8) -> &'static str {
 
 fn queue_icon(active: bool) -> &'static str {
     if active { "\u{f0cb8}" } else { "\u{f0cb9}" }
-}
-
-fn progress_ratio(position: std::time::Duration, duration: std::time::Duration) -> f32 {
-    let total = duration.as_secs_f32();
-    if total <= 0.0 {
-        return 0.0;
-    }
-    let current = position.as_secs_f32().min(total);
-    (current / total).clamp(0.0, 1.0)
 }
 
 fn build_progress_bar(

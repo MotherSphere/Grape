@@ -18,13 +18,14 @@ use crate::ui::message::{PlaybackMessage, SearchMessage, UiMessage};
 use crate::ui::state::{
     ActiveTab, Album as UiAlbum, Artist as UiArtist, Folder as UiFolder, Genre as UiGenre,
     PreferencesSection, PreferencesTab, SelectionState, SortOption, Track as UiTrack, UiState,
+    progress_ratio,
 };
 use crate::ui::style;
 use iced::font::Weight;
 use iced::widget::{button, column, container, row, scrollable, slider, text, text_input};
 use iced::{
     Alignment, Color, Element, Length, Padding, Settings, Subscription, Task, Theme, event,
-    keyboard, mouse, window,
+    keyboard, mouse, time, window,
 };
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -2919,6 +2920,7 @@ impl GrapeApp {
             }
         }
         self.sync_playback_state();
+        self.ui.playback.update_displayed_progress();
         task
     }
 
@@ -3026,6 +3028,14 @@ impl GrapeApp {
                 }
                 _ => None,
             }));
+        }
+
+        let target_progress = progress_ratio(self.ui.playback.position, self.ui.playback.duration);
+        let needs_animation = (self.ui.playback.displayed_progress - target_progress).abs() > 0.001;
+        if self.ui.playback.is_playing || needs_animation {
+            subscriptions.push(
+                time::every(Duration::from_millis(33)).map(|_| UiMessage::PlaybackTick),
+            );
         }
 
         Subscription::batch(subscriptions)
