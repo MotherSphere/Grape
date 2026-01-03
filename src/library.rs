@@ -177,16 +177,23 @@ pub fn scan_library(root: impl AsRef<Path>) -> io::Result<Catalog> {
                 }
             };
 
-            let album = if let Some(mut album) = cached_album {
-                album.title = title.clone();
-                album.year = year;
-                album.path = album_path.clone();
-                if album.genre.is_none() {
-                    album.genre = dominant_genre(
-                        album.tracks.iter().flat_map(|track| track.genre.as_deref()),
-                    );
+            let album = if let Some(cached) = cached_album {
+                let tracks =
+                    scan_tracks_with_cache(root, &album_path, &cached.album.tracks, &cached.track_entries)?;
+                if tracks.is_empty() {
+                    continue;
                 }
-                album
+                let genre = dominant_genre(tracks.iter().flat_map(|track| track.genre.as_deref()));
+                let total_duration_secs = tracks.iter().map(|track| track.duration_secs).sum();
+                Album {
+                    title: title.clone(),
+                    year,
+                    tracks,
+                    genre,
+                    path: album_path.clone(),
+                    total_duration_secs,
+                    cover: cached.album.cover,
+                }
             } else {
                 let tracks = scan_tracks(&album_path)?;
                 if tracks.is_empty() {
@@ -243,40 +250,9 @@ fn scan_tracks(dir: &Path) -> io::Result<Vec<Track>> {
     let mut tracks = Vec::new();
     let mut index = 1u8;
 
-    let read_dir = match fs::read_dir(dir) {
-        Ok(read_dir) => read_dir,
-        Err(error) => {
-            warn!(
-                error = %error,
-                path = %dir.display(),
-                "Skipping tracks scan: unable to read directory"
-            );
-            return Ok(tracks);
-        }
-    };
+    let entries = sorted_track_paths(dir)?;
 
-    let mut entries = Vec::new();
-    for entry_result in read_dir {
-        match entry_result {
-            Ok(entry) => {
-                if entry.path().is_file() {
-                    entries.push(entry);
-                }
-            }
-            Err(error) => {
-                warn!(
-                    error = %error,
-                    path = %dir.display(),
-                    "Skipping unreadable entry"
-                );
-            }
-        }
-    }
-
-    entries.sort_by_key(|entry| entry.file_name());
-
-    for entry in entries {
-        let path = entry.path();
+    for path in entries {
         if !is_audio_file(&path) {
             info!(path = %path.display(), "Ignoring non-audio file");
             continue;
@@ -309,6 +285,79 @@ fn scan_tracks(dir: &Path) -> io::Result<Vec<Track>> {
             duration_secs,
             path,
             genre: metadata.genre,
+        });
+    }
+
+    tracks.sort_by_key(|track| track.number);
+    Ok(tracks)
+}
+
+fn scan_tracks_with_cache(
+    root: &Path,
+    dir: &Path,
+    cached_tracks: &[Track],
+    track_entries: &std::collections::HashMap<String, cache::TrackEntry>,
+) -> io::Result<Vec<Track>> {
+    let mut tracks = Vec::new();
+    let mut index = 1u8;
+    let entries = sorted_track_paths(dir)?;
+    let cached_by_path: std::collections::HashMap<PathBuf, &Track> = cached_tracks
+        .iter()
+        .map(|track| (track.path.clone(), track))
+        .collect();
+
+    for path in entries {
+        if !is_audio_file(&path) {
+            info!(path = %path.display(), "Ignoring non-audio file");
+            continue;
+        }
+
+        let stem = match path.file_stem().and_then(|value| value.to_str()) {
+            Some(stem) if !stem.trim().is_empty() => stem,
+            Some(_) => {
+                warn!(path = %path.display(), "Ignoring track with empty name");
+                continue;
+            }
+            None => {
+                warn!(path = %path.display(), "Ignoring track with unreadable name");
+                continue;
+            }
+        };
+        let (number, title) = parse_track_filename(stem);
+        let track_number = number.unwrap_or_else(|| {
+            let current = index;
+            index = index.saturating_add(1);
+            current
+        });
+
+        let key = cache::track_key(root, &path);
+        let cached_track = cached_by_path.get(&path);
+        let mut duration_secs = 0;
+        let mut genre = None;
+        let mut used_cache = false;
+
+        if let (Some(entry), Some(cached_track)) = (track_entries.get(&key), cached_track) {
+            if let Ok(signature) = cache::track_signature(&path) {
+                if signature == *entry {
+                    duration_secs = cached_track.duration_secs;
+                    genre = cached_track.genre.clone();
+                    used_cache = true;
+                }
+            }
+        }
+
+        if !used_cache {
+            let metadata = metadata::track_metadata(&path);
+            duration_secs = metadata.duration_secs.unwrap_or(0);
+            genre = metadata.genre;
+        }
+
+        tracks.push(Track {
+            number: track_number,
+            title,
+            duration_secs,
+            path,
+            genre,
         });
     }
 
@@ -426,6 +475,41 @@ fn read_sorted_dirs(root: &Path) -> io::Result<Vec<fs::DirEntry>> {
         .filter(|entry| entry.path().is_dir())
         .collect();
     entries.sort_by_key(|entry| entry.file_name());
+    Ok(entries)
+}
+
+fn sorted_track_paths(dir: &Path) -> io::Result<Vec<PathBuf>> {
+    let read_dir = match fs::read_dir(dir) {
+        Ok(read_dir) => read_dir,
+        Err(error) => {
+            warn!(
+                error = %error,
+                path = %dir.display(),
+                "Skipping tracks scan: unable to read directory"
+            );
+            return Ok(Vec::new());
+        }
+    };
+
+    let mut entries = Vec::new();
+    for entry_result in read_dir {
+        match entry_result {
+            Ok(entry) => {
+                if entry.path().is_file() {
+                    entries.push(entry.path());
+                }
+            }
+            Err(error) => {
+                warn!(
+                    error = %error,
+                    path = %dir.display(),
+                    "Skipping unreadable entry"
+                );
+            }
+        }
+    }
+
+    entries.sort_by_key(|path| path.file_name().map(|name| name.to_os_string()));
     Ok(entries)
 }
 
