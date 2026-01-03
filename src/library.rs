@@ -29,8 +29,6 @@ pub struct FolderSummary {
 pub struct Artist {
     pub name: String,
     pub albums: Vec<Album>,
-    #[serde(default)]
-    pub genre: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -38,8 +36,6 @@ pub struct Album {
     pub title: String,
     pub year: u16,
     pub tracks: Vec<Track>,
-    #[serde(default)]
-    pub genre: Option<String>,
     #[serde(default)]
     pub path: PathBuf,
     #[serde(default)]
@@ -54,8 +50,6 @@ pub struct Track {
     pub title: String,
     pub duration_secs: u32,
     pub path: PathBuf,
-    #[serde(default)]
-    pub genre: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -73,26 +67,19 @@ impl Catalog {
     }
 
     pub fn genres(&self) -> Vec<GenreSummary> {
-        let mut counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
-        for artist in &self.artists {
-            for album in &artist.albums {
-                for track in &album.tracks {
-                    let name = track
-                        .genre
-                        .as_ref()
-                        .map(|genre| genre.trim())
-                        .filter(|genre| !genre.is_empty())
-                        .unwrap_or("Unknown");
-                    *counts.entry(name.to_string()).or_insert(0) += 1;
-                }
-            }
+        let total_tracks = self
+            .artists
+            .iter()
+            .flat_map(|artist| artist.albums.iter())
+            .map(|album| album.tracks.len())
+            .sum::<usize>();
+        if total_tracks == 0 {
+            return Vec::new();
         }
-        let mut genres: Vec<_> = counts
-            .into_iter()
-            .map(|(name, track_count)| GenreSummary { name, track_count })
-            .collect();
-        genres.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
-        genres
+        vec![GenreSummary {
+            name: "Unknown".to_string(),
+            track_count: total_tracks,
+        }]
     }
 
     pub fn folders(&self) -> Vec<FolderSummary> {
@@ -181,25 +168,18 @@ pub fn scan_library(root: impl AsRef<Path>) -> io::Result<Catalog> {
                 album.title = title.clone();
                 album.year = year;
                 album.path = album_path.clone();
-                if album.genre.is_none() {
-                    album.genre = dominant_genre(
-                        album.tracks.iter().flat_map(|track| track.genre.as_deref()),
-                    );
-                }
                 album
             } else {
                 let tracks = scan_tracks(&album_path)?;
                 if tracks.is_empty() {
                     continue;
                 }
-                let genre = dominant_genre(tracks.iter().flat_map(|track| track.genre.as_deref()));
                 let cover = scan_cover_art(root, &album_path)?;
                 let total_duration_secs = tracks.iter().map(|track| track.duration_secs).sum();
                 Album {
                     title: title.clone(),
                     year,
                     tracks,
-                    genre,
                     path: album_path.clone(),
                     total_duration_secs,
                     cover,
@@ -215,16 +195,9 @@ pub fn scan_library(root: impl AsRef<Path>) -> io::Result<Catalog> {
         }
 
         if !albums.is_empty() {
-            let genre = dominant_genre(
-                albums
-                    .iter()
-                    .flat_map(|album| album.tracks.iter())
-                    .flat_map(|track| track.genre.as_deref()),
-            );
             artists.push(Artist {
                 name: artist_name,
                 albums,
-                genre,
             });
         }
     }
@@ -300,15 +273,13 @@ fn scan_tracks(dir: &Path) -> io::Result<Vec<Track>> {
             current
         });
 
-        let metadata = metadata::track_metadata(&path);
-        let duration_secs = metadata.duration_secs.unwrap_or(0);
+        let duration_secs = metadata::track_duration_secs(&path).unwrap_or(0);
 
         tracks.push(Track {
             number: track_number,
             title,
             duration_secs,
             path,
-            genre: metadata.genre,
         });
     }
 
@@ -427,21 +398,6 @@ fn read_sorted_dirs(root: &Path) -> io::Result<Vec<fs::DirEntry>> {
         .collect();
     entries.sort_by_key(|entry| entry.file_name());
     Ok(entries)
-}
-
-fn dominant_genre<'a>(genres: impl Iterator<Item = &'a str>) -> Option<String> {
-    let mut counts: std::collections::HashMap<&'a str, usize> = std::collections::HashMap::new();
-    for genre in genres {
-        let trimmed = genre.trim();
-        if trimmed.is_empty() {
-            continue;
-        }
-        *counts.entry(trimmed).or_insert(0) += 1;
-    }
-    counts
-        .into_iter()
-        .max_by_key(|(_, count)| *count)
-        .map(|(genre, _)| genre.to_string())
 }
 
 fn is_audio_file(path: &Path) -> bool {
