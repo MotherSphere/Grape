@@ -122,6 +122,66 @@ impl Palette {
             input_border: Color::from_rgb8(0x58, 0x5b, 0x70),
         }
     }
+
+    pub fn gruvbox() -> Self {
+        Self {
+            background: Color::from_rgb8(0x28, 0x28, 0x28),
+            panel: Color::from_rgb8(0x3c, 0x38, 0x36),
+            elevated: Color::from_rgb8(0x50, 0x49, 0x45),
+            hover: Color::from_rgb8(0x66, 0x5c, 0x54),
+            selected: Color::from_rgb8(0x83, 0xa5, 0x98),
+            accent: Color::from_rgb8(0xfa, 0xbd, 0x2f),
+            text_primary: Color::from_rgb8(0xeb, 0xdb, 0xb2),
+            text_muted: Color::from_rgb8(0xbd, 0xae, 0x93),
+            border: Color::from_rgb8(0x50, 0x49, 0x45),
+            border_subtle: Color::from_rgb8(0x3c, 0x38, 0x36),
+            avatar: Color::from_rgb8(0x50, 0x49, 0x45),
+            player_bar: Color::from_rgb8(0x1d, 0x20, 0x21),
+            album_cover: Color::from_rgb8(0x50, 0x49, 0x45),
+            input_background: Color::from_rgb8(0x3c, 0x38, 0x36),
+            input_border: Color::from_rgb8(0x50, 0x49, 0x45),
+        }
+    }
+
+    pub fn everblush() -> Self {
+        Self {
+            background: Color::from_rgb8(0x14, 0x1b, 0x1e),
+            panel: Color::from_rgb8(0x23, 0x2a, 0x2d),
+            elevated: Color::from_rgb8(0x2d, 0x34, 0x37),
+            hover: Color::from_rgb8(0x3a, 0x42, 0x45),
+            selected: Color::from_rgb8(0x67, 0xb0, 0xe8),
+            accent: Color::from_rgb8(0x8c, 0xcf, 0x7e),
+            text_primary: Color::from_rgb8(0xda, 0xda, 0xda),
+            text_muted: Color::from_rgb8(0xb3, 0xb9, 0xb8),
+            border: Color::from_rgb8(0x2d, 0x34, 0x37),
+            border_subtle: Color::from_rgb8(0x23, 0x2a, 0x2d),
+            avatar: Color::from_rgb8(0x2d, 0x34, 0x37),
+            player_bar: Color::from_rgb8(0x10, 0x16, 0x18),
+            album_cover: Color::from_rgb8(0x2d, 0x34, 0x37),
+            input_background: Color::from_rgb8(0x23, 0x2a, 0x2d),
+            input_border: Color::from_rgb8(0x3a, 0x42, 0x45),
+        }
+    }
+
+    pub fn kanagawa() -> Self {
+        Self {
+            background: Color::from_rgb8(0x1f, 0x1f, 0x28),
+            panel: Color::from_rgb8(0x18, 0x18, 0x20),
+            elevated: Color::from_rgb8(0x2a, 0x2a, 0x37),
+            hover: Color::from_rgb8(0x36, 0x36, 0x46),
+            selected: Color::from_rgb8(0x7e, 0x9c, 0xd8),
+            accent: Color::from_rgb8(0x95, 0x7f, 0xb8),
+            text_primary: Color::from_rgb8(0xdc, 0xd7, 0xba),
+            text_muted: Color::from_rgb8(0x72, 0x71, 0x69),
+            border: Color::from_rgb8(0x2a, 0x2a, 0x37),
+            border_subtle: Color::from_rgb8(0x1a, 0x1a, 0x22),
+            avatar: Color::from_rgb8(0x2a, 0x2a, 0x37),
+            player_bar: Color::from_rgb8(0x16, 0x16, 0x1d),
+            album_cover: Color::from_rgb8(0x2a, 0x2a, 0x37),
+            input_background: Color::from_rgb8(0x18, 0x18, 0x20),
+            input_border: Color::from_rgb8(0x36, 0x36, 0x46),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -136,6 +196,9 @@ impl ThemeTokens {
             ThemeMode::Latte => Palette::latte(),
             ThemeMode::Frappe => Palette::frappe(),
             ThemeMode::Macchiato => Palette::macchiato(),
+            ThemeMode::Gruvbox => Palette::gruvbox(),
+            ThemeMode::Everblush => Palette::everblush(),
+            ThemeMode::Kanagawa => Palette::kanagawa(),
             ThemeMode::Mocha => Palette::mocha(),
         };
         Self { palette, scale }
