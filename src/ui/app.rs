@@ -2920,7 +2920,7 @@ impl GrapeApp {
             }
         }
         self.sync_playback_state();
-        self.ui.playback.update_displayed_progress();
+        self.ui.playback.update_animated_progress();
         task
     }
 
@@ -3031,7 +3031,7 @@ impl GrapeApp {
         }
 
         let target_progress = progress_ratio(self.ui.playback.position, self.ui.playback.duration);
-        let needs_animation = (self.ui.playback.displayed_progress - target_progress).abs() > 0.001;
+        let needs_animation = (self.ui.playback.animated_progress - target_progress).abs() > 0.001;
         if self.ui.playback.is_playing || needs_animation {
             subscriptions.push(
                 time::every(Duration::from_millis(33)).map(|_| UiMessage::PlaybackTick),

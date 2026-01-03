@@ -230,14 +230,14 @@ impl Default for RepeatMode {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct PlaybackState {
     pub position: Duration,
     pub duration: Duration,
     pub is_playing: bool,
     pub shuffle: bool,
     pub repeat: RepeatMode,
-    pub displayed_progress: f32,
+    pub animated_progress: f32,
 }
 
 impl PlaybackState {
@@ -259,13 +259,23 @@ impl PlaybackState {
         }
     }
 
-    pub fn update_displayed_progress(&mut self) {
+    pub fn update_animated_progress(&mut self) {
+        let total = self.duration.as_secs_f32();
+        if total <= 0.0 {
+            self.animated_progress = 0.0;
+            return;
+        }
         let target = progress_ratio(self.position, self.duration);
-        let delta = target - self.displayed_progress;
-        if delta.abs() < 0.001 {
-            self.displayed_progress = target;
+        let displayed_position = (self.animated_progress * total).clamp(0.0, total);
+        let position_delta = (self.position.as_secs_f32() - displayed_position).abs();
+        let ratio_delta = (target - self.animated_progress).abs();
+        if position_delta > 2.5 || ratio_delta > 0.15 {
+            self.animated_progress = target;
+        } else if ratio_delta < 0.001 {
+            self.animated_progress = target;
         } else {
-            self.displayed_progress = (self.displayed_progress + delta * 0.2).clamp(0.0, 1.0);
+            self.animated_progress = (self.animated_progress + (target - self.animated_progress) * 0.2)
+                .clamp(0.0, 1.0);
         }
     }
 }
