@@ -27,7 +27,7 @@ use iced::{
     keyboard, mouse, window,
 };
 use std::time::Duration;
-use tracing::{error, info, warn};
+use tracing::{error, info};
 
 pub struct GrapeApp {
     catalog: Catalog,
@@ -609,7 +609,10 @@ impl GrapeApp {
 
     fn handle_track_selection(&mut self, track: &UiTrack) {
         let now_playing = Self::now_playing_from_ui_track(track);
-        self.playlist_add(now_playing.clone());
+        self.playlists.add(now_playing.clone());
+        let (queue_items, queue_index) = self.queue_from_track_selection(track);
+        self.playback_queue.set_queue(queue_items);
+        self.playback_queue.set_index(queue_index);
         let Some(player) = &mut self.player else {
             return;
         };
@@ -628,16 +631,6 @@ impl GrapeApp {
             duration_secs: u32::try_from(track.duration.as_secs()).unwrap_or(u32::MAX),
             path: track.path.clone(),
         }
-    }
-
-    fn playback_queue_from_playlist(playlists: &PlaylistManager) -> PlaybackQueue {
-        let mut queue = PlaybackQueue::default();
-        let items = playlists
-            .active()
-            .map(|playlist| playlist.items.clone())
-            .unwrap_or_default();
-        queue.set_queue(items);
-        queue
     }
 
     fn ui_track_from_now_playing(&self, now_playing: &NowPlaying) -> UiTrack {
@@ -671,71 +664,29 @@ impl GrapeApp {
         }
     }
 
-    fn playlist_add(&mut self, now_playing: NowPlaying) {
-        self.playlists.add(now_playing);
-        let preferred_index = self
-            .playlists
-            .active()
-            .map(|playlist| playlist.items.len().saturating_sub(1));
-        self.refresh_playback_queue(preferred_index);
-        self.persist_playlist();
-    }
-
-    #[allow(dead_code)]
-    fn playlist_remove(&mut self, index: usize) -> Option<NowPlaying> {
-        let removed = self.playlists.remove(index);
-        if removed.is_some() {
-            self.refresh_playback_queue(None);
-            self.persist_playlist();
-        }
-        removed
-    }
-
-    #[allow(dead_code)]
-    fn playlist_reorder(&mut self, from: usize, to: usize) -> bool {
-        let changed = self.playlists.reorder(from, to);
-        if changed {
-            self.refresh_playback_queue(None);
-            self.persist_playlist();
-        }
-        changed
-    }
-
-    #[allow(dead_code)]
-    fn playlist_clear(&mut self) {
-        self.playlists.clear();
-        self.refresh_playback_queue(None);
-        self.persist_playlist();
-    }
-
-    fn refresh_playback_queue(&mut self, preferred_index: Option<usize>) {
-        let items = self
-            .playlists
-            .active()
-            .map(|playlist| playlist.items.clone())
-            .unwrap_or_default();
-        let index = match preferred_index {
-            Some(index) => index.min(items.len().saturating_sub(1)),
-            None => {
-                let current = self.playback_queue.current();
-                current
-                    .as_ref()
-                    .and_then(|now_playing| {
-                        items
-                            .iter()
-                            .position(|item| item.path == now_playing.path)
-                    })
-                    .unwrap_or(0)
+    fn queue_from_track_selection(&self, track: &UiTrack) -> (Vec<NowPlaying>, usize) {
+        if let Some(selected_album) = self.ui.selection.selected_album.as_ref() {
+            if let Some((artist, album)) = self.album_entry_by_id(selected_album.id) {
+                let mut items = Vec::with_capacity(album.tracks.len());
+                let mut selected_index = 0;
+                for (index, album_track) in album.tracks.iter().enumerate() {
+                    if album_track.path == track.path {
+                        selected_index = index;
+                    }
+                    items.push(NowPlaying {
+                        artist: artist.name.clone(),
+                        album: album.title.clone(),
+                        title: album_track.title.clone(),
+                        duration_secs: album_track.duration_secs,
+                        path: album_track.path.clone(),
+                    });
+                }
+                if !items.is_empty() {
+                    return (items, selected_index);
+                }
             }
-        };
-        self.playback_queue.set_queue(items);
-        self.playback_queue.set_index(index);
-    }
-
-    fn persist_playlist(&self) {
-        if let Err(err) = self.playlists.save() {
-            warn!(error = %err, "Failed to persist playlist");
         }
+        (vec![Self::now_playing_from_ui_track(track)], 0)
     }
 
     fn load_from_queue(&mut self, now_playing: Option<NowPlaying>) {
@@ -797,7 +748,7 @@ impl GrapeApp {
 
     fn playlist_view(&self) -> Element<'_, UiMessage> {
         let theme = self.theme_tokens();
-        PlaylistView::view(theme, self.playlists.active())
+        PlaylistView::view(theme)
     }
 
     fn preferences_view(&self) -> Element<'_, UiMessage> {
@@ -2500,13 +2451,11 @@ impl GrapeApp {
             }
         };
         let settings = config::load_settings();
-        let playlists = PlaylistManager::load_or_default();
-        let playback_queue = Self::playback_queue_from_playlist(&playlists);
         Self {
             catalog,
             player,
-            playlists,
-            playback_queue,
+            playlists: PlaylistManager::new_default(),
+            playback_queue: PlaybackQueue::default(),
             ui: UiState::new(settings),
         }
     }
