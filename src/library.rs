@@ -190,7 +190,7 @@ fn scan_library_with_cache(root: impl AsRef<Path>, use_cache: bool) -> io::Resul
         root_artist_albums.push(album);
     }
 
-    for artist_entry in read_sorted_dirs(root)? {
+    for artist_entry in read_sorted_dirs(root, false)? {
         let artist_path = artist_entry.path();
         let artist_key = normalized_path_key(root, &artist_path);
         if !seen_artist_dirs.insert(artist_key) {
@@ -225,7 +225,7 @@ fn scan_library_with_cache(root: impl AsRef<Path>, use_cache: bool) -> io::Resul
         let mut albums = Vec::new();
         let mut seen_album_dirs = std::collections::HashSet::new();
 
-        for album_entry in read_sorted_dirs(&artist_path)? {
+        for album_entry in read_sorted_dirs(&artist_path, true)? {
             let (year, title) = parse_album_folder(&album_entry.file_name().to_string_lossy());
             let album_path = album_entry.path();
             let album_key = normalized_path_key(root, &album_path);
@@ -757,7 +757,7 @@ fn file_modified_secs(path: &Path) -> io::Result<u64> {
     Ok(duration.as_secs())
 }
 
-fn read_sorted_dirs(root: &Path) -> io::Result<Vec<fs::DirEntry>> {
+fn read_sorted_dirs(root: &Path, warn_on_files: bool) -> io::Result<Vec<fs::DirEntry>> {
     let read_dir = match fs::read_dir(root) {
         Ok(read_dir) => read_dir,
         Err(error) => {
@@ -784,9 +784,12 @@ fn read_sorted_dirs(root: &Path) -> io::Result<Vec<fs::DirEntry>> {
             }
         };
         let path = entry.path();
+        if entry.file_name() == ".grape_cache" {
+            continue;
+        }
         if path.is_dir() {
             entries.push(entry);
-        } else {
+        } else if warn_on_files {
             warn!(
                 path = %path.display(),
                 "Ignoring non-conforming entry; expected a directory"
