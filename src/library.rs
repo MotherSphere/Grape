@@ -53,9 +53,17 @@ pub struct Track {
     pub number: u8,
     pub title: String,
     pub duration_secs: u32,
+    #[serde(default)]
+    pub duration_millis: Option<u64>,
+    #[serde(default)]
+    pub bitrate_kbps: Option<u32>,
+    #[serde(default)]
+    pub codec: Option<String>,
     pub path: PathBuf,
     #[serde(default)]
     pub genre: Option<String>,
+    #[serde(default)]
+    pub embedded_cover: Option<EmbeddedCover>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -63,6 +71,14 @@ pub struct CoverArt {
     pub source_path: PathBuf,
     pub cached_path: PathBuf,
     pub modified_secs: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmbeddedCover {
+    #[serde(default)]
+    pub mime_type: Option<String>,
+    #[serde(default)]
+    pub data: Vec<u8>,
 }
 
 impl Catalog {
@@ -303,8 +319,12 @@ fn scan_tracks(dir: &Path) -> io::Result<Vec<Track>> {
             number: track_number,
             title,
             duration_secs,
+            duration_millis: metadata.duration_millis,
+            bitrate_kbps: metadata.bitrate_kbps,
+            codec: metadata.codec,
             path,
             genre: metadata.genre,
+            embedded_cover: metadata.embedded_cover,
         });
     }
 
@@ -353,14 +373,22 @@ fn scan_tracks_with_cache(
         let key = cache::track_key(root, &path);
         let cached_track = cached_by_path.get(&path);
         let mut duration_secs = 0;
+        let mut duration_millis = None;
+        let mut bitrate_kbps = None;
+        let mut codec = None;
         let mut genre = None;
+        let mut embedded_cover = None;
         let mut used_cache = false;
 
         if let (Some(entry), Some(cached_track)) = (track_entries.get(&key), cached_track) {
             if let Ok(signature) = cache::track_signature(&path) {
                 if signature == *entry {
                     duration_secs = cached_track.duration_secs;
+                    duration_millis = cached_track.duration_millis;
+                    bitrate_kbps = cached_track.bitrate_kbps;
+                    codec = cached_track.codec.clone();
                     genre = cached_track.genre.clone();
+                    embedded_cover = cached_track.embedded_cover.clone();
                     used_cache = true;
                 }
             }
@@ -369,15 +397,23 @@ fn scan_tracks_with_cache(
         if !used_cache {
             let metadata = metadata::track_metadata(&path);
             duration_secs = metadata.duration_secs.unwrap_or(0);
+            duration_millis = metadata.duration_millis;
+            bitrate_kbps = metadata.bitrate_kbps;
+            codec = metadata.codec;
             genre = metadata.genre;
+            embedded_cover = metadata.embedded_cover;
         }
 
         tracks.push(Track {
             number: track_number,
             title,
             duration_secs,
+            duration_millis,
+            bitrate_kbps,
+            codec,
             path,
             genre,
+            embedded_cover,
         });
     }
 
