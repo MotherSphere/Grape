@@ -168,6 +168,17 @@ impl GrapeApp {
                     || Self::year_matches(&query, album.year)
             });
         }
+        if self.ui.active_tab == ActiveTab::Genres {
+            if let Some(selected_genre) = self.ui.selection.selected_genre.as_ref() {
+                let normalized_genre = Self::normalize_text(selected_genre.name.trim());
+                albums.retain(|album| {
+                    self.album_entry_by_id(album.id)
+                        .and_then(|(_, entry)| entry.genre.as_deref())
+                        .map(|genre| Self::normalize_text(genre.trim()) == normalized_genre)
+                        .unwrap_or(false)
+                });
+            }
+        }
         match self.ui.search.sort {
             SortOption::Alphabetical => {
                 albums.sort_by(|a, b| {
@@ -2748,6 +2759,7 @@ impl GrapeApp {
     }
 
     fn update(&mut self, message: UiMessage) -> Task<UiMessage> {
+        let should_select_genre_album = matches!(message, UiMessage::SelectGenre(_));
         let should_persist = matches!(
             message,
             UiMessage::SetThemeMode(_)
@@ -2903,6 +2915,15 @@ impl GrapeApp {
             _ => {}
         }
         self.ui.update(message);
+        if should_select_genre_album && self.ui.active_tab == ActiveTab::Genres {
+            if let Some(album) = self.filtered_albums_from_catalog().into_iter().next() {
+                self.ui.selection.selected_album = Some(album);
+                self.ui.selection.selected_track = None;
+            } else {
+                self.ui.selection.selected_album = None;
+                self.ui.selection.selected_track = None;
+            }
+        }
         if should_persist {
             if let Err(err) = config::save_settings(&self.ui.settings) {
                 error!(error = %err, "Failed to save preferences");

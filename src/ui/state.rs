@@ -341,6 +341,7 @@ impl UiState {
             UiMessage::SelectGenre(genre) => {
                 self.selection.selected_genre = Some(genre);
                 self.selection.selected_folder = None;
+                self.selection.selected_track = None;
             }
             UiMessage::SelectFolder(folder) => {
                 self.selection.selected_folder = Some(folder);
