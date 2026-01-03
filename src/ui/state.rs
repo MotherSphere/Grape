@@ -178,6 +178,7 @@ pub struct Album {
     pub title: String,
     pub artist: String,
     pub year: Option<u32>,
+    pub total_duration: Duration,
     pub cover_path: Option<PathBuf>,
 }
 
@@ -262,6 +263,8 @@ impl PlaybackState {
 pub enum SortOption {
     Alphabetical,
     ByAlbum,
+    ByYear,
+    ByDuration,
 }
 
 impl Default for SortOption {

@@ -12,6 +12,7 @@ serde_json = "1.0.148"
 tracing = "0.1.44"
 tracing-subscriber = "0.3.22"
 rfd = "0.16"
+unicode-normalization = "0.1.24"
 
 [dev-dependencies]
 tempfile = "3.24.0"
