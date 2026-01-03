@@ -84,7 +84,7 @@ impl SongsPanel {
             .enumerate()
             .map(|(index, track)| {
                 let is_selected = Some(track.id) == selected_id;
-                let number = track.track_number.unwrap_or((index + 1) as u32).to_string();
+                let number = format!("{:02}", track.track_number.unwrap_or((index + 1) as u32));
                 let number_label = text(number)
                     .size(theme.size(12))
                     .font(style::font_mono(Weight::Medium))
