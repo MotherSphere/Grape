@@ -148,7 +148,7 @@ impl PlayerBar {
 
         let elapsed = format_duration(playback.position);
         let duration = format_duration(playback.duration);
-        let progress = container(progress_bar(0.0..=1.0, playback.displayed_progress))
+        let progress = container(progress_bar(0.0..=1.0, playback.animated_progress))
         .width(Length::Fill);
         let progress_row = row![
             text(elapsed)
