@@ -269,7 +269,7 @@ pub enum SortOption {
 
 impl Default for SortOption {
     fn default() -> Self {
-        Self::Alphabetical
+        Self::ByAlbum
     }
 }
 

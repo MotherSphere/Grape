@@ -976,7 +976,9 @@ fn parse_track_filename(name: &str) -> (Option<u8>, String) {
     if number_end > 0 {
         let number_part = &trimmed[..number_end];
         let title = trimmed[number_end..]
-            .trim_start_matches(|c: char| c == '-' || c == '_' || c.is_whitespace())
+            .trim_start_matches(|c: char| {
+                c == '-' || c == '_' || c == '.' || c.is_whitespace()
+            })
             .trim();
         let title = if title.is_empty() { trimmed } else { title };
         return (number_part.parse::<u8>().ok(), title.to_string());
