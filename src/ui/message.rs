@@ -6,8 +6,7 @@ use crate::config::{
     TextScale, ThemeMode, TimeFormat, UpdateChannel, VolumeLevel,
 };
 use crate::ui::state::{
-    ActiveTab, Album, Artist, Folder, Genre, PreferencesSection, PreferencesTab, SortOption,
-    ThemeCategory, Track,
+    ActiveTab, Album, Artist, Folder, Genre, PreferencesSection, PreferencesTab, SortOption, Track,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -89,7 +88,6 @@ pub enum UiMessage {
     ReindexLibrary,
     ResetPreferences,
     TogglePreferencesSection(PreferencesSection),
-    ToggleThemeCategory(ThemeCategory),
     CloseMenu,
     PlaybackTick,
 }
