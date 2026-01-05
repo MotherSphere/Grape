@@ -62,6 +62,44 @@ pub enum PreferencesSection {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ThemeCategory {
+    Catppuccin,
+    Gruvbox,
+    Everblush,
+    Kanagawa,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ThemeCategoriesState {
+    pub catppuccin: bool,
+    pub gruvbox: bool,
+    pub everblush: bool,
+    pub kanagawa: bool,
+}
+
+impl ThemeCategoriesState {
+    pub fn toggle(&mut self, category: ThemeCategory) {
+        match category {
+            ThemeCategory::Catppuccin => self.catppuccin = !self.catppuccin,
+            ThemeCategory::Gruvbox => self.gruvbox = !self.gruvbox,
+            ThemeCategory::Everblush => self.everblush = !self.everblush,
+            ThemeCategory::Kanagawa => self.kanagawa = !self.kanagawa,
+        }
+    }
+}
+
+impl Default for ThemeCategoriesState {
+    fn default() -> Self {
+        Self {
+            catppuccin: false,
+            gruvbox: false,
+            everblush: false,
+            kanagawa: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PreferencesSectionsState {
     pub startup: bool,
     pub language: bool,
@@ -333,6 +371,7 @@ pub struct UiState {
     pub preferences_open: bool,
     pub preferences_tab: PreferencesTab,
     pub preferences_sections: PreferencesSectionsState,
+    pub theme_categories: ThemeCategoriesState,
     pub settings: UserSettings,
 }
 
@@ -348,6 +387,7 @@ impl UiState {
             preferences_open: false,
             preferences_tab: PreferencesTab::default(),
             preferences_sections: PreferencesSectionsState::default(),
+            theme_categories: ThemeCategoriesState::default(),
             settings,
         }
     }
@@ -415,6 +455,9 @@ impl UiState {
             }
             UiMessage::PreferencesTabSelected(tab) => {
                 self.preferences_tab = tab;
+            }
+            UiMessage::ToggleThemeCategory(category) => {
+                self.theme_categories.toggle(category);
             }
             UiMessage::SetThemeMode(theme_mode) => {
                 self.settings.theme_mode = theme_mode;

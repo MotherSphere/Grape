@@ -15,6 +15,13 @@ pub enum ThemeMode {
     Macchiato,
     #[serde(alias = "Dark", alias = "System")]
     Mocha,
+    GruvboxLight,
+    GruvboxDark,
+    EverblushLight,
+    EverblushDark,
+    KanagawaLight,
+    KanagawaDark,
+    KanagawaJournal,
 }
 
 impl Default for ThemeMode {
@@ -30,6 +37,13 @@ impl ThemeMode {
             Self::Frappe => "Frappé",
             Self::Macchiato => "Macchiato",
             Self::Mocha => "Mocha",
+            Self::GruvboxLight => "Gruvbox Light",
+            Self::GruvboxDark => "Gruvbox Dark",
+            Self::EverblushLight => "Everblush Light",
+            Self::EverblushDark => "Everblush Dark",
+            Self::KanagawaLight => "Kanagawa Light",
+            Self::KanagawaDark => "Kanagawa Dark",
+            Self::KanagawaJournal => "Kanagawa Journal",
         }
     }
 }
