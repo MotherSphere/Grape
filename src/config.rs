@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::env;
 use std::fs;
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing::warn;
 
 use crate::eq::EqModel;
@@ -203,6 +203,47 @@ pub enum InterfaceDensity {
     Compact,
     Comfort,
     Large,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DeclarativeAction {
+    ReindexLibrary,
+    ClearCache,
+    ResetAudioEngine,
+}
+
+impl DeclarativeAction {
+    pub fn title(self) -> &'static str {
+        match self {
+            Self::ReindexLibrary => "Réindexer la bibliothèque",
+            Self::ClearCache => "Vider le cache",
+            Self::ResetAudioEngine => "Réinitialiser l'audio",
+        }
+    }
+
+    pub fn description(self) -> &'static str {
+        match self {
+            Self::ReindexLibrary => "Reconstruit l'index local.",
+            Self::ClearCache => "Supprime les fichiers temporaires.",
+            Self::ResetAudioEngine => "Redémarre le moteur audio rodio.",
+        }
+    }
+
+    pub fn button_label(self) -> &'static str {
+        match self {
+            Self::ReindexLibrary => "Réindexer",
+            Self::ClearCache => "Vider le cache",
+            Self::ResetAudioEngine => "Réinitialiser",
+        }
+    }
+
+    pub fn confirm_label(self) -> &'static str {
+        match self {
+            Self::ReindexLibrary => "Confirmer",
+            Self::ClearCache => "Confirmer",
+            Self::ResetAudioEngine => "Confirmer",
+        }
+    }
 }
 
 impl Default for InterfaceDensity {
@@ -633,6 +674,15 @@ pub fn cache_dir(settings: &UserSettings) -> PathBuf {
     }
 }
 
+pub fn library_cache_dir(settings: &UserSettings, root: &Path) -> PathBuf {
+    let path = PathBuf::from(&settings.cache_path);
+    if path.is_absolute() {
+        path
+    } else {
+        root.join(path)
+    }
+}
+
 pub fn logs_path() -> PathBuf {
     logs_dir()
 }
@@ -647,6 +697,14 @@ pub fn clear_history() -> io::Result<()> {
 
 pub fn clear_cache(settings: &UserSettings) -> io::Result<()> {
     let path = cache_dir(settings);
+    if path.exists() {
+        fs::remove_dir_all(path)?;
+    }
+    Ok(())
+}
+
+pub fn clear_library_cache(settings: &UserSettings, root: &Path) -> io::Result<()> {
+    let path = library_cache_dir(settings, root);
     if path.exists() {
         fs::remove_dir_all(path)?;
     }

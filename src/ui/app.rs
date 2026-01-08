@@ -1,7 +1,7 @@
 use crate::config::{
     self, AccentColor, AccessibleTextSize, AudioOutputDevice, AudioStabilityMode, CloseBehavior,
-    EqPreset, InterfaceDensity, InterfaceLanguage, MissingDeviceBehavior, StartupScreen,
-    SubtitleSize, TextScale, ThemeMode, TimeFormat, UpdateChannel, VolumeLevel,
+    DeclarativeAction, EqPreset, InterfaceDensity, InterfaceLanguage, MissingDeviceBehavior,
+    StartupScreen, SubtitleSize, TextScale, ThemeMode, TimeFormat, UpdateChannel, VolumeLevel,
 };
 use crate::library::{self, Catalog};
 use crate::player::{AudioOptions, NowPlaying, PlaybackState as PlayerPlaybackState, Player};
@@ -17,7 +17,7 @@ use crate::ui::components::songs_panel::SongsPanel;
 use crate::ui::message::{PlaybackMessage, SearchMessage, UiMessage};
 use crate::ui::state::{
     ActiveTab, Album as UiAlbum, Artist as UiArtist, Folder as UiFolder, Genre as UiGenre,
-    PreferencesSection, PreferencesTab, SelectionState, SortOption, ThemeCategory,
+    PreferencesSection, PreferencesTab, SearchState, SelectionState, SortOption, ThemeCategory,
     Track as UiTrack, UiState, progress_ratio,
 };
 use crate::ui::style;
@@ -27,7 +27,6 @@ use iced::{
     Alignment, Color, Element, Length, Padding, Settings, Subscription, Task, Theme, event,
     keyboard, mouse, time, window,
 };
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tracing::{error, info, warn};
@@ -975,14 +974,6 @@ impl GrapeApp {
         Some(PathBuf::from(root))
     }
 
-    fn clear_library_cache(&self, root: &PathBuf) -> std::io::Result<()> {
-        let cache_dir = root.join(".grape_cache");
-        if cache_dir.exists() {
-            fs::remove_dir_all(&cache_dir)?;
-        }
-        Ok(())
-    }
-
     fn scan_library_at_root(&mut self, root: &Path, use_cache: bool) {
         let scan_result = if use_cache {
             library::scan_library(root)
@@ -1003,6 +994,7 @@ impl GrapeApp {
                 );
                 self.catalog = catalog;
                 self.ui.selection = SelectionState::default();
+                self.ui.search = SearchState::default();
             }
             Err(err) => {
                 error!(error = %err, path = %root.display(), "Failed to scan library");
@@ -1020,16 +1012,54 @@ impl GrapeApp {
     fn reset_audio_engine(&mut self) {
         info!("Resetting audio engine");
         let options = AudioOptions::from_settings(&self.ui.settings);
-        self.player = match Player::new_with_options(options) {
-            Ok(player) => Some(player),
-            Err(err) => {
-                error!(error = %err, "Failed to reinitialize audio player");
-                None
+        match self.player.as_mut() {
+            Some(player) => {
+                if let Err(err) = player.reset(options) {
+                    error!(error = %err, "Failed to reset audio player");
+                    self.player = Player::new_with_options(AudioOptions::default()).ok();
+                }
             }
-        };
+            None => {
+                self.player = match Player::new_with_options(options) {
+                    Ok(player) => Some(player),
+                    Err(err) => {
+                        error!(error = %err, "Failed to reinitialize audio player");
+                        None
+                    }
+                };
+            }
+        }
         self.ui.playback = crate::ui::state::PlaybackState::default();
         self.ui.selection = SelectionState::default();
         self.playback_queue = Self::playback_queue_from_playlist(&self.playlists);
+    }
+
+    fn handle_declarative_action(&mut self, action: DeclarativeAction) {
+        match action {
+            DeclarativeAction::ReindexLibrary => {
+                info!("Library reindex requested");
+                self.rescan_library(true);
+            }
+            DeclarativeAction::ClearCache => {
+                info!("Cache clear requested");
+                if let Some(root) = self.library_root() {
+                    let cache_path = config::library_cache_dir(&self.ui.settings, &root);
+                    match config::clear_library_cache(&self.ui.settings, &root) {
+                        Ok(()) => {
+                            info!(path = %cache_path.display(), "Library cache cleared");
+                            self.scan_library_at_root(&root, true);
+                        }
+                        Err(err) => {
+                            error!(error = %err, path = %cache_path.display(), "Failed to clear cache");
+                        }
+                    }
+                }
+            }
+            DeclarativeAction::ResetAudioEngine => {
+                info!("Audio engine reset requested");
+                self.reset_audio_engine();
+            }
+        }
     }
 
     fn playlist_view(&self) -> Element<'_, UiMessage> {
@@ -1188,6 +1218,29 @@ impl GrapeApp {
             .padding([6, 10])
             .on_press(message)
         };
+        let action_controls = |action: DeclarativeAction| -> Element<'_, UiMessage> {
+            if self.ui.pending_action == Some(action) {
+                row![
+                    action_button(
+                        action.confirm_label(),
+                        UiMessage::ConfirmDeclarativeAction(action),
+                    ),
+                    action_button("Annuler", UiMessage::CancelDeclarativeAction),
+                ]
+                .spacing(8)
+                .into()
+            } else {
+                action_button(
+                    action.button_label(),
+                    UiMessage::RequestDeclarativeAction(action),
+                )
+                .into()
+            }
+        };
+
+        let reindex_action = DeclarativeAction::ReindexLibrary;
+        let clear_cache_action = DeclarativeAction::ClearCache;
+        let reset_audio_action = DeclarativeAction::ResetAudioEngine;
 
         let library_input = text_input("Dossier de bibliothèque", &self.ui.settings.library_folder)
             .style(move |_, status| style::text_input_style(theme, status))
@@ -1495,14 +1548,11 @@ impl GrapeApp {
                 .align_y(Alignment::Center)
                 .spacing(12),
                 row![
-                    setting_label(
-                        "Emplacement du cache",
-                        "Chemin modifiable pour les fichiers temporaires."
-                    ),
+                    setting_label(clear_cache_action.title(), clear_cache_action.description()),
                     controls(
                         row![
                             cache_input.width(Length::Fill),
-                            action_button("Vider le cache", UiMessage::ClearCache),
+                            action_controls(clear_cache_action),
                         ]
                         .spacing(8)
                         .into(),
@@ -1605,8 +1655,8 @@ impl GrapeApp {
                 .align_y(Alignment::Center)
                 .spacing(12),
                 row![
-                    setting_label("Réindexer la bibliothèque", "Reconstruit l'index local."),
-                    controls(action_button("Réindexer", UiMessage::ReindexLibrary).into()),
+                    setting_label(reindex_action.title(), reindex_action.description()),
+                    controls(action_controls(reindex_action)),
                 ]
                 .align_y(Alignment::Center)
                 .spacing(12),
@@ -2731,8 +2781,8 @@ impl GrapeApp {
                 .align_y(Alignment::Center)
                 .spacing(12),
                 row![
-                    setting_label("Réinitialiser le moteur audio", "Recharge la sortie audio."),
-                    controls(action_button("Réinitialiser", UiMessage::ResetAudioEngine).into()),
+                    setting_label(reset_audio_action.title(), reset_audio_action.description()),
+                    controls(action_controls(reset_audio_action)),
                 ]
                 .align_y(Alignment::Center)
                 .spacing(12),
@@ -3046,18 +3096,7 @@ impl GrapeApp {
                 );
             }
             UiMessage::ClearCache => {
-                info!("Cache clear requested");
-                if let Some(root) = self.library_root() {
-                    match self.clear_library_cache(&root) {
-                        Ok(()) => {
-                            info!(path = %root.display(), "Library cache cleared");
-                            self.rescan_library(true);
-                        }
-                        Err(err) => {
-                            error!(error = %err, path = %root.display(), "Failed to clear cache");
-                        }
-                    }
-                }
+                self.handle_declarative_action(DeclarativeAction::ClearCache);
             }
             UiMessage::ClearHistory => {
                 if let Err(err) = config::clear_history() {
@@ -3071,12 +3110,15 @@ impl GrapeApp {
                 info!(path = %path.display(), "Open logs folder requested");
             }
             UiMessage::ReindexLibrary => {
-                info!("Library reindex requested");
-                self.rescan_library(false);
+                self.handle_declarative_action(DeclarativeAction::ReindexLibrary);
             }
             UiMessage::ResetAudioEngine => {
-                info!("Audio engine reset requested");
-                self.reset_audio_engine();
+                self.handle_declarative_action(DeclarativeAction::ResetAudioEngine);
+            }
+            UiMessage::ConfirmDeclarativeAction(action) => {
+                if self.ui.pending_action == Some(*action) {
+                    self.handle_declarative_action(*action);
+                }
             }
             _ => {}
         }
