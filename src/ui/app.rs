@@ -4,14 +4,11 @@ use crate::config::{
     StartupScreen, SubtitleSize, TextScale, ThemeMode, TimeFormat, UpdateChannel, VolumeLevel,
 };
 use crate::library::{self, Catalog};
-use crate::player::{
-    AudioFallback, AudioOptions, NowPlaying, PlaybackState as PlayerPlaybackState, Player,
-};
+use crate::player::{AudioOptions, NowPlaying, PlaybackState as PlayerPlaybackState, Player};
 use crate::playlist::{PlaybackQueue, PlaylistManager};
 use crate::ui::components::albums_grid::AlbumsGrid;
 use crate::ui::components::anchored_overlay::AnchoredOverlay;
 use crate::ui::components::artists_panel::ArtistsPanel;
-use crate::ui::components::audio_settings::eq_band_controls;
 use crate::ui::components::folders_panel::FoldersPanel;
 use crate::ui::components::genres_panel::GenresPanel;
 use crate::ui::components::player_bar::PlayerBar;
@@ -1126,11 +1123,11 @@ impl GrapeApp {
             Some(player) => {
                 if let Err(err) = player.reset(options) {
                     error!(error = %err, "Failed to reset audio player");
-                    self.player = Player::new_with_settings(&config::UserSettings::default()).ok();
+                    self.player = Player::new_with_options(AudioOptions::default()).ok();
                 }
             }
             None => {
-                self.player = match Player::new_with_settings(&self.ui.settings) {
+                self.player = match Player::new_with_options(options) {
                     Ok(player) => Some(player),
                     Err(err) => {
                         error!(error = %err, "Failed to reinitialize audio player");
@@ -1142,41 +1139,6 @@ impl GrapeApp {
         self.ui.playback = crate::ui::state::PlaybackState::default();
         self.ui.selection = SelectionState::default();
         self.playback_queue = Self::playback_queue_from_playlist(&self.playlists);
-    }
-
-    fn apply_audio_settings(&mut self) {
-        let Some(player) = &mut self.player else {
-            return;
-        };
-        if let Err(err) = player.apply_settings(&self.ui.settings) {
-            error!(error = %err, "Failed to apply audio settings");
-            return;
-        }
-        if let Some(fallback) = player.take_last_fallback_notice() {
-            self.handle_audio_fallback(fallback);
-        }
-    }
-
-    fn handle_audio_fallback(&mut self, fallback: AudioFallback) {
-        self.ui.audio_notice = Some(fallback.notice());
-        Self::apply_audio_fallback_to_settings(&mut self.ui.settings, &fallback);
-        if matches!(fallback.behavior, MissingDeviceBehavior::PausePlayback) {
-            if let Some(player) = &mut self.player {
-                player.pause();
-            }
-        }
-        if let Err(err) = config::save_settings(&self.ui.settings) {
-            error!(error = %err, "Failed to persist audio fallback settings");
-        }
-    }
-
-    fn apply_audio_fallback_to_settings(
-        settings: &mut config::UserSettings,
-        fallback: &AudioFallback,
-    ) {
-        let _ = fallback;
-        settings.output_device = AudioOutputDevice::System;
-        settings.output_sample_rate_hz = None;
     }
 
     fn handle_declarative_action(&mut self, action: DeclarativeAction) {
@@ -2649,39 +2611,8 @@ impl GrapeApp {
         let volume_value = self.ui.settings.default_volume as f32;
         let crossfade_value = self.ui.settings.crossfade_seconds as f32;
         let audio_output_content = || {
-            let notice = self.ui.audio_notice.as_deref().map(|label| {
-                row![
-                    text(label)
-                        .size(theme.size(12))
-                        .font(style::font_propo(Weight::Light))
-                        .style(move |_| style::text_style_muted(theme))
-                        .width(Length::Fill),
-                    button(
-                        text("OK")
-                            .size(theme.size(12))
-                            .font(style::font_propo(Weight::Medium))
-                            .style(move |_| style::text_style_primary(theme)),
-                    )
-                    .style(move |_, status| {
-                        style::button_style(
-                            theme,
-                            style::ButtonKind::Tab { selected: false },
-                            status,
-                        )
-                    })
-                    .padding([6, 10])
-                    .on_press(UiMessage::DismissAudioNotice)
-                ]
-                .align_y(Alignment::Center)
-                .spacing(12)
-            });
             column![
                 section_hint("Choisissez la sortie audio principale."),
-                if let Some(notice) = notice {
-                    notice
-                } else {
-                    row![]
-                },
                 row![
                     setting_label("Périphérique de sortie", "Sélectionnez la sortie active."),
                     controls(
@@ -2859,11 +2790,6 @@ impl GrapeApp {
             .padding(section_padding)
         };
         let audio_equalizer_content = || {
-            let band_controls = if self.ui.settings.eq_enabled {
-                eq_band_controls(theme, &self.ui.settings)
-            } else {
-                column![].into()
-            };
             column![
                 section_hint("Sculptez le rendu audio avec un preset."),
                 row![
@@ -2927,11 +2853,6 @@ impl GrapeApp {
                 ]
                 .align_y(Alignment::Center)
                 .spacing(12),
-                if self.ui.settings.eq_enabled {
-                    band_controls
-                } else {
-                    column![].into()
-                },
             ]
             .spacing(12)
             .padding(section_padding)
@@ -3086,28 +3007,18 @@ impl GrapeApp {
 
 impl GrapeApp {
     fn new(catalog: Catalog) -> Self {
-        let mut settings = config::load_settings();
-        let mut player = match Player::new_with_settings(&settings) {
+        let settings = config::load_settings();
+        let options = AudioOptions::from_settings(&settings);
+        let player = match Player::new_with_options(options) {
             Ok(player) => Some(player),
             Err(err) => {
                 error!(error = %err, "Failed to initialize audio player");
                 None
             }
         };
-        let mut audio_notice = None;
-        if let Some(player) = player.as_mut() {
-            if let Some(fallback) = player.take_last_fallback_notice() {
-                audio_notice = Some(fallback.notice());
-                Self::apply_audio_fallback_to_settings(&mut settings, &fallback);
-                if let Err(err) = config::save_settings(&settings) {
-                    error!(error = %err, "Failed to persist audio fallback settings");
-                }
-            }
-        }
         let playlists = PlaylistManager::load_or_default();
         let playback_queue = Self::playback_queue_from_playlist(&playlists);
         let mut ui = UiState::new(settings);
-        ui.audio_notice = audio_notice;
         if let Some(active) = playlists.active() {
             ui.selection.selected_playlist = Some(playlists.active_index);
             ui.selection.playlist_name_draft = active.name.clone();
@@ -3158,7 +3069,6 @@ impl GrapeApp {
                 | UiMessage::SetVolumeLevel(_)
                 | UiMessage::SetEqEnabled(_)
                 | UiMessage::SetEqPreset(_)
-                | UiMessage::SetEqBandGain(_, _)
                 | UiMessage::ResetEq
                 | UiMessage::SetAudioStabilityMode(_)
                 | UiMessage::SetAudioDebugLogs(_)
@@ -3182,18 +3092,6 @@ impl GrapeApp {
                 | UiMessage::SetHardwareAcceleration(_)
                 | UiMessage::SetLimitCpuDuringPlayback(_)
                 | UiMessage::ResetPreferences
-        );
-        let should_refresh_audio = matches!(
-            message,
-            UiMessage::SetAudioOutputDevice(_)
-                | UiMessage::SetMissingDeviceBehavior(_)
-                | UiMessage::SetNormalizeVolume(_)
-                | UiMessage::SetVolumeLevel(_)
-                | UiMessage::SetEqEnabled(_)
-                | UiMessage::SetEqPreset(_)
-                | UiMessage::SetEqBandGain(_, _)
-                | UiMessage::ResetEq
-                | UiMessage::SetAudioStabilityMode(_)
         );
         let mut task = Task::none();
         match &message {
@@ -3345,9 +3243,6 @@ impl GrapeApp {
             if let Err(err) = config::save_settings(&self.ui.settings) {
                 error!(error = %err, "Failed to save preferences");
             }
-        }
-        if should_refresh_audio {
-            self.apply_audio_settings();
         }
         self.sync_playback_state();
         self.ui.playback.update_animated_progress();

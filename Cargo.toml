@@ -7,7 +7,6 @@ edition = "2024"
 iced = { version = "0.14", features = ["advanced", "image", "tokio"] }
 lofty = "0.22"
 rodio = "0.21"
-biquad = "0.4"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.148"
 tracing = "0.1.44"
