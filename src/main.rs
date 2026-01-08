@@ -17,7 +17,8 @@ fn main() {
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("library"));
 
-    let catalog = match library::scan_library(&library_root) {
+    let settings = config::load_settings();
+    let catalog = match library::scan_library(&library_root, &settings) {
         Ok(catalog) => catalog,
         Err(err) => {
             eprintln!(
