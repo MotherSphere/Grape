@@ -715,7 +715,11 @@ impl GrapeApp {
                 id,
                 title: track.title.clone(),
                 album: album.title.clone(),
-                artist: artist.name.clone(),
+                artist: track
+                    .artist
+                    .as_deref()
+                    .unwrap_or(&artist.name)
+                    .to_string(),
                 track_number: Some(track.number as u32),
                 duration: std::time::Duration::from_secs(track.duration_secs as u64),
                 path: track.path.clone(),
@@ -1348,7 +1352,11 @@ impl GrapeApp {
                             id,
                             title: track.title.clone(),
                             album: album.title.clone(),
-                            artist: artist.name.clone(),
+                            artist: track
+                                .artist
+                                .as_deref()
+                                .unwrap_or(&artist.name)
+                                .to_string(),
                             track_number: Some(track.number as u32),
                             duration: Duration::from_secs(track.duration_secs as u64),
                             path: track.path.clone(),
@@ -1380,7 +1388,11 @@ impl GrapeApp {
                                 id,
                                 title: track.title.clone(),
                                 album: album.title.clone(),
-                                artist: artist.name.clone(),
+                                artist: track
+                                    .artist
+                                    .as_deref()
+                                    .unwrap_or(&artist.name)
+                                    .to_string(),
                                 track_number: Some(track.number as u32),
                                 duration: Duration::from_secs(track.duration_secs as u64),
                                 path: track.path.clone(),

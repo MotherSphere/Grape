@@ -63,6 +63,8 @@ pub struct Track {
     pub codec: Option<String>,
     pub path: PathBuf,
     #[serde(default)]
+    pub artist: Option<String>,
+    #[serde(default)]
     pub year: Option<u16>,
     #[serde(default)]
     pub genre: Option<String>,
@@ -693,6 +695,7 @@ fn scan_tracks_in_dir(dir: &Path, warn_on_dirs: bool) -> io::Result<Vec<Track>> 
             bitrate_kbps: metadata.bitrate_kbps,
             codec: metadata.codec,
             path,
+            artist: metadata.artist,
             year: metadata.year,
             genre: metadata.genre,
             embedded_cover: metadata.embedded_cover,
@@ -774,6 +777,7 @@ fn scan_tracks_with_cache_in_dir(
         let mut duration_millis = None;
         let mut bitrate_kbps = None;
         let mut codec = None;
+        let mut artist = None;
         let mut year = None;
         let mut genre = None;
         let mut embedded_cover = None;
@@ -791,6 +795,7 @@ fn scan_tracks_with_cache_in_dir(
                 duration_millis = cached_track.duration_millis;
                 bitrate_kbps = cached_track.bitrate_kbps;
                 codec = cached_track.codec.clone();
+                artist = cached_track.artist.clone();
                 year = cached_track.year;
                 genre = cached_track.genre.clone();
                 embedded_cover = cached_track.embedded_cover.clone();
@@ -804,6 +809,7 @@ fn scan_tracks_with_cache_in_dir(
             duration_millis = metadata.duration_millis;
             bitrate_kbps = metadata.bitrate_kbps;
             codec = metadata.codec;
+            artist = metadata.artist;
             year = metadata.year;
             genre = metadata.genre;
             embedded_cover = metadata.embedded_cover;
@@ -823,6 +829,7 @@ fn scan_tracks_with_cache_in_dir(
             bitrate_kbps,
             codec,
             path,
+            artist,
             year,
             genre,
             embedded_cover,
