@@ -39,27 +39,47 @@ impl GenresPanel {
         self
     }
 
-    pub fn view(&self, theme: style::ThemeTokens) -> Element<'static, UiMessage> {
+    pub fn view(&self, focused: bool, theme: style::ThemeTokens) -> Element<'static, UiMessage> {
         let header = row![
             text(format!("{} Genres", self.total_count))
                 .size(theme.size(16))
                 .font(style::font_propo(Weight::Semibold))
                 .style(move |_| style::text_style_primary(theme)),
             text("A–Z")
-                .size(theme.size(12))
+                .size(theme.size_accessible(12))
                 .font(style::font_propo(Weight::Light))
                 .style(move |_| style::text_style_muted(theme))
         ]
         .spacing(8)
         .align_y(Alignment::Center);
-        let list_items =
-            self.genres
+        let list_content: Element<'static, UiMessage> = if self.genres.is_empty() {
+            let empty = column![
+                text("Aucun genre trouvé")
+                    .size(theme.size(14))
+                    .font(style::font_propo(Weight::Medium))
+                    .style(move |_| style::text_style_primary(theme)),
+                text("Affinez la recherche pour réafficher les genres.")
+                    .size(theme.size_accessible(12))
+                    .font(style::font_propo(Weight::Light))
+                    .style(move |_| style::text_style_muted(theme)),
+            ]
+            .spacing(6)
+            .align_x(Alignment::Center);
+            container(empty)
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .center_x(Length::Fill)
+                .center_y(Length::Fill)
+                .into()
+        } else {
+            let list_items = self
+                .genres
                 .iter()
                 .map(|genre| {
                     let is_selected = Some(genre.id) == self.selected_genre_id;
                     let badge = container(
                         text(genre.name.chars().next().unwrap_or('?').to_string())
-                            .size(theme.size(12))
+                            .size(theme.size_accessible(12))
                             .font(style::font_propo(Weight::Medium))
                             .style(move |_| style::text_style_primary(theme)),
                     )
@@ -75,7 +95,7 @@ impl GenresPanel {
                     let count = text(format!("{} tracks", genre.track_count))
                         .font(style::font_propo(Weight::Light))
                         .style(move |_| style::text_style_muted(theme))
-                        .size(theme.size(12));
+                        .size(theme.size_accessible(12));
                     let details = column![name, count]
                         .spacing(2)
                         .align_x(Alignment::Start)
@@ -90,6 +110,7 @@ impl GenresPanel {
                                 theme,
                                 style::ButtonKind::ListItem {
                                     selected: is_selected,
+                                    focused: focused && is_selected,
                                 },
                                 status,
                             )
@@ -99,12 +120,13 @@ impl GenresPanel {
                         .into()
                 })
                 .collect::<Vec<Element<UiMessage>>>();
-        let list = column(list_items)
-            .spacing(6)
-            .width(Length::Fill)
-            .align_x(Alignment::Start);
-        let scrollable_list = scrollable(list).height(Length::Fill);
-        let content = column![header, scrollable_list]
+            let list = column(list_items)
+                .spacing(6)
+                .width(Length::Fill)
+                .align_x(Alignment::Start);
+            scrollable(list).height(Length::Fill).into()
+        };
+        let content = column![header, list_content]
             .spacing(12)
             .height(Length::Fill);
 

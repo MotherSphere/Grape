@@ -21,11 +21,11 @@ pub fn eq_band_controls<'a>(
             row![
                 column![
                     text(format!("{} Hz", band.frequency_hz))
-                        .size(theme.size(12))
+                        .size(theme.size_accessible(12))
                         .font(style::font_propo(Weight::Medium))
                         .style(move |_| style::text_style_primary(theme)),
                     text(format!("{:.1} dB", gain))
-                        .size(theme.size(11))
+                        .size(theme.size_accessible(11))
                         .font(style::font_propo(Weight::Light))
                         .style(move |_| style::text_style_muted(theme))
                 ]

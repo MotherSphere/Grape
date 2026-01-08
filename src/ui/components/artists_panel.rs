@@ -50,6 +50,7 @@ impl ArtistsPanel {
     pub fn view(
         &self,
         selection: &SelectionState,
+        focused: bool,
         theme: style::ThemeTokens,
     ) -> Element<'static, UiMessage> {
         let selected_id = selection.selected_artist.as_ref().map(|artist| artist.id);
@@ -59,20 +60,40 @@ impl ArtistsPanel {
                 .font(style::font_propo(Weight::Semibold))
                 .style(move |_| style::text_style_primary(theme)),
             text("A–Z")
-                .size(theme.size(12))
+                .size(theme.size_accessible(12))
                 .font(style::font_propo(Weight::Light))
                 .style(move |_| style::text_style_muted(theme))
         ]
         .spacing(8)
         .align_y(Alignment::Center);
-        let list_items =
-            self.artists
+        let list_content: Element<'static, UiMessage> = if self.artists.is_empty() {
+            let empty = column![
+                text("Aucun artiste disponible")
+                    .size(theme.size(14))
+                    .font(style::font_propo(Weight::Medium))
+                    .style(move |_| style::text_style_primary(theme)),
+                text("Modifiez les filtres pour afficher plus de résultats.")
+                    .size(theme.size_accessible(12))
+                    .font(style::font_propo(Weight::Light))
+                    .style(move |_| style::text_style_muted(theme)),
+            ]
+            .spacing(6)
+            .align_x(Alignment::Center);
+            container(empty)
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .center_x(Length::Fill)
+                .center_y(Length::Fill)
+                .into()
+        } else {
+            let list_items = self
+                .artists
                 .iter()
                 .map(|artist| {
                     let is_selected = Some(artist.id) == selected_id;
                     let avatar = container(
                         text(artist.name.chars().next().unwrap_or('?').to_string())
-                            .size(theme.size(12))
+                            .size(theme.size_accessible(12))
                             .font(style::font_propo(Weight::Medium))
                             .style(move |_| style::text_style_primary(theme)),
                     )
@@ -95,6 +116,7 @@ impl ArtistsPanel {
                                 theme,
                                 style::ButtonKind::ListItem {
                                     selected: is_selected,
+                                    focused: focused && is_selected,
                                 },
                                 status,
                             )
@@ -104,26 +126,23 @@ impl ArtistsPanel {
                         .into()
                 })
                 .collect::<Vec<Element<UiMessage>>>();
-        let list = column(list_items)
-            .spacing(6)
-            .width(Length::Fill)
-            .align_x(Alignment::Start);
-        let scrollable_list = scrollable(list).height(Length::Fill);
+            let list = column(list_items)
+                .spacing(6)
+                .width(Length::Fill)
+                .align_x(Alignment::Start);
+            scrollable(list).height(Length::Fill).into()
+        };
         let index_items = ('A'..='Z')
             .map(|letter| {
                 text(letter.to_string())
-                    .size(theme.size(12))
+                    .size(theme.size_accessible(12))
                     .font(style::font_propo(Weight::Light))
                     .style(move |_| style::text_style_muted(theme))
                     .into()
             })
             .collect::<Vec<Element<UiMessage>>>();
-        let index = column(index_items)
-            .spacing(4)
-            .align_x(Alignment::Center);
-        let body = row![scrollable_list, index]
-            .spacing(12)
-            .height(Length::Fill);
+        let index = column(index_items).spacing(4).align_x(Alignment::Center);
+        let body = row![list_content, index].spacing(12).height(Length::Fill);
         let content = column![header, body].spacing(12).height(Length::Fill);
 
         container(content)

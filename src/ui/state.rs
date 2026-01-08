@@ -21,6 +21,21 @@ impl Default for ActiveTab {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LibraryFocus {
+    Artists,
+    Genres,
+    Albums,
+    Folders,
+    Songs,
+}
+
+impl Default for LibraryFocus {
+    fn default() -> Self {
+        Self::Artists
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PreferencesTab {
     General,
     Appearance,
@@ -412,6 +427,7 @@ pub struct UiState {
     pub selection: SelectionState,
     pub playback: PlaybackState,
     pub search: SearchState,
+    pub library_focus: LibraryFocus,
     pub menu_open: bool,
     pub playlist_open: bool,
     pub preferences_open: bool,
@@ -430,6 +446,7 @@ impl UiState {
             selection: SelectionState::default(),
             playback: PlaybackState::default(),
             search: SearchState::default(),
+            library_focus: LibraryFocus::default(),
             menu_open: false,
             playlist_open: false,
             preferences_open: false,
@@ -448,27 +465,38 @@ impl UiState {
                 self.active_tab = tab;
                 self.playlist_open = false;
                 self.preferences_open = false;
+                self.library_focus = match tab {
+                    ActiveTab::Artists => LibraryFocus::Artists,
+                    ActiveTab::Genres => LibraryFocus::Genres,
+                    ActiveTab::Albums => LibraryFocus::Albums,
+                    ActiveTab::Folders => LibraryFocus::Folders,
+                };
             }
             UiMessage::SelectArtist(artist) => {
                 self.selection.selected_artist = Some(artist);
                 self.selection.selected_album = None;
                 self.selection.selected_track = None;
+                self.library_focus = LibraryFocus::Artists;
             }
             UiMessage::SelectAlbum(album) => {
                 self.selection.selected_album = Some(album);
                 self.selection.selected_track = None;
+                self.library_focus = LibraryFocus::Albums;
             }
             UiMessage::SelectGenre(genre) => {
                 self.selection.selected_genre = Some(genre);
                 self.selection.selected_folder = None;
                 self.selection.selected_track = None;
+                self.library_focus = LibraryFocus::Genres;
             }
             UiMessage::SelectFolder(folder) => {
                 self.selection.selected_folder = Some(folder);
                 self.selection.selected_genre = None;
+                self.library_focus = LibraryFocus::Folders;
             }
             UiMessage::SelectTrack(track) => {
                 self.selection.selected_track = Some(track);
+                self.library_focus = LibraryFocus::Songs;
             }
             UiMessage::SelectPlaylist(index) => {
                 self.selection.selected_playlist = Some(index);
@@ -531,6 +559,7 @@ impl UiState {
             }
             UiMessage::SetTextScale(scale) => {
                 self.settings.text_scale = scale;
+                self.settings.accessibility_large_text = scale != crate::config::TextScale::Normal;
             }
             UiMessage::SetInterfaceDensity(density) => {
                 self.settings.interface_density = density;
@@ -541,8 +570,34 @@ impl UiState {
             UiMessage::SetUiAnimations(enabled) => {
                 self.settings.ui_animations = enabled;
             }
+            UiMessage::SetAccessibilityLargeText(enabled) => {
+                self.settings.accessibility_large_text = enabled;
+                if enabled {
+                    if self.settings.text_scale == crate::config::TextScale::Normal {
+                        self.settings.text_scale = crate::config::TextScale::Large;
+                    }
+                    if self.settings.accessible_text_size
+                        == crate::config::AccessibleTextSize::Standard
+                    {
+                        self.settings.accessible_text_size =
+                            crate::config::AccessibleTextSize::Large;
+                    }
+                }
+            }
+            UiMessage::SetAccessibilityHighContrast(enabled) => {
+                self.settings.accessibility_high_contrast = enabled;
+                self.settings.increase_contrast = enabled;
+            }
+            UiMessage::SetAccessibilityReduceMotion(enabled) => {
+                self.settings.accessibility_reduce_motion = enabled;
+                if enabled {
+                    self.settings.reduce_animations = true;
+                    self.settings.reduce_transitions = true;
+                }
+            }
             UiMessage::SetIncreaseContrast(enabled) => {
                 self.settings.increase_contrast = enabled;
+                self.settings.accessibility_high_contrast = enabled;
             }
             UiMessage::SetReduceTransparency(enabled) => {
                 self.settings.reduce_transparency = enabled;
@@ -552,9 +607,13 @@ impl UiState {
             }
             UiMessage::SetReduceAnimations(enabled) => {
                 self.settings.reduce_animations = enabled;
+                self.settings.accessibility_reduce_motion =
+                    self.settings.reduce_animations || self.settings.reduce_transitions;
             }
             UiMessage::SetReduceTransitions(enabled) => {
                 self.settings.reduce_transitions = enabled;
+                self.settings.accessibility_reduce_motion =
+                    self.settings.reduce_animations || self.settings.reduce_transitions;
             }
             UiMessage::SetSubtitlesEnabled(enabled) => {
                 self.settings.subtitles_enabled = enabled;
@@ -711,6 +770,7 @@ impl UiState {
                 self.menu_open = false;
             }
             UiMessage::PlaybackTick => {}
+            UiMessage::NavigateLibrary(_) | UiMessage::ActivateSelection => {}
             UiMessage::PlaylistNameChanged(name) => {
                 self.selection.playlist_name_draft = name.clone();
             }

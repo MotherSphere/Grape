@@ -51,6 +51,7 @@ impl SongsPanel {
     pub fn view(
         &self,
         selection: &SelectionState,
+        focused: bool,
         theme: style::ThemeTokens,
     ) -> Element<'static, UiMessage> {
         let selected_id = selection.selected_track.as_ref().map(|track| track.id);
@@ -60,7 +61,7 @@ impl SongsPanel {
                 .font(style::font_propo(Weight::Semibold))
                 .style(move |_| style::text_style_primary(theme)),
             text("By album")
-                .size(theme.size(12))
+                .size(theme.size_accessible(12))
                 .font(style::font_propo(Weight::Light))
                 .style(move |_| style::text_style_muted(theme))
         ]
@@ -72,65 +73,87 @@ impl SongsPanel {
                 .font(style::font_propo(Weight::Medium))
                 .style(move |_| style::text_style_primary(theme)),
             text(self.artist.clone())
-                .size(theme.size(12))
+                .size(theme.size_accessible(12))
                 .font(style::font_propo(Weight::Light))
                 .style(move |_| style::text_style_muted(theme))
         ]
         .spacing(4)
         .align_x(Alignment::Start);
-        let list_items = self
-            .tracks
-            .iter()
-            .enumerate()
-            .map(|(index, track)| {
-                let is_selected = Some(track.id) == selected_id;
-                let number = format!("{:02}", track.track_number.unwrap_or((index + 1) as u32));
-                let number_label = text(number)
-                    .size(theme.size(12))
-                    .font(style::font_mono(Weight::Medium))
-                    .style(move |_| style::text_style_muted(theme));
-                let title = text(track.title.clone())
+        let list_content: Element<'static, UiMessage> = if self.tracks.is_empty() {
+            let empty = column![
+                text("Aucun morceau à afficher")
                     .size(theme.size(14))
                     .font(style::font_propo(Weight::Medium))
-                    .style(move |_| style::text_style_primary(theme));
-                let artist = text(track.artist.clone())
-                    .size(theme.size(12))
+                    .style(move |_| style::text_style_primary(theme)),
+                text("Sélectionnez un album pour voir les titres.")
+                    .size(theme.size_accessible(12))
                     .font(style::font_propo(Weight::Light))
-                    .style(move |_| style::text_style_muted(theme));
-                let details = column![title, artist]
-                    .spacing(2)
-                    .width(Length::Fill)
-                    .align_x(Alignment::Start);
-                let duration = text(format_duration(track.duration))
-                    .size(theme.size(12))
-                    .font(style::font_mono(Weight::Medium))
-                    .style(move |_| style::text_style_muted(theme));
-                let row_content = row![number_label, details, duration]
-                    .spacing(12)
-                    .align_y(Alignment::Center)
-                    .width(Length::Fill);
+                    .style(move |_| style::text_style_muted(theme)),
+            ]
+            .spacing(6)
+            .align_x(Alignment::Center);
+            container(empty)
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .center_x(Length::Fill)
+                .center_y(Length::Fill)
+                .into()
+        } else {
+            let list_items = self
+                .tracks
+                .iter()
+                .enumerate()
+                .map(|(index, track)| {
+                    let is_selected = Some(track.id) == selected_id;
+                    let number = format!("{:02}", track.track_number.unwrap_or((index + 1) as u32));
+                    let number_label = text(number)
+                        .size(theme.size_accessible(12))
+                        .font(style::font_mono(Weight::Medium))
+                        .style(move |_| style::text_style_muted(theme));
+                    let title = text(track.title.clone())
+                        .size(theme.size(14))
+                        .font(style::font_propo(Weight::Medium))
+                        .style(move |_| style::text_style_primary(theme));
+                    let artist = text(track.artist.clone())
+                        .size(theme.size_accessible(12))
+                        .font(style::font_propo(Weight::Light))
+                        .style(move |_| style::text_style_muted(theme));
+                    let details = column![title, artist]
+                        .spacing(2)
+                        .width(Length::Fill)
+                        .align_x(Alignment::Start);
+                    let duration = text(format_duration(track.duration))
+                        .size(theme.size_accessible(12))
+                        .font(style::font_mono(Weight::Medium))
+                        .style(move |_| style::text_style_muted(theme));
+                    let row_content = row![number_label, details, duration]
+                        .spacing(12)
+                        .align_y(Alignment::Center)
+                        .width(Length::Fill);
 
-                button(row_content)
-                    .style(move |_, status| {
-                        style::button_style(
-                            theme,
-                            style::ButtonKind::ListItem {
-                                selected: is_selected,
-                            },
-                            status,
-                        )
-                    })
-                    .on_press(UiMessage::SelectTrack(track.clone()))
-                    .width(Length::Fill)
-                    .into()
-            })
-            .collect::<Vec<Element<UiMessage>>>();
-        let list = column(list_items)
-            .spacing(8)
-            .width(Length::Fill)
-            .align_x(Alignment::Start);
-        let scrollable_list = scrollable(list).height(Length::Fill);
-        let content = column![header, album_info, scrollable_list]
+                    button(row_content)
+                        .style(move |_, status| {
+                            style::button_style(
+                                theme,
+                                style::ButtonKind::ListItem {
+                                    selected: is_selected,
+                                    focused: focused && is_selected,
+                                },
+                                status,
+                            )
+                        })
+                        .on_press(UiMessage::SelectTrack(track.clone()))
+                        .width(Length::Fill)
+                        .into()
+                })
+                .collect::<Vec<Element<UiMessage>>>();
+            let list = column(list_items)
+                .spacing(8)
+                .width(Length::Fill)
+                .align_x(Alignment::Start);
+            scrollable(list).height(Length::Fill).into()
+        };
+        let content = column![header, album_info, list_content]
             .spacing(12)
             .height(Length::Fill);
 
