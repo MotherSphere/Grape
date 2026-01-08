@@ -506,22 +506,16 @@ fn apply_online_metadata(
     let user_override = metadata::online::load_user_metadata_override(root, artist_name, &album.title)
         .ok()
         .flatten();
-    let mut overridden_genre = false;
-    let mut overridden_year = false;
-    let mut forced_genre: Option<Option<String>> = None;
+    let mut genre_locked = false;
+    let mut year_locked = false;
     if let Some(metadata_override) = user_override {
         if metadata_override.genre_overridden {
-            overridden_genre = true;
-            forced_genre = Some(metadata_override.genre.clone());
+            genre_locked = true;
+            apply_album_genre(album, metadata_override.genre.clone());
         }
         if metadata_override.year_overridden {
             album.year = metadata_override.year.unwrap_or(0);
-            overridden_year = true;
-        }
-    }
-    if overridden_genre {
-        if let Some(genre) = forced_genre.take() {
-            apply_album_genre(album, genre);
+            year_locked = true;
         }
     }
 
@@ -543,19 +537,15 @@ fn apply_online_metadata(
         return;
     };
 
-    if !overridden_genre {
-        if let Some(genre) = metadata.genre.clone() {
-            forced_genre = Some(Some(genre));
+    if !genre_locked && album.genre.is_none() {
+        if let Some(genre) = metadata.genre {
+            apply_album_genre(album, Some(genre));
         }
     }
-    if !overridden_year && album.year == 0 {
+    if !year_locked && album.year == 0 {
         if let Some(year) = metadata.year {
             album.year = year;
         }
-    }
-
-    if let Some(genre) = forced_genre {
-        apply_album_genre(album, genre);
     }
 }
 
