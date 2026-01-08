@@ -98,7 +98,10 @@ pub fn load_index(root: &Path) -> io::Result<CacheIndex> {
     Ok(index)
 }
 
-pub fn load_album(root: &Path, album_path: &Path) -> io::Result<Option<CachedAlbum>> {
+pub fn load_album(
+    root: &Path,
+    album_path: &Path,
+) -> io::Result<Option<CachedAlbum>> {
     let key = album_key(root, album_path)?;
     let cache_path = folder_cache_path(root, &key);
     if !cache_path.exists() {

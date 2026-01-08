@@ -12,18 +12,17 @@ pub struct ArtistsPanel {
     total_count: usize,
     artists: Vec<Artist>,
     selected_artist_id: Option<usize>,
-    load_more_message: Option<UiMessage>,
     scroll_offset: usize,
     viewport_size: usize,
 }
 
 impl ArtistsPanel {
-    pub fn new(artists: Vec<Artist>, total_count: usize) -> Self {
+    pub fn new(artists: Vec<Artist>) -> Self {
+        let total_count = artists.len();
         Self {
             total_count,
             artists,
             selected_artist_id: None,
-            load_more_message: None,
             scroll_offset: 0,
             viewport_size: 8,
         }
@@ -37,11 +36,6 @@ impl ArtistsPanel {
     pub fn with_scroll(mut self, scroll_offset: usize, viewport_size: usize) -> Self {
         self.scroll_offset = scroll_offset.min(self.artists.len());
         self.viewport_size = viewport_size.max(1);
-        self
-    }
-
-    pub fn with_load_more(mut self, message: Option<UiMessage>) -> Self {
-        self.load_more_message = message;
         self
     }
 
@@ -92,7 +86,7 @@ impl ArtistsPanel {
                 .center_y(Length::Fill)
                 .into()
         } else {
-            let mut list_items = self
+            let list_items = self
                 .artists
                 .iter()
                 .map(|artist| {
@@ -132,24 +126,6 @@ impl ArtistsPanel {
                         .into()
                 })
                 .collect::<Vec<Element<UiMessage>>>();
-            if let Some(message) = self.load_more_message.clone() {
-                let remaining = self.total_count.saturating_sub(self.artists.len());
-                if remaining > 0 {
-                    let label = text(format!("Charger plus ({remaining} restants)"))
-                        .size(theme.size_accessible(12))
-                        .font(style::font_propo(Weight::Medium))
-                        .style(move |_| style::text_style_primary(theme));
-                    list_items.push(
-                        button(label)
-                            .style(move |_, status| {
-                                style::button_style(theme, style::ButtonKind::Control, status)
-                            })
-                            .padding([6, 10])
-                            .on_press(message)
-                            .into(),
-                    );
-                }
-            }
             let list = column(list_items)
                 .spacing(6)
                 .width(Length::Fill)

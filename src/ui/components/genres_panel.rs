@@ -12,18 +12,17 @@ pub struct GenresPanel {
     total_count: usize,
     genres: Vec<Genre>,
     selected_genre_id: Option<usize>,
-    load_more_message: Option<UiMessage>,
     scroll_offset: usize,
     viewport_size: usize,
 }
 
 impl GenresPanel {
-    pub fn new(genres: Vec<Genre>, total_count: usize) -> Self {
+    pub fn new(genres: Vec<Genre>) -> Self {
+        let total_count = genres.len();
         Self {
             total_count,
             genres,
             selected_genre_id: None,
-            load_more_message: None,
             scroll_offset: 0,
             viewport_size: 8,
         }
@@ -37,11 +36,6 @@ impl GenresPanel {
     pub fn with_scroll(mut self, scroll_offset: usize, viewport_size: usize) -> Self {
         self.scroll_offset = scroll_offset.min(self.genres.len());
         self.viewport_size = viewport_size.max(1);
-        self
-    }
-
-    pub fn with_load_more(mut self, message: Option<UiMessage>) -> Self {
-        self.load_more_message = message;
         self
     }
 
@@ -78,7 +72,7 @@ impl GenresPanel {
                 .center_y(Length::Fill)
                 .into()
         } else {
-            let mut list_items = self
+            let list_items = self
                 .genres
                 .iter()
                 .map(|genre| {
@@ -126,24 +120,6 @@ impl GenresPanel {
                         .into()
                 })
                 .collect::<Vec<Element<UiMessage>>>();
-            if let Some(message) = self.load_more_message.clone() {
-                let remaining = self.total_count.saturating_sub(self.genres.len());
-                if remaining > 0 {
-                    let label = text(format!("Charger plus ({remaining} restants)"))
-                        .size(theme.size_accessible(12))
-                        .font(style::font_propo(Weight::Medium))
-                        .style(move |_| style::text_style_primary(theme));
-                    list_items.push(
-                        button(label)
-                            .style(move |_, status| {
-                                style::button_style(theme, style::ButtonKind::Control, status)
-                            })
-                            .padding([6, 10])
-                            .on_press(message)
-                            .into(),
-                    );
-                }
-            }
             let list = column(list_items)
                 .spacing(6)
                 .width(Length::Fill)

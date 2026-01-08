@@ -5,7 +5,6 @@ use crate::config::{
     DeclarativeAction, EqPreset, InterfaceDensity, InterfaceLanguage, MissingDeviceBehavior,
     StartupScreen, SubtitleSize, TextScale, ThemeMode, TimeFormat, UpdateChannel, VolumeLevel,
 };
-use crate::library::Catalog;
 use crate::ui::state::{
     ActiveTab, Album, Artist, Folder, Genre, PreferencesSection, PreferencesTab, SearchFilter,
     SortOption, ThemeCategory, Track,
@@ -101,9 +100,6 @@ pub enum UiMessage {
     ToggleThemeCategory(ThemeCategory),
     CloseMenu,
     PlaybackTick,
-    StartInitialScan,
-    ScanTick,
-    LibraryScanCompleted(Result<Catalog, String>),
     NavigateLibrary(LibraryNavigation),
     ActivateSelection,
     PlaylistNameChanged(String),
@@ -112,11 +108,6 @@ pub enum UiMessage {
     DeletePlaylist,
     AddSelectedTrackToPlaylist,
     DismissAudioNotice,
-    LoadMoreArtists,
-    LoadMoreAlbums,
-    LoadMoreTracks,
-    LoadMoreGenres,
-    LoadMoreFolders,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
