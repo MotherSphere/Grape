@@ -13,12 +13,13 @@ const CACHE_DIRNAME: &str = ".grape_cache";
 const INDEX_FILENAME: &str = "index.json";
 const FOLDERS_DIRNAME: &str = "folders";
 const COVER_DIRNAME: &str = "covers";
-const CACHE_VERSION: u32 = 3;
+const CACHE_VERSION: u32 = 4;
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct CacheIndex {
     version: u32,
-    entries: HashMap<String, FolderEntry>,
+    #[serde(default)]
+    tracks: HashMap<String, TrackEntry>,
     #[serde(skip)]
     legacy_version: Option<u32>,
 }
@@ -42,7 +43,19 @@ pub struct TrackEntry {
 
 pub struct CachedAlbum {
     pub album: Album,
-    pub track_entries: HashMap<String, TrackEntry>,
+}
+
+impl CacheIndex {
+    pub fn track_entries(&self) -> &HashMap<String, TrackEntry> {
+        &self.tracks
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct LegacyCacheIndex {
+    version: u32,
+    #[serde(default)]
+    entries: HashMap<String, FolderEntry>,
 }
 
 pub fn load_index(root: &Path) -> io::Result<CacheIndex> {
@@ -56,12 +69,29 @@ pub fn load_index(root: &Path) -> io::Result<CacheIndex> {
     }
 
     let contents = fs::read_to_string(&index_path)?;
-    let mut index: CacheIndex = serde_json::from_str(&contents)
+    let value: serde_json::Value = serde_json::from_str(&contents)
+        .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
+    if value.get("entries").is_some() {
+        let legacy: LegacyCacheIndex = serde_json::from_value(value)
+            .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
+        let mut tracks = HashMap::new();
+        for entry in legacy.entries.values() {
+            for (key, track_entry) in &entry.tracks {
+                tracks.insert(key.clone(), *track_entry);
+            }
+        }
+        return Ok(CacheIndex {
+            version: CACHE_VERSION,
+            tracks,
+            legacy_version: Some(legacy.version),
+        });
+    }
+
+    let mut index: CacheIndex = serde_json::from_value(value)
         .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
     if index.version != CACHE_VERSION {
         index.legacy_version = Some(index.version);
         index.version = CACHE_VERSION;
-        index.entries.clear();
     }
 
     Ok(index)
@@ -69,7 +99,6 @@ pub fn load_index(root: &Path) -> io::Result<CacheIndex> {
 
 pub fn load_album(
     root: &Path,
-    index: &CacheIndex,
     album_path: &Path,
 ) -> io::Result<Option<CachedAlbum>> {
     let key = album_key(root, album_path)?;
@@ -82,15 +111,8 @@ pub fn load_album(
     let mut cache_file: FolderCacheFile = serde_json::from_str(&contents)
         .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
     cache_file.album.path = album_path.to_path_buf();
-    let track_entries = index
-        .entries
-        .get(&key)
-        .map(|entry| entry.tracks.clone())
-        .filter(|tracks| !tracks.is_empty())
-        .unwrap_or_else(|| build_track_entries(root, &cache_file.album));
     Ok(Some(CachedAlbum {
         album: cache_file.album,
-        track_entries,
     }))
 }
 
@@ -113,9 +135,9 @@ pub fn store_album(
     fs::write(folder_cache_path(root, &key), contents)?;
 
     let track_entries = build_track_entries(root, album);
-    index
-        .entries
-        .insert(key.clone(), FolderEntry { tracks: track_entries });
+    for (track_key, track_entry) in track_entries {
+        index.tracks.insert(track_key, track_entry);
+    }
 
     Ok(key)
 }
@@ -124,26 +146,43 @@ pub fn finalize(
     root: &Path,
     index: &mut CacheIndex,
     used_keys: &HashSet<String>,
+    used_track_keys: &HashSet<String>,
 ) -> io::Result<()> {
     if !root.exists() {
         return Ok(());
     }
 
     index.version = CACHE_VERSION;
+    let folders_dir = root.join(CACHE_DIRNAME).join(FOLDERS_DIRNAME);
+    if folders_dir.exists() {
+        if let Ok(read_dir) = fs::read_dir(&folders_dir) {
+            for entry_result in read_dir {
+                let Ok(entry) = entry_result else {
+                    continue;
+                };
+                let path = entry.path();
+                if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+                    continue;
+                }
+                let Some(stem) = path.file_stem().and_then(|name| name.to_str()) else {
+                    continue;
+                };
+                if !used_keys.contains(stem) {
+                    let _ = fs::remove_file(path);
+                }
+            }
+        }
+    }
 
-    let removed_keys: Vec<String> = index
-        .entries
+    let removed_tracks: Vec<String> = index
+        .tracks
         .keys()
-        .filter(|key| !used_keys.contains(*key))
+        .filter(|key| !used_track_keys.contains(*key))
         .cloned()
         .collect();
 
-    for key in removed_keys {
-        index.entries.remove(&key);
-        let cache_path = folder_cache_path(root, &key);
-        if cache_path.exists() {
-            let _ = fs::remove_file(cache_path);
-        }
+    for key in removed_tracks {
+        index.tracks.remove(&key);
     }
 
     let contents = serde_json::to_string_pretty(index)
