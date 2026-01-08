@@ -212,7 +212,6 @@ fn scan_library_with_cache(
     };
     let mut used_cache_keys = std::collections::HashSet::new();
     let mut used_track_keys = std::collections::HashSet::new();
-    let mut used_track_ids = std::collections::HashSet::new();
 
     if !root.exists() {
         return Ok(Catalog::empty());
@@ -227,7 +226,6 @@ fn scan_library_with_cache(
         &mut cache_index,
         &mut used_cache_keys,
         &mut used_track_keys,
-        &mut used_track_ids,
     )? {
         root_artist_albums.push(album);
     }
@@ -262,7 +260,6 @@ fn scan_library_with_cache(
                 &mut cache_index,
                 &mut used_cache_keys,
                 &mut used_track_keys,
-                &mut used_track_ids,
             )? {
                 root_artist_albums.push(album);
             }
@@ -306,7 +303,6 @@ fn scan_library_with_cache(
                     &cached.album.tracks,
                     cache_index.track_entries(),
                     &mut used_track_keys,
-                    &mut used_track_ids,
                     true,
                 )?;
                 if tracks.is_empty() {
@@ -332,7 +328,6 @@ fn scan_library_with_cache(
                     continue;
                 }
                 record_track_keys(root, &tracks, &mut used_track_keys);
-                record_track_ids(root, &tracks, &mut used_track_ids);
                 let year = resolve_album_year(year, &tracks);
                 let genre = dominant_genre(tracks.iter().flat_map(|track| track.genre.as_deref()));
                 let cover = select_album_cover(root, &album_path, &tracks, None)?;
@@ -399,13 +394,8 @@ fn scan_library_with_cache(
     let mut catalog = Catalog { artists };
     catalog.prune_missing_cover_art();
 
-    if let Err(error) = cache::finalize(
-        root,
-        &mut cache_index,
-        &used_cache_keys,
-        &used_track_keys,
-        &used_track_ids,
-    ) {
+    if let Err(error) = cache::finalize(root, &mut cache_index, &used_cache_keys, &used_track_keys)
+    {
         warn!(error = %error, "Unable to persist cache index");
     }
 
@@ -428,7 +418,6 @@ fn scan_album_dir(
     cache_index: &mut cache::CacheIndex,
     used_cache_keys: &mut std::collections::HashSet<String>,
     used_track_keys: &mut std::collections::HashSet<String>,
-    used_track_ids: &mut std::collections::HashSet<String>,
 ) -> io::Result<Option<Album>> {
     let cached_album = if use_cache {
         match cache::load_album(root, album_path) {
@@ -453,7 +442,6 @@ fn scan_album_dir(
             &cached.album.tracks,
             cache_index.track_entries(),
             used_track_keys,
-            used_track_ids,
             true,
         )?;
         if tracks.is_empty() {
@@ -478,7 +466,6 @@ fn scan_album_dir(
             return Ok(None);
         }
         record_track_keys(root, &tracks, used_track_keys);
-        record_track_ids(root, &tracks, used_track_ids);
         let year = resolve_album_year(year, &tracks);
         let genre = dominant_genre(tracks.iter().flat_map(|track| track.genre.as_deref()));
         let cover = select_album_cover(root, album_path, &tracks, None)?;
@@ -516,10 +503,9 @@ fn apply_online_metadata(
     album: &mut Album,
     force_refresh: bool,
 ) {
-    let user_override =
-        metadata::online::load_user_metadata_override(root, artist_name, &album.title)
-            .ok()
-            .flatten();
+    let user_override = metadata::online::load_user_metadata_override(root, artist_name, &album.title)
+        .ok()
+        .flatten();
     let mut genre_locked = false;
     let mut year_locked = false;
     if let Some(metadata_override) = user_override {
@@ -716,7 +702,6 @@ fn scan_tracks_with_cache(
     cached_tracks: &[Track],
     track_entries: &std::collections::HashMap<String, cache::TrackEntry>,
     used_track_keys: &mut std::collections::HashSet<String>,
-    used_track_ids: &mut std::collections::HashSet<String>,
 ) -> io::Result<Vec<Track>> {
     scan_tracks_with_cache_in_dir(
         root,
@@ -724,7 +709,6 @@ fn scan_tracks_with_cache(
         cached_tracks,
         track_entries,
         used_track_keys,
-        used_track_ids,
         true,
     )
 }
@@ -735,7 +719,6 @@ fn scan_tracks_with_cache_in_dir(
     cached_tracks: &[Track],
     track_entries: &std::collections::HashMap<String, cache::TrackEntry>,
     used_track_keys: &mut std::collections::HashSet<String>,
-    used_track_ids: &mut std::collections::HashSet<String>,
     warn_on_dirs: bool,
 ) -> io::Result<Vec<Track>> {
     let mut tracks = Vec::new();
@@ -778,9 +761,7 @@ fn scan_tracks_with_cache_in_dir(
         let mut title = parsed_title;
 
         let key = cache::track_key(root, &path);
-        let id = cache::track_id(root, &path);
         used_track_keys.insert(key.clone());
-        used_track_ids.insert(id.clone());
         let cached_track = cached_by_path.get(&path);
         let mut duration_secs = 0;
         let mut duration_millis = None;
@@ -794,37 +775,21 @@ fn scan_tracks_with_cache_in_dir(
 
         let signature = cache::track_signature(&path).ok();
 
-        if let (Some(entry), Some(signature)) = (track_entries.get(&key), signature.as_ref()) {
-            if entry.matches_signature(signature) {
-                let cached = cache::load_track_metadata(root, entry.id()).ok().flatten();
-                if let Some(cached) = cached {
-                    if signature.matches_cache(&cached) {
-                        let cached_track = cached.metadata.into_track(path.clone());
-                        track_number = cached_track.number;
-                        title = cached_track.title;
-                        duration_secs = cached_track.duration_secs;
-                        duration_millis = cached_track.duration_millis;
-                        bitrate_kbps = cached_track.bitrate_kbps;
-                        codec = cached_track.codec;
-                        artist = cached_track.artist;
-                        year = cached_track.year;
-                        genre = cached_track.genre;
-                        embedded_cover = cached_track.embedded_cover;
-                        used_cache = true;
-                    }
-                } else if let Some(cached_track) = cached_track {
-                    track_number = cached_track.number;
-                    title = cached_track.title.clone();
-                    duration_secs = cached_track.duration_secs;
-                    duration_millis = cached_track.duration_millis;
-                    bitrate_kbps = cached_track.bitrate_kbps;
-                    codec = cached_track.codec.clone();
-                    artist = cached_track.artist.clone();
-                    year = cached_track.year;
-                    genre = cached_track.genre.clone();
-                    embedded_cover = cached_track.embedded_cover.clone();
-                    used_cache = true;
-                }
+        if let (Some(entry), Some(cached_track), Some(signature)) =
+            (track_entries.get(&key), cached_track, signature)
+        {
+            if signature == *entry {
+                track_number = cached_track.number;
+                title = cached_track.title.clone();
+                duration_secs = cached_track.duration_secs;
+                duration_millis = cached_track.duration_millis;
+                bitrate_kbps = cached_track.bitrate_kbps;
+                codec = cached_track.codec.clone();
+                artist = cached_track.artist.clone();
+                year = cached_track.year;
+                genre = cached_track.genre.clone();
+                embedded_cover = cached_track.embedded_cover.clone();
+                used_cache = true;
             }
         }
 
@@ -875,16 +840,6 @@ fn record_track_keys(
     }
 }
 
-fn record_track_ids(
-    root: &Path,
-    tracks: &[Track],
-    used_track_ids: &mut std::collections::HashSet<String>,
-) {
-    for track in tracks {
-        used_track_ids.insert(cache::track_id(root, &track.path));
-    }
-}
-
 fn scan_root_album(
     root: &Path,
     use_cache: bool,
@@ -893,7 +848,6 @@ fn scan_root_album(
     cache_index: &mut cache::CacheIndex,
     used_cache_keys: &mut std::collections::HashSet<String>,
     used_track_keys: &mut std::collections::HashSet<String>,
-    used_track_ids: &mut std::collections::HashSet<String>,
 ) -> io::Result<Option<Album>> {
     let album_path = root.to_path_buf();
     let cached_album = if use_cache {
@@ -920,7 +874,6 @@ fn scan_root_album(
             &cached.album.tracks,
             cache_index.track_entries(),
             used_track_keys,
-            used_track_ids,
             false,
         )?;
         if tracks.is_empty() {
@@ -945,7 +898,6 @@ fn scan_root_album(
             return Ok(None);
         }
         record_track_keys(root, &tracks, used_track_keys);
-        record_track_ids(root, &tracks, used_track_ids);
         let year = resolve_album_year(0, &tracks);
         let genre = dominant_genre(tracks.iter().flat_map(|track| track.genre.as_deref()));
         let cover = select_album_cover(root, &album_path, &tracks, None)?;
