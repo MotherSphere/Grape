@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
 use crate::config::{
-    AccessibleTextSize, AccentColor, AudioOutputDevice, AudioStabilityMode, CloseBehavior, EqPreset,
-    InterfaceDensity, InterfaceLanguage, MissingDeviceBehavior, StartupScreen, SubtitleSize,
-    TextScale, ThemeMode, TimeFormat, UpdateChannel, VolumeLevel,
+    AccentColor, AccessibleTextSize, AudioOutputDevice, AudioStabilityMode, CloseBehavior,
+    EqPreset, InterfaceDensity, InterfaceLanguage, MissingDeviceBehavior, StartupScreen,
+    SubtitleSize, TextScale, ThemeMode, TimeFormat, UpdateChannel, VolumeLevel,
 };
 use crate::ui::state::{
     ActiveTab, Album, Artist, Folder, Genre, PreferencesSection, PreferencesTab, SortOption,
@@ -18,6 +18,7 @@ pub enum UiMessage {
     SelectGenre(Genre),
     SelectFolder(Folder),
     SelectTrack(Track),
+    SelectPlaylist(usize),
     Playback(PlaybackMessage),
     Search(SearchMessage),
     ToggleLogoMenu,
@@ -92,6 +93,11 @@ pub enum UiMessage {
     ToggleThemeCategory(ThemeCategory),
     CloseMenu,
     PlaybackTick,
+    PlaylistNameChanged(String),
+    CreatePlaylist,
+    RenamePlaylist,
+    DeletePlaylist,
+    AddSelectedTrackToPlaylist,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
