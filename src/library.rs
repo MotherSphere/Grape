@@ -506,14 +506,20 @@ fn apply_online_metadata(
         .flatten();
     let mut overridden_genre = false;
     let mut overridden_year = false;
+    let mut forced_genre: Option<Option<String>> = None;
     if let Some(metadata_override) = user_override {
         if metadata_override.genre_overridden {
-            album.genre = metadata_override.genre.clone();
             overridden_genre = true;
+            forced_genre = Some(metadata_override.genre.clone());
         }
         if metadata_override.year_overridden {
             album.year = metadata_override.year.unwrap_or(0);
             overridden_year = true;
+        }
+    }
+    if overridden_genre {
+        if let Some(genre) = forced_genre.take() {
+            apply_album_genre(album, genre);
         }
     }
 
@@ -535,13 +541,26 @@ fn apply_online_metadata(
         return;
     };
 
-    if !overridden_genre && album.genre.is_none() {
-        album.genre = metadata.genre;
+    if !overridden_genre {
+        if let Some(genre) = metadata.genre.clone() {
+            forced_genre = Some(Some(genre));
+        }
     }
     if !overridden_year && album.year == 0 {
         if let Some(year) = metadata.year {
             album.year = year;
         }
+    }
+
+    if let Some(genre) = forced_genre {
+        apply_album_genre(album, genre);
+    }
+}
+
+fn apply_album_genre(album: &mut Album, genre: Option<String>) {
+    album.genre = genre.clone();
+    for track in &mut album.tracks {
+        track.genre = genre.clone();
     }
 }
 
