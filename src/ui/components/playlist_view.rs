@@ -114,8 +114,12 @@ impl PlaylistView {
             row![
                 action_button("Créer", UiMessage::CreatePlaylist),
                 action_button("Renommer", UiMessage::RenamePlaylist),
-                action_button("Supprimer", UiMessage::DeletePlaylist),
-                add_track_button
+                action_button("Supprimer", UiMessage::DeletePlaylist)
+            ]
+            .spacing(8),
+            row![
+                add_track_button,
+                action_button("Enregistrer ordre", UiMessage::SavePlaylistOrder)
             ]
             .spacing(8)
         ]
@@ -125,6 +129,7 @@ impl PlaylistView {
             Some(playlist) if !playlist.items.is_empty() => {
                 let mut rows: Vec<Element<'a, UiMessage>> = Vec::new();
                 let total_items = playlist.items.len();
+                let drag_source = selection.playlist_drag_source;
                 for (index, item) in playlist.items.iter().enumerate() {
                     let index_label = text(format!("{:02}", index + 1))
                         .size(theme.size_accessible(12))
@@ -139,6 +144,15 @@ impl PlaylistView {
                         .font(style::font_propo(Weight::Medium))
                         .style(move |_| style::text_style_muted(theme));
                     let track = column![title, subtitle].spacing(2);
+                    let drag_handle = button(
+                        text("⠿")
+                            .size(theme.size_accessible(12))
+                            .font(style::font_propo(Weight::Medium))
+                            .style(move |_| style::text_style_muted(theme)),
+                    )
+                    .style(move |_, status| style::button_style(theme, style::ButtonKind::Icon, status))
+                    .padding([2, 6])
+                    .on_press(UiMessage::StartPlaylistItemDrag(index));
                     let mut move_up = button(
                         text("↑")
                             .size(theme.size_accessible(12))
@@ -169,8 +183,30 @@ impl PlaylistView {
                     )
                     .style(move |_, status| style::button_style(theme, style::ButtonKind::Icon, status))
                     .padding([2, 6])
-                    .on_press(UiMessage::RemovePlaylistItem(index));
-                    let actions = row![move_up, move_down, remove].spacing(4);
+                    .on_press(UiMessage::DeletePlaylistItem(index));
+                    let actions = if let Some(source) = drag_source {
+                        let mut row = row![drag_handle, move_up, move_down, remove].spacing(4);
+                        if source != index {
+                            let drop = button(
+                                text("⤵")
+                                    .size(theme.size_accessible(12))
+                                    .font(style::font_propo(Weight::Medium))
+                                    .style(move |_| style::text_style_muted(theme)),
+                            )
+                            .style(move |_, status| {
+                                style::button_style(theme, style::ButtonKind::Icon, status)
+                            })
+                            .padding([2, 6])
+                            .on_press(UiMessage::MovePlaylistItemDrag {
+                                from: source,
+                                to: index,
+                            });
+                            row = row.push(drop);
+                        }
+                        row
+                    } else {
+                        row![drag_handle, move_up, move_down, remove].spacing(4)
+                    };
                     rows.push(
                         row![index_label, track, actions]
                             .align_y(Alignment::Center)
@@ -178,7 +214,23 @@ impl PlaylistView {
                             .into(),
                     );
                 }
-                scrollable(column(rows).spacing(12)).into()
+                let list = scrollable(column(rows).spacing(12));
+                if let Some(source) = drag_source {
+                    column![
+                        text(format!(
+                            "Déplacement en cours (piste {:02}). Choisissez une cible.",
+                            source + 1
+                        ))
+                        .size(theme.size_accessible(12))
+                        .font(style::font_propo(Weight::Medium))
+                        .style(move |_| style::text_style_muted(theme)),
+                        list
+                    ]
+                    .spacing(8)
+                    .into()
+                } else {
+                    list.into()
+                }
             }
             _ => column![
                 text("Les pistes de la playlist apparaîtront ici.")
