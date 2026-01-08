@@ -52,11 +52,7 @@ pub fn track_metadata(path: &Path) -> TrackMetadata {
     let track_number = extract_track_number(&tagged_file);
     let artist = extract_first_string(
         &tagged_file,
-        &[
-            ItemKey::AlbumArtist,
-            ItemKey::TrackArtist,
-            ItemKey::TrackArtists,
-        ],
+        &[ItemKey::AlbumArtist, ItemKey::TrackArtist, ItemKey::TrackArtists],
     );
     let album = extract_first_string(&tagged_file, &[ItemKey::AlbumTitle]);
     let genre = extract_genre(&tagged_file);
@@ -127,7 +123,10 @@ fn extract_genre(tagged_file: &impl TaggedFileExt) -> Option<String> {
     }
 }
 
-fn extract_first_string(tagged_file: &impl TaggedFileExt, keys: &[ItemKey]) -> Option<String> {
+fn extract_first_string(
+    tagged_file: &impl TaggedFileExt,
+    keys: &[ItemKey],
+) -> Option<String> {
     let mut tags = Vec::new();
     if let Some(primary_tag) = tagged_file.primary_tag() {
         tags.push(primary_tag);

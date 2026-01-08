@@ -421,49 +421,6 @@ impl SearchState {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ListLimits {
-    pub artists: usize,
-    pub albums: usize,
-    pub tracks: usize,
-    pub genres: usize,
-    pub folders: usize,
-}
-
-impl Default for ListLimits {
-    fn default() -> Self {
-        Self {
-            artists: 120,
-            albums: 90,
-            tracks: 120,
-            genres: 120,
-            folders: 120,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ScanStage {
-    Indexing,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct ScanStatus {
-    pub stage: ScanStage,
-    pub root: PathBuf,
-    pub progress: f32,
-}
-
-impl ScanStatus {
-    pub fn new(root: PathBuf) -> Self {
-        Self {
-            stage: ScanStage::Indexing,
-            root,
-            progress: 0.0,
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct UiState {
     pub active_tab: ActiveTab,
@@ -480,14 +437,10 @@ pub struct UiState {
     pub pending_action: Option<DeclarativeAction>,
     pub settings: UserSettings,
     pub audio_notice: Option<String>,
-    pub list_limits: ListLimits,
-    pub scan_status: Option<ScanStatus>,
-    pub needs_initial_scan: bool,
 }
 
 impl UiState {
     pub fn new(settings: UserSettings) -> Self {
-        let needs_initial_scan = settings.auto_scan_on_launch;
         Self {
             active_tab: ActiveTab::default(),
             selection: SelectionState::default(),
@@ -503,9 +456,6 @@ impl UiState {
             pending_action: None,
             settings,
             audio_notice: None,
-            list_limits: ListLimits::default(),
-            scan_status: None,
-            needs_initial_scan,
         }
     }
 
@@ -820,9 +770,6 @@ impl UiState {
                 self.menu_open = false;
             }
             UiMessage::PlaybackTick => {}
-            UiMessage::StartInitialScan => {}
-            UiMessage::ScanTick => {}
-            UiMessage::LibraryScanCompleted(_) => {}
             UiMessage::NavigateLibrary(_) | UiMessage::ActivateSelection => {}
             UiMessage::PlaylistNameChanged(name) => {
                 self.selection.playlist_name_draft = name.clone();
@@ -834,11 +781,6 @@ impl UiState {
             UiMessage::DismissAudioNotice => {
                 self.audio_notice = None;
             }
-            UiMessage::LoadMoreArtists
-            | UiMessage::LoadMoreAlbums
-            | UiMessage::LoadMoreTracks
-            | UiMessage::LoadMoreGenres
-            | UiMessage::LoadMoreFolders => {}
         }
     }
 }

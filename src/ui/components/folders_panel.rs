@@ -18,8 +18,6 @@ pub struct FoldersPanel {
     sort_label: String,
     folders: Vec<Folder>,
     selected_folder_id: Option<usize>,
-    total_count: usize,
-    load_more_message: Option<UiMessage>,
     layout: FolderLayout,
     columns: usize,
     scroll_offset: usize,
@@ -27,13 +25,11 @@ pub struct FoldersPanel {
 }
 
 impl FoldersPanel {
-    pub fn new(folders: Vec<Folder>, total_count: usize) -> Self {
+    pub fn new(folders: Vec<Folder>) -> Self {
         Self {
             sort_label: "By name".to_string(),
             folders,
             selected_folder_id: None,
-            total_count,
-            load_more_message: None,
             layout: FolderLayout::Grid,
             columns: 3,
             scroll_offset: 0,
@@ -71,15 +67,10 @@ impl FoldersPanel {
         self
     }
 
-    pub fn with_load_more(mut self, message: Option<UiMessage>) -> Self {
-        self.load_more_message = message;
-        self
-    }
-
     pub fn view(self, focused: bool, theme: style::ThemeTokens) -> Element<'static, UiMessage> {
         let sort_label = self.sort_label.clone();
         let header = row![
-            text(format!("{} Folders", self.total_count))
+            text(format!("{} Folders", self.folders.len()))
                 .size(theme.size(16))
                 .font(style::font_propo(Weight::Semibold))
                 .style(move |_| style::text_style_primary(theme)),
@@ -193,26 +184,10 @@ impl FoldersPanel {
                     .into()
             })
             .collect::<Vec<Element<UiMessage>>>();
-        let mut grid = column(rows)
+        let grid = column(rows)
             .spacing(20)
             .width(Length::Fill)
             .align_x(Alignment::Start);
-        if let Some(message) = self.load_more_message.clone() {
-            let remaining = self.total_count.saturating_sub(self.folders.len());
-            if remaining > 0 {
-                let label = text(format!("Charger plus ({remaining} restants)"))
-                    .size(theme.size_accessible(12))
-                    .font(style::font_propo(Weight::Medium))
-                    .style(move |_| style::text_style_primary(theme));
-                let button = button(label)
-                    .style(move |_, status| {
-                        style::button_style(theme, style::ButtonKind::Control, status)
-                    })
-                    .padding([6, 10])
-                    .on_press(message);
-                grid = grid.push(container(button).center_x(Length::Fill));
-            }
-        }
         column![header, grid]
             .spacing(12)
             .width(Length::Fill)
@@ -226,7 +201,7 @@ impl FoldersPanel {
         focused: bool,
         theme: style::ThemeTokens,
     ) -> Element<'static, UiMessage> {
-        let mut list_items = self
+        let list_items = self
             .folders
             .iter()
             .map(|folder| {
@@ -275,24 +250,6 @@ impl FoldersPanel {
                     .into()
             })
             .collect::<Vec<Element<UiMessage>>>();
-        if let Some(message) = self.load_more_message.clone() {
-            let remaining = self.total_count.saturating_sub(self.folders.len());
-            if remaining > 0 {
-                let label = text(format!("Charger plus ({remaining} restants)"))
-                    .size(theme.size_accessible(12))
-                    .font(style::font_propo(Weight::Medium))
-                    .style(move |_| style::text_style_primary(theme));
-                list_items.push(
-                    button(label)
-                        .style(move |_, status| {
-                            style::button_style(theme, style::ButtonKind::Control, status)
-                        })
-                        .padding([6, 10])
-                        .on_press(message)
-                        .into(),
-                );
-            }
-        }
         let list = column(list_items)
             .spacing(8)
             .width(Length::Fill)
@@ -305,7 +262,7 @@ impl FoldersPanel {
     }
 
     pub fn render(&self) -> String {
-        let header = format!("{} Folders · {}", self.total_count, self.sort_label);
+        let header = format!("{} Folders · {}", self.folders.len(), self.sort_label);
         let mut lines = vec![header];
 
         match self.layout {
