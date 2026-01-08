@@ -484,8 +484,6 @@ pub struct UiState {
     pub list_limits: ListLimits,
     pub scan_status: Option<ScanStatus>,
     pub needs_initial_scan: bool,
-    pub album_genre_draft: String,
-    pub album_year_draft: String,
 }
 
 impl UiState {
@@ -510,8 +508,6 @@ impl UiState {
             list_limits: ListLimits::default(),
             scan_status: None,
             needs_initial_scan,
-            album_genre_draft: String::new(),
-            album_year_draft: String::new(),
         }
     }
 
@@ -555,13 +551,6 @@ impl UiState {
                 self.selection.selected_track = Some(track);
                 self.library_focus = LibraryFocus::Songs;
             }
-            UiMessage::AlbumGenreChanged(value) => {
-                self.album_genre_draft = value;
-            }
-            UiMessage::AlbumYearChanged(value) => {
-                self.album_year_draft = value;
-            }
-            UiMessage::SaveAlbumMetadata => {}
             UiMessage::SelectPlaylist(index) => {
                 self.selection.selected_playlist = Some(index);
             }
