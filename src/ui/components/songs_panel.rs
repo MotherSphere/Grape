@@ -4,7 +4,7 @@ use crate::ui::message::UiMessage;
 use crate::ui::state::{SelectionState, Track};
 use crate::ui::style;
 use iced::font::Weight;
-use iced::widget::{button, column, container, row, scrollable, text, text_input};
+use iced::widget::{button, column, container, row, scrollable, text};
 use iced::{Alignment, Element, Length};
 
 #[derive(Debug, Clone)]
@@ -17,9 +17,6 @@ pub struct SongsPanel {
     load_more_message: Option<UiMessage>,
     scroll_offset: usize,
     viewport_size: usize,
-    genre_draft: String,
-    year_draft: String,
-    show_metadata_editor: bool,
 }
 
 impl SongsPanel {
@@ -38,9 +35,6 @@ impl SongsPanel {
             load_more_message: None,
             scroll_offset: 0,
             viewport_size: 8,
-            genre_draft: String::new(),
-            year_draft: String::new(),
-            show_metadata_editor: false,
         }
     }
 
@@ -57,18 +51,6 @@ impl SongsPanel {
 
     pub fn with_load_more(mut self, message: Option<UiMessage>) -> Self {
         self.load_more_message = message;
-        self
-    }
-
-    pub fn with_metadata_editor(
-        mut self,
-        genre_draft: impl Into<String>,
-        year_draft: impl Into<String>,
-        show_metadata_editor: bool,
-    ) -> Self {
-        self.genre_draft = genre_draft.into();
-        self.year_draft = year_draft.into();
-        self.show_metadata_editor = show_metadata_editor;
         self
     }
 
@@ -99,31 +81,6 @@ impl SongsPanel {
         ]
         .spacing(8)
         .align_y(Alignment::Center);
-        let metadata_editor = if self.show_metadata_editor {
-            let genre_input = text_input("Genre", &self.genre_draft)
-                .style(move |_, status| style::text_input_style(theme, status))
-                .on_input(UiMessage::AlbumGenreChanged)
-                .padding([6, 10]);
-            let year_input = text_input("Année", &self.year_draft)
-                .style(move |_, status| style::text_input_style(theme, status))
-                .on_input(UiMessage::AlbumYearChanged)
-                .padding([6, 10]);
-            let save_button = button(
-                text("Enregistrer")
-                    .size(theme.size_accessible(12))
-                    .font(style::font_propo(Weight::Medium))
-                    .style(move |_| style::text_style_primary(theme)),
-            )
-            .style(move |_, status| style::button_style(theme, style::ButtonKind::Control, status))
-            .padding([6, 10])
-            .on_press(UiMessage::SaveAlbumMetadata);
-            row![genre_input, year_input, save_button]
-                .spacing(8)
-                .align_y(Alignment::Center)
-                .into()
-        } else {
-            row![].into()
-        };
         let album_info = column![
             text(self.album.clone())
                 .size(theme.size(18))
@@ -132,8 +89,7 @@ impl SongsPanel {
             text(self.artist.clone())
                 .size(theme.size_accessible(12))
                 .font(style::font_propo(Weight::Light))
-                .style(move |_| style::text_style_muted(theme)),
-            metadata_editor
+                .style(move |_| style::text_style_muted(theme))
         ]
         .spacing(4)
         .align_x(Alignment::Start);
