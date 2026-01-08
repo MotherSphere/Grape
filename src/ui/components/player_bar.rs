@@ -15,6 +15,7 @@ pub struct PlayerBar {
     playback: PlaybackState,
     volume: u8,
     queue_active: bool,
+    queue_message: Option<UiMessage>,
 }
 
 impl PlayerBar {
@@ -26,6 +27,7 @@ impl PlayerBar {
             playback: PlaybackState::default(),
             volume: 70,
             queue_active: false,
+            queue_message: None,
         }
     }
 
@@ -46,6 +48,11 @@ impl PlayerBar {
 
     pub fn with_queue(mut self, queue_active: bool) -> Self {
         self.queue_active = queue_active;
+        self
+    }
+
+    pub fn with_queue_action(mut self, message: Option<UiMessage>) -> Self {
+        self.queue_message = message;
         self
     }
 
@@ -77,6 +84,7 @@ impl PlayerBar {
             playback,
             volume,
             queue_active,
+            queue_message,
         } = self;
         let cover_content: Element<UiMessage> = if let Some(path) = cover_path {
             image(image::Handle::from_path(path))
@@ -164,13 +172,28 @@ impl PlayerBar {
         .spacing(8)
         .align_y(Alignment::Center)
         .width(Length::Fill);
+        let queue_label = text(queue_icon(queue_active))
+            .font(style::font_propo(Weight::Medium))
+            .style(move |_| {
+                if queue_active {
+                    style::text_style_primary(theme)
+                } else {
+                    style::text_style_muted(theme)
+                }
+            });
+        let queue_control: Element<UiMessage> = if let Some(message) = queue_message {
+            button(queue_label)
+                .style(move |_, status| style::button_style(theme, style::ButtonKind::Icon, status))
+                .on_press(message)
+                .into()
+        } else {
+            queue_label.into()
+        };
         let audio_icons = row![
             text(volume_icon(volume))
                 .font(style::font_propo(Weight::Medium))
                 .style(move |_| style::text_style_muted(theme)),
-            text(queue_icon(queue_active))
-                .font(style::font_propo(Weight::Medium))
-                .style(move |_| style::text_style_muted(theme))
+            queue_control
         ]
         .spacing(8)
         .align_y(Alignment::Center);
