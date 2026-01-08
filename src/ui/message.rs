@@ -6,8 +6,8 @@ use crate::config::{
     StartupScreen, SubtitleSize, TextScale, ThemeMode, TimeFormat, UpdateChannel, VolumeLevel,
 };
 use crate::ui::state::{
-    ActiveTab, Album, Artist, Folder, Genre, PreferencesSection, PreferencesTab, SortOption,
-    ThemeCategory, Track,
+    ActiveTab, Album, Artist, Folder, Genre, PreferencesSection, PreferencesTab, SearchFilter,
+    SortOption, ThemeCategory, Track,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -116,4 +116,5 @@ pub enum PlaybackMessage {
 pub enum SearchMessage {
     QueryChanged(String),
     SortChanged(SortOption),
+    ToggleFilter(SearchFilter),
 }

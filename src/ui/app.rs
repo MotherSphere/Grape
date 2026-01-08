@@ -17,8 +17,8 @@ use crate::ui::components::songs_panel::SongsPanel;
 use crate::ui::message::{PlaybackMessage, SearchMessage, UiMessage};
 use crate::ui::state::{
     ActiveTab, Album as UiAlbum, Artist as UiArtist, Folder as UiFolder, Genre as UiGenre,
-    PreferencesSection, PreferencesTab, SearchState, SelectionState, SortOption, ThemeCategory,
-    Track as UiTrack, UiState, progress_ratio,
+    PreferencesSection, PreferencesTab, SearchFilter, SearchState, SelectionState, SortOption,
+    ThemeCategory, Track as UiTrack, UiState, progress_ratio,
 };
 use crate::ui::style;
 use iced::font::Weight;
@@ -125,6 +125,24 @@ impl GrapeApp {
             .unwrap_or(false)
     }
 
+    fn duration_matches(query: &str, duration: Duration) -> bool {
+        let total_seconds = duration.as_secs();
+        let total_minutes = total_seconds / 60;
+        let seconds = total_seconds % 60;
+        let hours = total_minutes / 60;
+        let minutes = total_minutes % 60;
+        let mmss = format!("{minutes:02}:{seconds:02}");
+        let hmmss = format!("{hours}:{minutes:02}:{seconds:02}");
+        [
+            total_seconds.to_string(),
+            total_minutes.to_string(),
+            mmss,
+            hmmss,
+        ]
+        .iter()
+        .any(|value| value.contains(query))
+    }
+
     fn normalized_query(&self) -> Option<String> {
         let query = self.ui.search.query.trim();
         if query.is_empty() {
@@ -162,10 +180,24 @@ impl GrapeApp {
     fn filtered_albums_from_catalog(&self) -> Vec<UiAlbum> {
         let mut albums = self.albums_from_catalog();
         if let Some(query) = self.normalized_query() {
+            let filters = self.ui.search.filters;
             albums.retain(|album| {
-                Self::normalized_contains(&query, &album.title)
-                    || Self::normalized_contains(&query, &album.artist)
-                    || Self::year_matches(&query, album.year)
+                let mut matches = Self::normalized_contains(&query, &album.title)
+                    || Self::normalized_contains(&query, &album.artist);
+                if filters.genre {
+                    matches |= self
+                        .album_entry_by_id(album.id)
+                        .and_then(|(_, entry)| entry.genre.as_deref())
+                        .map(|genre| Self::normalized_contains(&query, genre))
+                        .unwrap_or(false);
+                }
+                if filters.year {
+                    matches |= Self::year_matches(&query, album.year);
+                }
+                if filters.duration {
+                    matches |= Self::duration_matches(&query, album.total_duration);
+                }
+                matches
             });
         }
         if self.ui.active_tab == ActiveTab::Genres {
@@ -341,11 +373,25 @@ impl GrapeApp {
             Some(album.year as u32)
         };
         if let Some(query) = self.normalized_query() {
+            let filters = self.ui.search.filters;
             tracks.retain(|track| {
-                Self::normalized_contains(&query, &track.title)
+                let mut matches = Self::normalized_contains(&query, &track.title)
                     || Self::normalized_contains(&query, &track.artist)
-                    || Self::normalized_contains(&query, &track.album)
-                    || Self::year_matches(&query, album_year)
+                    || Self::normalized_contains(&query, &track.album);
+                if filters.genre {
+                    matches |= album
+                        .genre
+                        .as_deref()
+                        .map(|genre| Self::normalized_contains(&query, genre))
+                        .unwrap_or(false);
+                }
+                if filters.year {
+                    matches |= Self::year_matches(&query, album_year);
+                }
+                if filters.duration {
+                    matches |= Self::duration_matches(&query, track.duration);
+                }
+                matches
             });
         }
         match self.ui.search.sort {
@@ -411,7 +457,35 @@ impl GrapeApp {
     fn filtered_folders_from_catalog(&self) -> Vec<UiFolder> {
         let mut folders = self.folders_from_catalog();
         if let Some(query) = self.normalized_query() {
-            folders.retain(|folder| Self::normalized_contains(&query, &folder.name));
+            let filters = self.ui.search.filters;
+            folders.retain(|folder| {
+                let mut matches = Self::normalized_contains(&query, &folder.name);
+                if filters.genre || filters.year || filters.duration {
+                    let Some((_, entry)) = self.folder_entry_by_id(folder.id) else {
+                        return matches;
+                    };
+                    if filters.genre {
+                        matches |= entry
+                            .genre
+                            .as_deref()
+                            .map(|genre| Self::normalized_contains(&query, genre))
+                            .unwrap_or(false);
+                    }
+                    if filters.year {
+                        let year = if entry.year == 0 {
+                            None
+                        } else {
+                            Some(entry.year as u32)
+                        };
+                        matches |= Self::year_matches(&query, year);
+                    }
+                    if filters.duration {
+                        let duration = Duration::from_secs(entry.total_duration_secs as u64);
+                        matches |= Self::duration_matches(&query, duration);
+                    }
+                }
+                matches
+            });
         }
         folders.sort_by(|a, b| Self::normalize_text(&a.name).cmp(&Self::normalize_text(&b.name)));
         folders
@@ -457,11 +531,44 @@ impl GrapeApp {
             .padding([4, 8])
             .on_press(message)
         };
+        let menu_toggle = |label: &'static str, enabled: bool, filter: SearchFilter| {
+            let label = if enabled {
+                format!("{label} ✓")
+            } else {
+                label.to_string()
+            };
+            button(
+                text(label)
+                    .size(theme.size(12))
+                    .font(style::font_propo(Weight::Medium))
+                    .style(move |_| style::text_style_primary(theme)),
+            )
+            .style(move |_, status| {
+                style::button_style(
+                    theme,
+                    style::ButtonKind::ListItem { selected: enabled },
+                    status,
+                )
+            })
+            .padding([4, 8])
+            .on_press(UiMessage::Search(SearchMessage::ToggleFilter(filter)))
+        };
         let logo_menu = container(
             column![
                 menu_button("Bibliothèque", UiMessage::ShowLibrary),
                 menu_button("Playlist", UiMessage::OpenPlaylist),
                 menu_button("Préférences", UiMessage::OpenPreferences),
+                text("Filtres")
+                    .size(theme.size(11))
+                    .font(style::font_propo(Weight::Light))
+                    .style(move |_| style::text_style_muted(theme)),
+                menu_toggle("Genre", self.ui.search.filters.genre, SearchFilter::Genre),
+                menu_toggle("Année", self.ui.search.filters.year, SearchFilter::Year),
+                menu_toggle(
+                    "Durée",
+                    self.ui.search.filters.duration,
+                    SearchFilter::Duration,
+                ),
             ]
             .spacing(6),
         )

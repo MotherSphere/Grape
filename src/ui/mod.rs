@@ -8,7 +8,7 @@ pub mod style;
 
 pub use app::GrapeApp;
 pub use message::{SearchMessage, UiMessage};
-pub use state::{ActiveTab, SortOption};
+pub use state::{ActiveTab, SearchFilter, SortOption};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct TopBar;
