@@ -542,8 +542,6 @@ pub struct UserSettings {
     pub now_playing_notifications: bool,
     pub hardware_acceleration: bool,
     pub limit_cpu_during_playback: bool,
-    pub metadata_api_key: String,
-    pub metadata_cache_ttl_hours: u32,
 }
 
 impl Default for UserSettings {
@@ -600,8 +598,6 @@ impl Default for UserSettings {
             now_playing_notifications: true,
             hardware_acceleration: true,
             limit_cpu_during_playback: false,
-            metadata_api_key: String::new(),
-            metadata_cache_ttl_hours: 24,
         }
     }
 }
@@ -622,9 +618,6 @@ impl UserSettings {
         }
         if self.cache_path.trim().is_empty() {
             self.cache_path = ".grape_cache".to_string();
-        }
-        if self.metadata_cache_ttl_hours > 24 * 365 {
-            self.metadata_cache_ttl_hours = 24 * 365;
         }
         self
     }
