@@ -93,13 +93,6 @@ impl EqModel {
             }
         }
     }
-
-    pub fn clamp_gains(mut self, min_db: f32, max_db: f32) -> Self {
-        for band in &mut self.bands {
-            band.gain_db = band.gain_db.clamp(min_db, max_db);
-        }
-        self
-    }
 }
 
 impl Default for EqModel {
