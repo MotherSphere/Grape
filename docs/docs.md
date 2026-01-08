@@ -11,31 +11,33 @@ Cette documentation couvre l'état actuel du projet, l'architecture et les choix
 ## Architecture (vue rapide)
 
 - **Entrée** : `src/main.rs`
-  - Lance un scan du catalogue via `library::scan_library`.
-  - Lance l'UI via `ui::run`.
+  - Initialise le logging.
+  - Démarre l'UI via `ui::run`, qui pilote le scan initial.
 - **Bibliothèque** : `src/library.rs` + `src/library/`
   - Scan de dossiers, structure `Artist/Album/Track`.
   - Parsing des noms de dossiers/fichiers pour année et numéro de piste.
-  - Lecture des durées audio via `library::metadata` (crate `lofty`).
-  - Détection de jaquettes et cache des couvertures.
+  - Lecture des métadonnées audio via `library::metadata` (crate `lofty`).
+  - Détection de covers embarquées + fallback sur images locales.
+  - Enrichissement optionnel via `library::metadata::online` (Last.fm).
 - **Cache** : `src/library/cache.rs`
-  - Dossier `.grape_cache/` en racine de la bibliothèque.
-  - Index global + un fichier JSON par dossier d'album.
-  - Invalidation par dossier en fonction de la date de modification.
+  - Dossier `.grape_cache/` en racine de la bibliothèque (ou chemin configuré).
+  - Index global des signatures de pistes + JSON par dossier d'album.
+  - Cache covers + cache metadata (Last.fm).
+  - Invalidation par signature (taille + date de modification).
 - **Lecture audio** : `src/player.rs`
   - Player `rodio` (load/play/pause/seek).
-  - Branché sur la sélection de piste dans l'UI.
-  - Traitement EQ en temps réel (3 ou 5 bandes, +/-12 dB).
+  - Sortie audio configurable (périphérique + sample rate).
+  - Traitement EQ et normalisation de volume.
 - **Playlists & queue** : `src/playlist.rs`
-  - Modèle de playlist + sérialisation JSON.
-  - Queue de lecture (`PlaybackQueue`) utilisée par Next/Previous.
+  - Modèle de playlist + sérialisation JSON (`~/.config/grape/playlist.json`).
+  - Queue de lecture (`PlaybackQueue`) basée sur la playlist active.
 - **UI** : `src/ui/*`
   - Iced (layout en 3 colonnes + player bar).
   - État UI centralisé (`UiState`).
   - Vues dédiées pour Artists/Albums/Genres/Folders + playlist.
 - **Préférences** : `src/config.rs`
   - Paramètres persistés dans `~/.config/grape/preferences.json`.
-  - Actions locales (clear cache, clear history) exposées dans l'UI.
+  - Actions locales (clear cache, clear history, reset audio, reindex) exposées dans l'UI.
 
 ## UI : layout et composants
 
@@ -69,9 +71,10 @@ Composants Iced :
 ## Données du catalogue
 
 - Les artistes et albums sont chargés depuis le scan local.
-- Les durées proviennent des métadonnées (`lofty`) quand elles sont disponibles.
-- Les jaquettes sont copiées dans le cache local si détectées.
+- Les métadonnées proviennent de `lofty` (durées, codec, bitrate, genre, année).
+- Les jaquettes embarquées sont prioritaires, sinon copie locale dans le cache.
 - Les onglets Genres/Folders sont alimentés par des résumés dérivés du catalogue.
+- L'enrichissement en ligne (Last.fm) est optionnel via clé API.
 
 ## Assets
 
@@ -79,15 +82,13 @@ Le dossier `assets/` est dédié aux éléments visuels (logos, fonts, captures,
 
 ## Limitations actuelles
 
-- La playlist est une vue placeholder (modèle non encore affiché).
-- Les genres sont dérivés (actuellement un genre « Unknown » global).
-- Certaines actions de préférences sont encore déclaratives (réindexation, logs).
-- Le cache est indexé par dossier d'album, sans détection fine au niveau piste.
+- L'édition de playlist est limitée (pas de réordonnancement ni suppression d'items depuis l'UI).
+- Les genres restent « Unknown » si les tags audio sont absents.
 - L'égaliseur est limité aux bandes préconfigurées (3 ou 5) avec des gains entre -12 dB et +12 dB.
 - Si un périphérique audio sélectionné n'est pas disponible, la sortie repasse sur le système.
 
 ## Prochaines étapes suggérées
 
-- Relier le modèle de playlist (`playlist.rs`) à l'UI.
-- Enrichir les métadonnées (genres réels, jaquettes embarquées).
-- Étendre les préférences (réindexation, logs, reset audio réel).
+- Compléter les actions playlist (réorder, suppression de pistes, vue queue dédiée).
+- Enrichir les métadonnées (genres réels, sources en ligne supplémentaires).
+- Étendre les préférences (actions système avancées, logs détaillés).
