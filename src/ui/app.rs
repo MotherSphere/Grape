@@ -34,7 +34,9 @@ use iced::{
     Alignment, Color, Element, Length, Padding, Settings, Subscription, Task, Theme, event,
     keyboard, mouse, time, window,
 };
-use std::path::PathBuf;
+use std::io;
+use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::time::Duration;
 use tracing::{error, info, warn};
 use unicode_normalization::UnicodeNormalization;
@@ -1657,6 +1659,55 @@ impl GrapeApp {
         self.ui.playback = crate::ui::state::PlaybackState::default();
         self.ui.selection = SelectionState::default();
         self.playback_queue = Self::playback_queue_from_playlist(&self.playlists);
+    }
+
+    fn open_logs_folder(&self) {
+        let path = match config::ensure_logs_dir() {
+            Ok(path) => path,
+            Err(err) => {
+                error!(error = %err, "Failed to ensure logs directory");
+                return;
+            }
+        };
+        if let Err(err) = Self::open_path_in_shell(&path) {
+            error!(error = %err, path = %path.display(), "Failed to open logs folder");
+        } else {
+            info!(path = %path.display(), "Opened logs folder");
+        }
+    }
+
+    fn open_path_in_shell(path: &Path) -> io::Result<()> {
+        #[cfg(target_os = "windows")]
+        let mut command = {
+            let mut command = Command::new("cmd");
+            command.args(["/C", "start", ""]);
+            command.arg(path);
+            command
+        };
+
+        #[cfg(target_os = "macos")]
+        let mut command = {
+            let mut command = Command::new("open");
+            command.arg(path);
+            command
+        };
+
+        #[cfg(all(unix, not(target_os = "macos")))]
+        let mut command = {
+            let mut command = Command::new("xdg-open");
+            command.arg(path);
+            command
+        };
+
+        let status = command.status()?;
+        if status.success() {
+            Ok(())
+        } else {
+            Err(io::Error::new(
+                io::ErrorKind::Other,
+                format!("open command failed with status {status}"),
+            ))
+        }
     }
 
     fn apply_audio_settings(&mut self) {
@@ -3853,6 +3904,7 @@ impl GrapeApp {
                 | UiMessage::SetEqBandGain(_, _)
                 | UiMessage::ResetEq
                 | UiMessage::SetAudioStabilityMode(_)
+                | UiMessage::SetAudioDebugLogs(_)
         );
         let mut task = Task::none();
         match &message {
@@ -4043,8 +4095,7 @@ impl GrapeApp {
                 }
             }
             UiMessage::OpenLogsFolder => {
-                let path = config::logs_path();
-                info!(path = %path.display(), "Open logs folder requested");
+                self.open_logs_folder();
             }
             UiMessage::ReindexLibrary => {
                 task = self.handle_declarative_action(DeclarativeAction::ReindexLibrary);

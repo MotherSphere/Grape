@@ -240,6 +240,7 @@ pub struct Player {
     options: AudioOptions,
     processing: AudioProcessingConfig,
     last_fallback: Option<AudioFallback>,
+    debug_logs: bool,
 }
 
 impl Player {
@@ -254,7 +255,7 @@ impl Player {
         let (stream, resolved_options, last_fallback) =
             Self::stream_outcome_to_player_state(options, outcome);
         let sink = Sink::connect_new(stream.mixer());
-        Ok(Self {
+        let mut player = Self {
             stream,
             sink,
             state: PlaybackState::Stopped,
@@ -263,7 +264,10 @@ impl Player {
             options: resolved_options,
             processing,
             last_fallback,
-        })
+            debug_logs: settings.audio_debug_logs,
+        };
+        player.log_audio_config("init");
+        Ok(player)
     }
 
     pub fn reset(&mut self, options: AudioOptions) -> Result<(), PlayerError> {
@@ -280,13 +284,25 @@ impl Player {
         self.options = resolved_options;
         self.processing = processing;
         self.last_fallback = last_fallback;
+        self.log_audio_config("reset");
         Ok(())
     }
 
     pub fn apply_settings(&mut self, settings: &UserSettings) -> Result<(), PlayerError> {
         let mut updated = false;
+        let was_debug_logs = self.debug_logs;
         let options = AudioOptions::from_settings(settings);
         let processing = AudioProcessingConfig::from_settings(settings);
+        if self.debug_logs != settings.audio_debug_logs {
+            self.debug_logs = settings.audio_debug_logs;
+            info!(
+                enabled = self.debug_logs,
+                "Audio debug logging preference updated"
+            );
+            if !was_debug_logs && self.debug_logs {
+                self.log_audio_config("debug_enabled");
+            }
+        }
         if options != self.options {
             let outcome = options.open_stream()?;
             let (stream, resolved_options, last_fallback) =
@@ -302,6 +318,7 @@ impl Player {
         }
         if updated {
             self.reload_current_track()?;
+            self.log_audio_config("apply_settings");
         }
         Ok(())
     }
@@ -368,6 +385,17 @@ impl Player {
 
     pub fn take_last_fallback_notice(&mut self) -> Option<AudioFallback> {
         self.last_fallback.take()
+    }
+
+    fn log_audio_config(&self, context: &str) {
+        if self.debug_logs {
+            info!(
+                context,
+                options = ?self.options,
+                processing = ?self.processing,
+                "Audio debug configuration"
+            );
+        }
     }
 
     fn reload_current_track(&mut self) -> Result<(), PlayerError> {

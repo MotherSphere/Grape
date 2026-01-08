@@ -750,6 +750,14 @@ pub fn logs_path() -> PathBuf {
     logs_dir()
 }
 
+pub fn ensure_logs_dir() -> io::Result<PathBuf> {
+    let path = logs_dir();
+    if !path.exists() {
+        fs::create_dir_all(&path)?;
+    }
+    Ok(path)
+}
+
 pub fn clear_history() -> io::Result<()> {
     let path = history_path();
     if path.exists() {
