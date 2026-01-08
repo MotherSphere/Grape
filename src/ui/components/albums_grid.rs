@@ -12,17 +12,21 @@ pub struct AlbumsGrid {
     sort_label: String,
     albums: Vec<Album>,
     selected_album_id: Option<usize>,
+    total_count: usize,
+    load_more_message: Option<UiMessage>,
     columns: usize,
     scroll_offset: usize,
     viewport_rows: usize,
 }
 
 impl AlbumsGrid {
-    pub fn new(albums: Vec<Album>) -> Self {
+    pub fn new(albums: Vec<Album>, total_count: usize) -> Self {
         Self {
             sort_label: "A–Z".to_string(),
             albums,
             selected_album_id: None,
+            total_count,
+            load_more_message: None,
             columns: 3,
             scroll_offset: 0,
             viewport_rows: 3,
@@ -51,6 +55,11 @@ impl AlbumsGrid {
         self
     }
 
+    pub fn with_load_more(mut self, message: Option<UiMessage>) -> Self {
+        self.load_more_message = message;
+        self
+    }
+
     pub fn message_for_album(&self, album_id: usize) -> Option<UiMessage> {
         self.albums
             .iter()
@@ -61,7 +70,7 @@ impl AlbumsGrid {
 
     pub fn view(self, focused: bool, theme: style::ThemeTokens) -> Element<'static, UiMessage> {
         let header = row![
-            text(format!("{} Albums", self.albums.len()))
+            text(format!("{} Albums", self.total_count))
                 .size(theme.size(16))
                 .font(style::font_propo(Weight::Semibold))
                 .style(move |_| style::text_style_primary(theme)),
@@ -159,11 +168,27 @@ impl AlbumsGrid {
                         .into()
                 })
                 .collect::<Vec<Element<UiMessage>>>();
-            column(rows)
+            let mut grid = column(rows)
                 .spacing(20)
                 .width(Length::Fill)
-                .align_x(Alignment::Start)
-                .into()
+                .align_x(Alignment::Start);
+            if let Some(message) = self.load_more_message.clone() {
+                let remaining = self.total_count.saturating_sub(self.albums.len());
+                if remaining > 0 {
+                    let label = text(format!("Charger plus ({remaining} restants)"))
+                        .size(theme.size_accessible(12))
+                        .font(style::font_propo(Weight::Medium))
+                        .style(move |_| style::text_style_primary(theme));
+                    let button = button(label)
+                        .style(move |_, status| {
+                            style::button_style(theme, style::ButtonKind::Control, status)
+                        })
+                        .padding([6, 10])
+                        .on_press(message);
+                    grid = grid.push(container(button).center_x(Length::Fill));
+                }
+            }
+            grid.into()
         };
         let content = column![header, grid_content]
             .spacing(12)
