@@ -75,6 +75,14 @@ impl Default for AccessibleTextSize {
 }
 
 impl AccessibleTextSize {
+    pub fn scale(self) -> f32 {
+        match self {
+            Self::Standard => 1.0,
+            Self::Large => 1.1,
+            Self::ExtraLarge => 1.25,
+        }
+    }
+
     pub fn slider_value(self) -> f32 {
         match self {
             Self::Standard => 0.0,
@@ -523,6 +531,9 @@ pub struct UserSettings {
     pub interface_density: InterfaceDensity,
     pub transparency_blur: bool,
     pub ui_animations: bool,
+    pub accessibility_large_text: bool,
+    pub accessibility_high_contrast: bool,
+    pub accessibility_reduce_motion: bool,
     pub increase_contrast: bool,
     pub reduce_transparency: bool,
     pub accessible_text_size: AccessibleTextSize,
@@ -581,6 +592,9 @@ impl Default for UserSettings {
             interface_density: InterfaceDensity::default(),
             transparency_blur: true,
             ui_animations: true,
+            accessibility_large_text: false,
+            accessibility_high_contrast: false,
+            accessibility_reduce_motion: false,
             increase_contrast: false,
             reduce_transparency: false,
             accessible_text_size: AccessibleTextSize::default(),
@@ -635,6 +649,24 @@ impl UserSettings {
         self.default_volume = self.default_volume.min(100);
         self.crossfade_seconds = self.crossfade_seconds.min(12);
         self.default_playback_speed = self.default_playback_speed.clamp(5, 20);
+        if self.accessibility_large_text {
+            if self.text_scale == TextScale::Normal {
+                self.text_scale = TextScale::Large;
+            }
+            if self.accessible_text_size == AccessibleTextSize::Standard {
+                self.accessible_text_size = AccessibleTextSize::Large;
+            }
+        }
+        if self.accessibility_high_contrast {
+            self.increase_contrast = true;
+        }
+        if self.accessibility_reduce_motion {
+            self.reduce_animations = true;
+            self.reduce_transitions = true;
+        }
+        self.accessibility_large_text |= self.text_scale != TextScale::Normal;
+        self.accessibility_high_contrast |= self.increase_contrast;
+        self.accessibility_reduce_motion |= self.reduce_animations || self.reduce_transitions;
         if let Some(sample_rate) = self.output_sample_rate_hz {
             if !(8_000..=192_000).contains(&sample_rate) {
                 self.output_sample_rate_hz = None;

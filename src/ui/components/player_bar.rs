@@ -102,7 +102,7 @@ impl PlayerBar {
                     .font(style::font_propo(Weight::Medium))
                     .style(move |_| style::text_style_primary(theme)),
                 text(artist)
-                    .size(theme.size(12))
+                    .size(theme.size_accessible(12))
                     .font(style::font_propo(Weight::Light))
                     .style(move |_| style::text_style_muted(theme))
             ]
@@ -148,16 +148,16 @@ impl PlayerBar {
 
         let elapsed = format_duration(playback.position);
         let duration = format_duration(playback.duration);
-        let progress = container(progress_bar(0.0..=1.0, playback.animated_progress))
-        .width(Length::Fill);
+        let progress =
+            container(progress_bar(0.0..=1.0, playback.animated_progress)).width(Length::Fill);
         let progress_row = row![
             text(elapsed)
-                .size(theme.size(12))
+                .size(theme.size_accessible(12))
                 .font(style::font_mono(Weight::Medium))
                 .style(move |_| style::text_style_muted(theme)),
             progress,
             text(duration)
-                .size(theme.size(12))
+                .size(theme.size_accessible(12))
                 .font(style::font_mono(Weight::Medium))
                 .style(move |_| style::text_style_muted(theme))
         ]

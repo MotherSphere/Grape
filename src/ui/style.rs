@@ -2,7 +2,7 @@ use iced::font::{Family, Weight};
 use iced::widget::{button, container, text, text_input};
 use iced::{Background, Border, Color, Font, Shadow};
 
-use crate::config::ThemeMode;
+use crate::config::{ThemeMode, UserSettings};
 
 pub const FONT_PROPO: &str = "JetBrainsMono Nerd Font Propo";
 pub const FONT_MONO: &str = "JetBrainsMono Nerd Font Mono";
@@ -43,6 +43,37 @@ pub struct Palette {
 }
 
 impl Palette {
+    fn with_high_contrast(self) -> Self {
+        let background = self.background;
+        let accent = self.accent;
+        let text_primary = if is_dark(background) {
+            Color::from_rgb8(0xf8, 0xf8, 0xf8)
+        } else {
+            Color::from_rgb8(0x10, 0x10, 0x10)
+        };
+        let text_muted = mix(text_primary, background, 0.35);
+        let border = mix(text_primary, background, 0.2);
+        let selected = mix(accent, background, 0.2);
+        let hover = mix(accent, background, 0.35);
+        Self {
+            background,
+            panel: mix(self.panel, background, 0.1),
+            elevated: mix(self.elevated, background, 0.1),
+            hover,
+            selected,
+            accent,
+            text_primary,
+            text_muted,
+            border,
+            border_subtle: border,
+            avatar: self.avatar,
+            player_bar: mix(self.player_bar, background, 0.1),
+            album_cover: self.album_cover,
+            input_background: mix(self.input_background, background, 0.1),
+            input_border: border,
+        }
+    }
+
     pub fn latte() -> Self {
         Self {
             background: Color::from_rgb8(0xef, 0xf1, 0xf5),
@@ -264,14 +295,37 @@ impl Palette {
     }
 }
 
+fn is_dark(color: Color) -> bool {
+    let luminance = 0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b;
+    luminance < 0.5
+}
+
+fn mix(foreground: Color, background: Color, factor: f32) -> Color {
+    let factor = factor.clamp(0.0, 1.0);
+    Color {
+        r: background.r + (foreground.r - background.r) * factor,
+        g: background.g + (foreground.g - background.g) * factor,
+        b: background.b + (foreground.b - background.b) * factor,
+        a: 1.0,
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct ThemeTokens {
     pub palette: Palette,
     pub scale: f32,
+    pub accessible_scale: f32,
+    pub focus_ring: bool,
 }
 
 impl ThemeTokens {
-    pub fn new(mode: ThemeMode, scale: f32) -> Self {
+    pub fn new(
+        mode: ThemeMode,
+        scale: f32,
+        accessible_scale: f32,
+        high_contrast: bool,
+        focus_ring: bool,
+    ) -> Self {
         let palette = match mode {
             ThemeMode::Latte => Palette::latte(),
             ThemeMode::Frappe => Palette::frappe(),
@@ -285,11 +339,39 @@ impl ThemeTokens {
             ThemeMode::KanagawaDark => Palette::kanagawa_dark(),
             ThemeMode::KanagawaJournal => Palette::kanagawa_journal(),
         };
-        Self { palette, scale }
+        let palette = if high_contrast {
+            palette.with_high_contrast()
+        } else {
+            palette
+        };
+        Self {
+            palette,
+            scale,
+            accessible_scale,
+            focus_ring,
+        }
+    }
+
+    pub fn from_settings(settings: &UserSettings) -> Self {
+        let high_contrast = settings.increase_contrast || settings.accessibility_high_contrast;
+        let focus_ring = settings.highlight_keyboard_focus;
+        let scale = settings.text_scale.scale();
+        let accessible_scale = settings.accessible_text_size.scale();
+        Self::new(
+            settings.theme_mode,
+            scale,
+            accessible_scale,
+            high_contrast,
+            focus_ring,
+        )
     }
 
     pub fn size(&self, base: u16) -> u32 {
         ((base as f32 * self.scale).round().max(10.0)) as u32
+    }
+
+    pub fn size_accessible(&self, base: u16) -> u32 {
+        ((base as f32 * self.accessible_scale).round().max(10.0)) as u32
     }
 }
 
@@ -417,17 +499,13 @@ pub fn surface_style(theme: ThemeTokens, surface: Surface) -> container::Style {
 #[derive(Debug, Clone, Copy)]
 pub enum ButtonKind {
     Tab { selected: bool },
-    ListItem { selected: bool },
-    AlbumCard { selected: bool },
+    ListItem { selected: bool, focused: bool },
+    AlbumCard { selected: bool, focused: bool },
     Control,
     Icon,
 }
 
-pub fn button_style(
-    theme: ThemeTokens,
-    kind: ButtonKind,
-    status: button::Status,
-) -> button::Style {
+pub fn button_style(theme: ThemeTokens, kind: ButtonKind, status: button::Status) -> button::Style {
     let palette = theme.palette;
     let mut style = match kind {
         ButtonKind::Tab { selected } => button::Style {
@@ -453,7 +531,7 @@ pub fn button_style(
             shadow: Shadow::default(),
             snap: cfg!(feature = "crisp"),
         },
-        ButtonKind::ListItem { selected } => button::Style {
+        ButtonKind::ListItem { selected, focused } => button::Style {
             background: Some(Background::Color(if selected {
                 palette.selected
             } else {
@@ -472,7 +550,7 @@ pub fn button_style(
             shadow: Shadow::default(),
             snap: cfg!(feature = "crisp"),
         },
-        ButtonKind::AlbumCard { selected } => button::Style {
+        ButtonKind::AlbumCard { selected, focused } => button::Style {
             background: Some(Background::Color(if selected {
                 palette.selected
             } else {
@@ -515,6 +593,18 @@ pub fn button_style(
         },
     };
 
+    if matches!(
+        kind,
+        ButtonKind::ListItem { focused: true, .. } | ButtonKind::AlbumCard { focused: true, .. }
+    ) && theme.focus_ring
+    {
+        style.border = Border {
+            width: 2.0,
+            color: palette.accent,
+            ..style.border
+        };
+    }
+
     match status {
         button::Status::Hovered | button::Status::Pressed => {
             style.background = Some(Background::Color(palette.hover));
@@ -530,10 +620,7 @@ pub fn button_style(
     style
 }
 
-pub fn text_input_style(
-    theme: ThemeTokens,
-    status: text_input::Status,
-) -> text_input::Style {
+pub fn text_input_style(theme: ThemeTokens, status: text_input::Status) -> text_input::Style {
     let base = text_input::Style {
         background: Background::Color(theme.palette.input_background),
         border: Border {

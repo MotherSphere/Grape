@@ -39,7 +39,7 @@ impl PlaylistView {
         let playlist_rows = if playlists.playlists.is_empty() {
             vec![
                 text("Aucune playlist enregistrée.")
-                    .size(theme.size(12))
+                    .size(theme.size_accessible(12))
                     .font(style::font_propo(Weight::Medium))
                     .style(move |_| style::text_style_muted(theme))
                     .into(),
@@ -59,7 +59,10 @@ impl PlaylistView {
                         .style(move |_, status| {
                             style::button_style(
                                 theme,
-                                style::ButtonKind::ListItem { selected },
+                                style::ButtonKind::ListItem {
+                                    selected,
+                                    focused: false,
+                                },
                                 status,
                             )
                         })
@@ -73,7 +76,7 @@ impl PlaylistView {
 
         let playlist_section = column![
             text("Playlists existantes")
-                .size(theme.size(12))
+                .size(theme.size_accessible(12))
                 .font(style::font_propo(Weight::Semibold))
                 .style(move |_| style::text_style_muted(theme)),
             scrollable(column(playlist_rows).spacing(6)).height(Length::Fixed(120.0))
@@ -83,7 +86,7 @@ impl PlaylistView {
         let action_button = |label: &'static str, message: UiMessage| {
             button(
                 text(label)
-                    .size(theme.size(12))
+                    .size(theme.size_accessible(12))
                     .font(style::font_propo(Weight::Medium))
                     .style(move |_| style::text_style_primary(theme)),
             )
@@ -94,7 +97,7 @@ impl PlaylistView {
 
         let mut add_track_button = button(
             text("Ajouter piste")
-                .size(theme.size(12))
+                .size(theme.size_accessible(12))
                 .font(style::font_propo(Weight::Medium))
                 .style(move |_| style::text_style_primary(theme)),
         )
@@ -123,7 +126,7 @@ impl PlaylistView {
                 let mut rows: Vec<Element<'a, UiMessage>> = Vec::new();
                 for (index, item) in playlist.items.iter().enumerate() {
                     let index_label = text(format!("{:02}", index + 1))
-                        .size(theme.size(12))
+                        .size(theme.size_accessible(12))
                         .font(style::font_propo(Weight::Medium))
                         .style(move |_| style::text_style_muted(theme));
                     let title = text(item.title.clone())
@@ -131,7 +134,7 @@ impl PlaylistView {
                         .font(style::font_propo(Weight::Semibold))
                         .style(move |_| style::text_style_primary(theme));
                     let subtitle = text(format!("{} — {}", item.artist, item.album))
-                        .size(theme.size(12))
+                        .size(theme.size_accessible(12))
                         .font(style::font_propo(Weight::Medium))
                         .style(move |_| style::text_style_muted(theme));
                     let track = column![title, subtitle].spacing(2);

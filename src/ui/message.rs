@@ -39,6 +39,9 @@ pub enum UiMessage {
     SetInterfaceDensity(InterfaceDensity),
     SetTransparencyBlur(bool),
     SetUiAnimations(bool),
+    SetAccessibilityLargeText(bool),
+    SetAccessibilityHighContrast(bool),
+    SetAccessibilityReduceMotion(bool),
     SetIncreaseContrast(bool),
     SetReduceTransparency(bool),
     SetAccessibleTextSize(AccessibleTextSize),
@@ -97,6 +100,8 @@ pub enum UiMessage {
     ToggleThemeCategory(ThemeCategory),
     CloseMenu,
     PlaybackTick,
+    NavigateLibrary(LibraryNavigation),
+    ActivateSelection,
     PlaylistNameChanged(String),
     CreatePlaylist,
     RenamePlaylist,
@@ -119,4 +124,14 @@ pub enum SearchMessage {
     QueryChanged(String),
     SortChanged(SortOption),
     ToggleFilter(SearchFilter),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LibraryNavigation {
+    Up,
+    Down,
+    Left,
+    Right,
+    NextPanel,
+    PreviousPanel,
 }

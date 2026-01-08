@@ -59,90 +59,113 @@ impl AlbumsGrid {
             .map(UiMessage::SelectAlbum)
     }
 
-    pub fn view(self, theme: style::ThemeTokens) -> Element<'static, UiMessage> {
+    pub fn view(self, focused: bool, theme: style::ThemeTokens) -> Element<'static, UiMessage> {
         let header = row![
             text(format!("{} Albums", self.albums.len()))
                 .size(theme.size(16))
                 .font(style::font_propo(Weight::Semibold))
                 .style(move |_| style::text_style_primary(theme)),
             text(format!("{} ", self.sort_label))
-                .size(theme.size(12))
+                .size(theme.size_accessible(12))
                 .font(style::font_propo(Weight::Light))
                 .style(move |_| style::text_style_muted(theme))
         ]
         .spacing(8)
         .align_y(Alignment::Center);
-        let rows = self
-            .albums
-            .chunks(self.columns)
-            .map(|chunk| {
-                let cells = chunk
-                    .iter()
-                    .map(|album| {
-                        let is_selected = Some(album.id) == self.selected_album_id;
-                        let cover_content: Element<UiMessage> =
-                            if let Some(cover_path) = &album.cover_path {
-                                image(image::Handle::from_path(cover_path))
-                                    .width(Length::Fill)
-                                    .height(Length::Fill)
-                                    .into()
-                            } else {
-                                text("♪")
-                                    .size(theme.size(26))
-                                    .font(style::font_propo(Weight::Medium))
-                                    .style(move |_| style::text_style_muted(theme))
-                                    .into()
-                            };
-                        let cover = container(cover_content)
-                            .width(Length::Fixed(120.0))
-                            .height(Length::Fixed(120.0))
-                            .center_x(Length::Fill)
-                            .center_y(Length::Fill)
-                            .style(move |_| {
-                                style::surface_style(theme, style::Surface::AlbumCover)
-                            });
+        let grid_content: Element<'static, UiMessage> = if self.albums.is_empty() {
+            let empty = column![
+                text("Aucun album trouvé")
+                    .size(theme.size(14))
+                    .font(style::font_propo(Weight::Medium))
+                    .style(move |_| style::text_style_primary(theme)),
+                text("Essayez un autre filtre ou un autre tri.")
+                    .size(theme.size_accessible(12))
+                    .font(style::font_propo(Weight::Light))
+                    .style(move |_| style::text_style_muted(theme)),
+            ]
+            .spacing(6)
+            .align_x(Alignment::Center);
+            container(empty)
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .center_x(Length::Fill)
+                .center_y(Length::Fill)
+                .into()
+        } else {
+            let rows = self
+                .albums
+                .chunks(self.columns)
+                .map(|chunk| {
+                    let cells = chunk
+                        .iter()
+                        .map(|album| {
+                            let is_selected = Some(album.id) == self.selected_album_id;
+                            let cover_content: Element<UiMessage> =
+                                if let Some(cover_path) = &album.cover_path {
+                                    image(image::Handle::from_path(cover_path))
+                                        .width(Length::Fill)
+                                        .height(Length::Fill)
+                                        .into()
+                                } else {
+                                    text("♪")
+                                        .size(theme.size(26))
+                                        .font(style::font_propo(Weight::Medium))
+                                        .style(move |_| style::text_style_muted(theme))
+                                        .into()
+                                };
+                            let cover = container(cover_content)
+                                .width(Length::Fixed(120.0))
+                                .height(Length::Fixed(120.0))
+                                .center_x(Length::Fill)
+                                .center_y(Length::Fill)
+                                .style(move |_| {
+                                    style::surface_style(theme, style::Surface::AlbumCover)
+                                });
 
-                        let title = text(album.title.clone())
-                            .size(theme.size(14))
-                            .font(style::font_propo(Weight::Medium))
-                            .style(move |_| style::text_style_primary(theme));
-                        let artist = text(album.artist.clone())
-                            .size(theme.size(12))
-                            .font(style::font_propo(Weight::Light))
-                            .style(move |_| style::text_style_muted(theme));
-                        let card = column![cover, title, artist]
-                            .spacing(6)
-                            .align_x(Alignment::Center)
-                            .width(Length::Fill);
+                            let title = text(album.title.clone())
+                                .size(theme.size(14))
+                                .font(style::font_propo(Weight::Medium))
+                                .style(move |_| style::text_style_primary(theme));
+                            let artist = text(album.artist.clone())
+                                .size(theme.size_accessible(12))
+                                .font(style::font_propo(Weight::Light))
+                                .style(move |_| style::text_style_muted(theme));
+                            let card = column![cover, title, artist]
+                                .spacing(6)
+                                .align_x(Alignment::Center)
+                                .width(Length::Fill);
 
-                        button(card)
-                            .style(move |_, status| {
-                                style::button_style(
-                                    theme,
-                                    style::ButtonKind::AlbumCard {
-                                        selected: is_selected,
-                                    },
-                                    status,
-                                )
-                            })
-                            .on_press(UiMessage::SelectAlbum(album.clone()))
-                            .width(Length::FillPortion(1))
-                            .into()
-                    })
-                    .collect::<Vec<Element<UiMessage>>>();
+                            button(card)
+                                .style(move |_, status| {
+                                    style::button_style(
+                                        theme,
+                                        style::ButtonKind::AlbumCard {
+                                            selected: is_selected,
+                                            focused: focused && is_selected,
+                                        },
+                                        status,
+                                    )
+                                })
+                                .on_press(UiMessage::SelectAlbum(album.clone()))
+                                .width(Length::FillPortion(1))
+                                .into()
+                        })
+                        .collect::<Vec<Element<UiMessage>>>();
 
-                row(cells)
-                    .spacing(16)
-                    .align_y(Alignment::Start)
-                    .width(Length::Fill)
-                    .into()
-            })
-            .collect::<Vec<Element<UiMessage>>>();
-        let grid = column(rows)
-            .spacing(20)
-            .width(Length::Fill)
-            .align_x(Alignment::Start);
-        let content = column![header, grid]
+                    row(cells)
+                        .spacing(16)
+                        .align_y(Alignment::Start)
+                        .width(Length::Fill)
+                        .into()
+                })
+                .collect::<Vec<Element<UiMessage>>>();
+            column(rows)
+                .spacing(20)
+                .width(Length::Fill)
+                .align_x(Alignment::Start)
+                .into()
+        };
+        let content = column![header, grid_content]
             .spacing(12)
             .width(Length::Fill)
             .align_x(Alignment::Start);
