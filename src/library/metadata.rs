@@ -50,14 +50,21 @@ pub fn track_metadata(path: &Path) -> TrackMetadata {
 
     let title = extract_first_string(&tagged_file, &[ItemKey::TrackTitle]);
     let track_number = extract_track_number(&tagged_file);
-    let artist = extract_first_string(
+    let track_artist = extract_first_string(
         &tagged_file,
-        &[
-            ItemKey::AlbumArtist,
-            ItemKey::TrackArtist,
-            ItemKey::TrackArtists,
-        ],
-    );
+        &[ItemKey::TrackArtist, ItemKey::TrackArtists],
+    )
+    .and_then(|value| split_artist_field(&value));
+    let album_artist = extract_first_string(&tagged_file, &[ItemKey::AlbumArtist])
+        .and_then(|value| split_artist_field(&value));
+    let artist = match (track_artist.as_deref(), album_artist.as_deref()) {
+        (Some(primary), Some(secondary)) if primary != secondary => {
+            Some(format!("{}; {}", primary, secondary))
+        }
+        (Some(primary), _) => Some(primary.to_string()),
+        (None, Some(secondary)) => Some(secondary.to_string()),
+        (None, None) => None,
+    };
     let album = extract_first_string(&tagged_file, &[ItemKey::AlbumTitle]);
     let genre = extract_genre(&tagged_file);
     let year = extract_year(&tagged_file);
@@ -146,6 +153,14 @@ fn extract_first_string(tagged_file: &impl TaggedFileExt, keys: &[ItemKey]) -> O
         }
     }
     None
+}
+
+fn split_artist_field(value: &str) -> Option<String> {
+    value
+        .split(|ch| matches!(ch, ';' | '/' | '\\' | ',' | '|'))
+        .map(|artist| artist.trim())
+        .find(|artist| !artist.is_empty())
+        .map(|artist| artist.to_string())
 }
 
 fn extract_track_number(tagged_file: &impl TaggedFileExt) -> Option<u8> {
