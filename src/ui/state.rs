@@ -482,6 +482,7 @@ pub struct UiState {
     pub pending_action: Option<DeclarativeAction>,
     pub settings: UserSettings,
     pub audio_notice: Option<String>,
+    pub play_from_queue: bool,
     pub list_limits: ListLimits,
     pub scan_status: Option<ScanStatus>,
     pub needs_initial_scan: bool,
@@ -508,6 +509,7 @@ impl UiState {
             pending_action: None,
             settings,
             audio_notice: None,
+            play_from_queue: true,
             list_limits: ListLimits::default(),
             scan_status: None,
             needs_initial_scan,
@@ -571,6 +573,9 @@ impl UiState {
             }
             UiMessage::Search(message) => {
                 self.search.update(message);
+            }
+            UiMessage::TogglePlayFromQueue => {
+                self.play_from_queue = !self.play_from_queue;
             }
             UiMessage::ToggleLogoMenu => {
                 self.menu_open = !self.menu_open;
