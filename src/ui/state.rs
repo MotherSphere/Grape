@@ -253,8 +253,6 @@ pub struct SelectionState {
     pub selected_genre: Option<Genre>,
     pub selected_folder: Option<Folder>,
     pub selected_track: Option<Track>,
-    pub selected_playlist: Option<usize>,
-    pub playlist_name_draft: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -314,8 +312,8 @@ impl PlaybackState {
         } else if ratio_delta < 0.001 {
             self.animated_progress = target;
         } else {
-            self.animated_progress =
-                (self.animated_progress + (target - self.animated_progress) * 0.2).clamp(0.0, 1.0);
+            self.animated_progress = (self.animated_progress + (target - self.animated_progress) * 0.2)
+                .clamp(0.0, 1.0);
         }
     }
 }
@@ -421,9 +419,6 @@ impl UiState {
             }
             UiMessage::SelectTrack(track) => {
                 self.selection.selected_track = Some(track);
-            }
-            UiMessage::SelectPlaylist(index) => {
-                self.selection.selected_playlist = Some(*index);
             }
             UiMessage::Playback(message) => {
                 self.playback.update(message);
@@ -639,13 +634,6 @@ impl UiState {
                 self.menu_open = false;
             }
             UiMessage::PlaybackTick => {}
-            UiMessage::PlaylistNameChanged(name) => {
-                self.selection.playlist_name_draft = name.clone();
-            }
-            UiMessage::CreatePlaylist => {}
-            UiMessage::RenamePlaylist => {}
-            UiMessage::DeletePlaylist => {}
-            UiMessage::AddSelectedTrackToPlaylist => {}
         }
     }
 }
