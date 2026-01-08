@@ -12,24 +12,10 @@ use crate::library::Catalog;
 fn main() {
     tracing_subscriber::fmt::init();
 
-    let library_root = std::env::args()
-        .nth(1)
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("library"));
+    let library_root_override = std::env::args().nth(1).map(PathBuf::from);
+    let catalog = Catalog::empty();
 
-    let settings = config::load_settings();
-    let catalog = match library::scan_library(&library_root, &settings) {
-        Ok(catalog) => catalog,
-        Err(err) => {
-            eprintln!(
-                "Erreur lors du scan de {:?}: {err}. Utilisation d'une bibliothèque vide.",
-                library_root
-            );
-            Catalog::empty()
-        }
-    };
-
-    if let Err(err) = ui::run(catalog) {
+    if let Err(err) = ui::run(catalog, library_root_override) {
         eprintln!("Erreur UI: {err}");
     }
 }

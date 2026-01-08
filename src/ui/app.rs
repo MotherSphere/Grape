@@ -20,17 +20,20 @@ use crate::ui::components::songs_panel::SongsPanel;
 use crate::ui::message::{LibraryNavigation, PlaybackMessage, SearchMessage, UiMessage};
 use crate::ui::state::{
     ActiveTab, Album as UiAlbum, Artist as UiArtist, Folder as UiFolder, Genre as UiGenre,
-    LibraryFocus, PreferencesSection, PreferencesTab, SearchFilter, SearchState, SelectionState,
-    SortOption, ThemeCategory, Track as UiTrack, UiState, progress_ratio,
+    LibraryFocus, ListLimits, PreferencesSection, PreferencesTab, ScanStage, ScanStatus,
+    SearchFilter, SearchState, SelectionState, SortOption, ThemeCategory, Track as UiTrack,
+    UiState, progress_ratio,
 };
 use crate::ui::style;
 use iced::font::Weight;
-use iced::widget::{button, column, container, row, scrollable, slider, text, text_input};
+use iced::widget::{
+    button, column, container, image, progress_bar, row, scrollable, slider, text, text_input,
+};
 use iced::{
     Alignment, Color, Element, Length, Padding, Settings, Subscription, Task, Theme, event,
     keyboard, mouse, time, window,
 };
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::Duration;
 use tracing::{error, info, warn};
 use unicode_normalization::UnicodeNormalization;
@@ -55,27 +58,40 @@ pub struct GrapeApp {
     playlists: PlaylistManager,
     playback_queue: PlaybackQueue,
     ui: UiState,
+    cover_preloads: Vec<image::Handle>,
 }
 
 impl GrapeApp {
-    pub fn run(catalog: Catalog) -> iced::Result {
+    pub fn run(catalog: Catalog, library_root_override: Option<PathBuf>) -> iced::Result {
         let settings = Self::apply_font_settings(Settings::default());
-        iced::application(move || Self::new(catalog.clone()), Self::update, Self::view)
-            .settings(settings)
-            .title(Self::title)
-            .subscription(Self::subscription)
-            .theme(Self::theme)
-            .run()
+        iced::application(
+            move || Self::new(catalog.clone(), library_root_override.clone()),
+            Self::update,
+            Self::view,
+        )
+        .settings(settings)
+        .title(Self::title)
+        .subscription(Self::subscription)
+        .theme(Self::theme)
+        .run()
     }
 
-    pub fn run_with(catalog: Catalog, settings: Settings) -> iced::Result {
+    pub fn run_with(
+        catalog: Catalog,
+        settings: Settings,
+        library_root_override: Option<PathBuf>,
+    ) -> iced::Result {
         let settings = Self::apply_font_settings(settings);
-        iced::application(move || Self::new(catalog.clone()), Self::update, Self::view)
-            .settings(settings)
-            .title(Self::title)
-            .subscription(Self::subscription)
-            .theme(Self::theme)
-            .run()
+        iced::application(
+            move || Self::new(catalog.clone(), library_root_override.clone()),
+            Self::update,
+            Self::view,
+        )
+        .settings(settings)
+        .title(Self::title)
+        .subscription(Self::subscription)
+        .theme(Self::theme)
+        .run()
     }
 
     fn apply_font_settings(mut settings: Settings) -> Settings {
@@ -131,6 +147,12 @@ impl GrapeApp {
 
     fn normalized_contains(query: &str, value: &str) -> bool {
         Self::normalize_text(value).contains(query)
+    }
+
+    fn apply_limit<T>(items: Vec<T>, limit: usize) -> (Vec<T>, usize) {
+        let total = items.len();
+        let limited = items.into_iter().take(limit).collect();
+        (limited, total)
     }
 
     fn move_selection<T: Clone>(
@@ -311,16 +333,41 @@ impl GrapeApp {
     }
 
     fn apply_artist_selection(&mut self, artist: UiArtist) {
+        let artist_name = artist.name.clone();
         self.ui.selection.selected_artist = Some(artist);
         self.ui.selection.selected_album = None;
+        self.ui.selection.selected_genre = None;
+        self.ui.selection.selected_folder = None;
         self.ui.selection.selected_track = None;
         self.ui.library_focus = LibraryFocus::Artists;
+        if let Some(album) = self
+            .filtered_albums_from_catalog()
+            .into_iter()
+            .find(|album| album.artist == artist_name)
+        {
+            self.ui.selection.selected_album = Some(album.clone());
+            self.ui.selection.selected_track =
+                self.album_entry_by_id(album.id)
+                    .and_then(|(artist, entry)| {
+                        self.filtered_tracks_for_album(artist, entry)
+                            .into_iter()
+                            .next()
+                    });
+        }
     }
 
     fn apply_album_selection(&mut self, album: UiAlbum) {
+        let album_id = album.id;
         self.ui.selection.selected_album = Some(album);
-        self.ui.selection.selected_track = None;
-        self.ui.library_focus = LibraryFocus::Albums;
+        self.ui.selection.selected_folder = None;
+        self.ui.selection.selected_track =
+            self.album_entry_by_id(album_id)
+                .and_then(|(artist, entry)| {
+                    self.filtered_tracks_for_album(artist, entry)
+                        .into_iter()
+                        .next()
+                });
+        self.ui.library_focus = LibraryFocus::Songs;
     }
 
     fn apply_genre_selection(&mut self, genre: UiGenre) {
@@ -333,7 +380,18 @@ impl GrapeApp {
     fn apply_folder_selection(&mut self, folder: UiFolder) {
         self.ui.selection.selected_folder = Some(folder);
         self.ui.selection.selected_genre = None;
-        self.ui.library_focus = LibraryFocus::Folders;
+        self.ui.selection.selected_album = None;
+        self.ui.library_focus = LibraryFocus::Songs;
+        self.ui.selection.selected_track = self
+            .ui
+            .selection
+            .selected_folder
+            .as_ref()
+            .and_then(|folder| {
+                self.folder_entry_by_id(folder.id)
+                    .map(|(artist, entry)| self.filtered_tracks_for_album(artist, entry))
+            })
+            .and_then(|tracks| tracks.into_iter().next());
     }
 
     fn apply_track_selection(&mut self, track: UiTrack) {
@@ -964,6 +1022,35 @@ impl GrapeApp {
             .into()
     }
 
+    fn scan_banner(&self) -> Option<Element<'_, UiMessage>> {
+        let status = self.ui.scan_status.as_ref()?;
+        let theme = self.theme_tokens();
+        let stage_label = match status.stage {
+            ScanStage::Indexing => "Indexation en cours",
+        };
+        let progress = progress_bar(0.0..=1.0, status.progress).height(Length::Fixed(6.0));
+        let content = column![
+            text(stage_label)
+                .size(theme.size(14))
+                .font(style::font_propo(Weight::Semibold))
+                .style(move |_| style::text_style_primary(theme)),
+            text(format!("Dossier : {}", status.root.display()))
+                .size(theme.size_accessible(12))
+                .font(style::font_propo(Weight::Light))
+                .style(move |_| style::text_style_muted(theme)),
+            progress
+        ]
+        .spacing(6)
+        .width(Length::Fill);
+        Some(
+            container(content)
+                .padding(12)
+                .width(Length::Fill)
+                .style(move |_| style::surface_style(theme, style::Surface::Panel))
+                .into(),
+        )
+    }
+
     fn artists_panel(&self) -> Element<'_, UiMessage> {
         let theme = self.theme_tokens();
         let selected_id = self
@@ -972,8 +1059,14 @@ impl GrapeApp {
             .selected_artist
             .as_ref()
             .map(|artist| artist.id);
-        let artists = self.filtered_artists_from_catalog();
-        let panel = ArtistsPanel::new(artists).with_selection(selected_id);
+        let (artists, total) = Self::apply_limit(
+            self.filtered_artists_from_catalog(),
+            self.ui.list_limits.artists,
+        );
+        let load_more = (total > artists.len()).then_some(UiMessage::LoadMoreArtists);
+        let panel = ArtistsPanel::new(artists, total)
+            .with_selection(selected_id)
+            .with_load_more(load_more);
         panel.view(
             &self.ui.selection,
             self.ui.library_focus == crate::ui::state::LibraryFocus::Artists,
@@ -995,10 +1088,15 @@ impl GrapeApp {
             .selected_album
             .as_ref()
             .map(|album| album.id);
-        let albums = self.filtered_albums_from_catalog();
-        let grid = AlbumsGrid::new(albums)
+        let (albums, total) = Self::apply_limit(
+            self.filtered_albums_from_catalog(),
+            self.ui.list_limits.albums,
+        );
+        let load_more = (total > albums.len()).then_some(UiMessage::LoadMoreAlbums);
+        let grid = AlbumsGrid::new(albums, total)
             .with_sort_label(sort_label)
             .with_selection(selected_id)
+            .with_load_more(load_more)
             .view(
                 self.ui.library_focus == crate::ui::state::LibraryFocus::Albums,
                 theme,
@@ -1043,13 +1141,17 @@ impl GrapeApp {
                 Vec::new(),
             ),
         };
+        let (tracks, total) = Self::apply_limit(tracks, self.ui.list_limits.tracks);
+        let load_more = (total > tracks.len()).then_some(UiMessage::LoadMoreTracks);
         let selected_id = self
             .ui
             .selection
             .selected_track
             .as_ref()
             .map(|track| track.id);
-        let panel = SongsPanel::new(album_title, artist_name, tracks).with_selection(selected_id);
+        let panel = SongsPanel::new(album_title, artist_name, tracks, total)
+            .with_selection(selected_id)
+            .with_load_more(load_more);
         panel.view(
             &self.ui.selection,
             self.ui.library_focus == crate::ui::state::LibraryFocus::Songs,
@@ -1065,8 +1167,14 @@ impl GrapeApp {
             .selected_genre
             .as_ref()
             .map(|genre| genre.id);
-        let genres = self.filtered_genres_from_catalog();
-        let panel = GenresPanel::new(genres).with_selection(selected_id);
+        let (genres, total) = Self::apply_limit(
+            self.filtered_genres_from_catalog(),
+            self.ui.list_limits.genres,
+        );
+        let load_more = (total > genres.len()).then_some(UiMessage::LoadMoreGenres);
+        let panel = GenresPanel::new(genres, total)
+            .with_selection(selected_id)
+            .with_load_more(load_more);
         panel.view(
             self.ui.library_focus == crate::ui::state::LibraryFocus::Genres,
             theme,
@@ -1087,10 +1195,15 @@ impl GrapeApp {
             .selected_folder
             .as_ref()
             .map(|folder| folder.id);
-        let folders = self.filtered_folders_from_catalog();
-        FoldersPanel::new(folders)
+        let (folders, total) = Self::apply_limit(
+            self.filtered_folders_from_catalog(),
+            self.ui.list_limits.folders,
+        );
+        let load_more = (total > folders.len()).then_some(UiMessage::LoadMoreFolders);
+        FoldersPanel::new(folders, total)
             .with_sort_label(sort_label)
             .with_selection(selected_id)
+            .with_load_more(load_more)
             .view(
                 self.ui.library_focus == crate::ui::state::LibraryFocus::Folders,
                 theme,
@@ -1301,6 +1414,23 @@ impl GrapeApp {
         }
     }
 
+    fn refresh_cover_preloads(&mut self) {
+        let mut handles = Vec::new();
+        let albums = self.filtered_albums_from_catalog();
+        for album in albums.into_iter().take(self.ui.list_limits.albums) {
+            if let Some(path) = album.cover_path {
+                handles.push(image::Handle::from_path(path));
+            }
+        }
+        let tracks = self.current_tracks();
+        for track in tracks.into_iter().take(self.ui.list_limits.tracks) {
+            if let Some(path) = track.cover_path {
+                handles.push(image::Handle::from_path(path));
+            }
+        }
+        self.cover_preloads = handles;
+    }
+
     fn load_from_queue(&mut self, now_playing: Option<NowPlaying>) {
         let Some(player) = &mut self.player else {
             return;
@@ -1367,39 +1497,30 @@ impl GrapeApp {
         Some(PathBuf::from(root))
     }
 
-    fn scan_library_at_root(&mut self, root: &Path, use_cache: bool) {
-        let scan_result = if use_cache {
-            library::scan_library(root, &self.ui.settings)
-        } else {
-            library::scan_library_full(root, &self.ui.settings)
-        };
-        match scan_result {
-            Ok(catalog) => {
-                let root_path = root.to_path_buf();
-                let has_root_album = catalog
-                    .artists
-                    .iter()
-                    .any(|artist| artist.albums.iter().any(|album| album.path == root_path));
-                info!(
-                    path = %root.display(),
-                    root_tracks = has_root_album,
-                    "Library scan completed"
-                );
-                self.catalog = catalog;
-                self.ui.selection = SelectionState::default();
-                self.ui.search = SearchState::default();
-            }
-            Err(err) => {
-                error!(error = %err, path = %root.display(), "Failed to scan library");
-            }
+    fn begin_scan(&mut self, root: PathBuf, use_cache: bool) -> Task<UiMessage> {
+        if self.ui.scan_status.is_some() {
+            return Task::none();
         }
+        let settings = self.ui.settings.clone();
+        self.ui.scan_status = Some(ScanStatus::new(root.clone()));
+        Task::perform(
+            async move {
+                let scan_result = if use_cache {
+                    library::scan_library(&root, &settings)
+                } else {
+                    library::scan_library_full(&root, &settings)
+                };
+                scan_result.map_err(|err| err.to_string())
+            },
+            UiMessage::LibraryScanCompleted,
+        )
     }
 
-    fn rescan_library(&mut self, use_cache: bool) {
+    fn begin_scan_from_settings(&mut self, use_cache: bool) -> Task<UiMessage> {
         let Some(root) = self.library_root() else {
-            return;
+            return Task::none();
         };
-        self.scan_library_at_root(&root, use_cache);
+        self.begin_scan(root, use_cache)
     }
 
     fn reset_audio_engine(&mut self) {
@@ -1462,11 +1583,11 @@ impl GrapeApp {
         settings.output_sample_rate_hz = None;
     }
 
-    fn handle_declarative_action(&mut self, action: DeclarativeAction) {
+    fn handle_declarative_action(&mut self, action: DeclarativeAction) -> Task<UiMessage> {
         match action {
             DeclarativeAction::ReindexLibrary => {
                 info!("Library reindex requested");
-                self.rescan_library(true);
+                return self.begin_scan_from_settings(true);
             }
             DeclarativeAction::ClearCache => {
                 info!("Cache clear requested");
@@ -1475,7 +1596,7 @@ impl GrapeApp {
                     match config::clear_library_cache(&self.ui.settings, &root) {
                         Ok(()) => {
                             info!(path = %cache_path.display(), "Library cache cleared");
-                            self.scan_library_at_root(&root, true);
+                            return self.begin_scan(root, true);
                         }
                         Err(err) => {
                             error!(error = %err, path = %cache_path.display(), "Failed to clear cache");
@@ -1488,6 +1609,7 @@ impl GrapeApp {
                 self.reset_audio_engine();
             }
         }
+        Task::none()
     }
 
     fn playlist_view(&self) -> Element<'_, UiMessage> {
@@ -3410,8 +3532,11 @@ impl GrapeApp {
 }
 
 impl GrapeApp {
-    fn new(catalog: Catalog) -> Self {
+    fn new(catalog: Catalog, library_root_override: Option<PathBuf>) -> Self {
         let mut settings = config::load_settings();
+        if let Some(root) = library_root_override {
+            settings.library_folder = root.display().to_string();
+        }
         let mut player = match Player::new_with_settings(&settings) {
             Ok(player) => Some(player),
             Err(err) => {
@@ -3433,6 +3558,9 @@ impl GrapeApp {
         let playback_queue = Self::playback_queue_from_playlist(&playlists);
         let mut ui = UiState::new(settings);
         ui.audio_notice = audio_notice;
+        if !catalog.artists.is_empty() {
+            ui.needs_initial_scan = false;
+        }
         if let Some(active) = playlists.active() {
             ui.selection.selected_playlist = Some(playlists.active_index);
             ui.selection.playlist_name_draft = active.name.clone();
@@ -3443,6 +3571,7 @@ impl GrapeApp {
             playlists,
             playback_queue,
             ui,
+            cover_preloads: Vec::new(),
         }
     }
 
@@ -3452,6 +3581,43 @@ impl GrapeApp {
 
     fn update(&mut self, message: UiMessage) -> Task<UiMessage> {
         let should_select_genre_album = matches!(message, UiMessage::SelectGenre(_));
+        let selected_artist = match &message {
+            UiMessage::SelectArtist(artist) => Some(artist.clone()),
+            _ => None,
+        };
+        let selected_album = match &message {
+            UiMessage::SelectAlbum(album) => Some(album.clone()),
+            _ => None,
+        };
+        let selected_folder = match &message {
+            UiMessage::SelectFolder(folder) => Some(folder.clone()),
+            _ => None,
+        };
+        let should_reset_limits = matches!(
+            message,
+            UiMessage::TabSelected(_)
+                | UiMessage::Search(SearchMessage::QueryChanged(_))
+                | UiMessage::Search(SearchMessage::SortChanged(_))
+                | UiMessage::Search(SearchMessage::ToggleFilter(_))
+                | UiMessage::SelectArtist(_)
+                | UiMessage::SelectGenre(_)
+                | UiMessage::SelectFolder(_)
+        );
+        let should_refresh_preloads = matches!(
+            message,
+            UiMessage::TabSelected(_)
+                | UiMessage::Search(_)
+                | UiMessage::SelectArtist(_)
+                | UiMessage::SelectAlbum(_)
+                | UiMessage::SelectGenre(_)
+                | UiMessage::SelectFolder(_)
+                | UiMessage::LoadMoreArtists
+                | UiMessage::LoadMoreAlbums
+                | UiMessage::LoadMoreTracks
+                | UiMessage::LoadMoreGenres
+                | UiMessage::LoadMoreFolders
+                | UiMessage::LibraryScanCompleted(_)
+        );
         let should_persist = matches!(
             message,
             UiMessage::SetThemeMode(_)
@@ -3624,7 +3790,7 @@ impl GrapeApp {
                             "Selected library folder is invalid"
                         );
                     } else {
-                        self.scan_library_at_root(&root, false);
+                        task = self.begin_scan(root, false);
                     }
                 }
             }
@@ -3639,7 +3805,7 @@ impl GrapeApp {
                 );
             }
             UiMessage::ClearCache => {
-                self.handle_declarative_action(DeclarativeAction::ClearCache);
+                task = self.handle_declarative_action(DeclarativeAction::ClearCache);
             }
             UiMessage::ClearHistory => {
                 if let Err(err) = config::clear_history() {
@@ -3653,23 +3819,101 @@ impl GrapeApp {
                 info!(path = %path.display(), "Open logs folder requested");
             }
             UiMessage::ReindexLibrary => {
-                self.handle_declarative_action(DeclarativeAction::ReindexLibrary);
+                task = self.handle_declarative_action(DeclarativeAction::ReindexLibrary);
             }
             UiMessage::ResetAudioEngine => {
-                self.handle_declarative_action(DeclarativeAction::ResetAudioEngine);
+                task = self.handle_declarative_action(DeclarativeAction::ResetAudioEngine);
             }
             UiMessage::ConfirmDeclarativeAction(action) => {
                 if self.ui.pending_action == Some(*action) {
-                    self.handle_declarative_action(*action);
+                    task = self.handle_declarative_action(*action);
                 }
+            }
+            UiMessage::StartInitialScan => {
+                if self.ui.needs_initial_scan {
+                    self.ui.needs_initial_scan = false;
+                    task = self.begin_scan_from_settings(true);
+                }
+            }
+            UiMessage::ScanTick => {
+                if let Some(status) = self.ui.scan_status.as_mut() {
+                    let next = status.progress + 0.02;
+                    status.progress = if next >= 0.95 { 0.2 } else { next };
+                }
+            }
+            UiMessage::LibraryScanCompleted(result) => {
+                let scan_root = self
+                    .ui
+                    .scan_status
+                    .as_ref()
+                    .map(|status| status.root.clone());
+                self.ui.scan_status = None;
+                match result {
+                    Ok(catalog) => {
+                        let catalog = catalog.clone();
+                        let root = scan_root
+                            .or_else(|| self.library_root())
+                            .unwrap_or_default();
+                        let has_root_album = catalog
+                            .artists
+                            .iter()
+                            .any(|artist| artist.albums.iter().any(|album| album.path == root));
+                        info!(
+                            path = %root.display(),
+                            root_tracks = has_root_album,
+                            "Library scan completed"
+                        );
+                        self.catalog = catalog;
+                        self.ui.selection = SelectionState::default();
+                        self.ui.search = SearchState::default();
+                        self.ui.list_limits = ListLimits::default();
+                    }
+                    Err(err) => {
+                        error!(error = %err, "Failed to scan library");
+                    }
+                }
+            }
+            UiMessage::LoadMoreArtists => {
+                self.ui.list_limits.artists += 50;
+            }
+            UiMessage::LoadMoreAlbums => {
+                self.ui.list_limits.albums += 30;
+            }
+            UiMessage::LoadMoreTracks => {
+                self.ui.list_limits.tracks += 50;
+            }
+            UiMessage::LoadMoreGenres => {
+                self.ui.list_limits.genres += 50;
+            }
+            UiMessage::LoadMoreFolders => {
+                self.ui.list_limits.folders += 50;
             }
             _ => {}
         }
         self.ui.update(message);
+        if let Some(artist) = selected_artist {
+            self.apply_artist_selection(artist);
+        }
+        if let Some(album) = selected_album {
+            self.apply_album_selection(album);
+        }
+        if let Some(folder) = selected_folder {
+            self.apply_folder_selection(folder);
+        }
+        if should_reset_limits {
+            self.ui.list_limits = ListLimits::default();
+        }
         if should_select_genre_album && self.ui.active_tab == ActiveTab::Genres {
             if let Some(album) = self.filtered_albums_from_catalog().into_iter().next() {
+                let album_id = album.id;
                 self.ui.selection.selected_album = Some(album);
-                self.ui.selection.selected_track = None;
+                self.ui.selection.selected_track =
+                    self.album_entry_by_id(album_id)
+                        .and_then(|(artist, entry)| {
+                            self.filtered_tracks_for_album(artist, entry)
+                                .into_iter()
+                                .next()
+                        });
             } else {
                 self.ui.selection.selected_album = None;
                 self.ui.selection.selected_track = None;
@@ -3682,6 +3926,9 @@ impl GrapeApp {
         }
         if should_refresh_audio {
             self.apply_audio_settings();
+        }
+        if should_refresh_preloads {
+            self.refresh_cover_preloads();
         }
         self.sync_playback_state();
         if self.ui.settings.reduce_animations || self.ui.settings.accessibility_reduce_motion {
@@ -3739,10 +3986,14 @@ impl GrapeApp {
             .into()
         };
 
-        let layout = column![self.top_bar(), content, self.player_bar()]
+        let mut layout = column![self.top_bar()]
             .spacing(16)
             .padding(16)
             .height(Length::Fill);
+        if let Some(banner) = self.scan_banner() {
+            layout = layout.push(banner);
+        }
+        layout = layout.push(content).push(self.player_bar());
 
         container(layout)
             .width(Length::Fill)
@@ -3841,6 +4092,16 @@ impl GrapeApp {
                 }
                 _ => None,
             }));
+        }
+
+        if self.ui.needs_initial_scan {
+            subscriptions
+                .push(time::every(Duration::from_millis(16)).map(|_| UiMessage::StartInitialScan));
+        }
+
+        if self.ui.scan_status.is_some() {
+            subscriptions
+                .push(time::every(Duration::from_millis(120)).map(|_| UiMessage::ScanTick));
         }
 
         let target_progress = progress_ratio(self.ui.playback.position, self.ui.playback.duration);
