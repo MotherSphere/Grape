@@ -25,6 +25,7 @@ Cette documentation couvre l'état actuel du projet, l'architecture et les choix
 - **Lecture audio** : `src/player.rs`
   - Player `rodio` (load/play/pause/seek).
   - Branché sur la sélection de piste dans l'UI.
+  - Traitement EQ en temps réel (3 ou 5 bandes, +/-12 dB).
 - **Playlists & queue** : `src/playlist.rs`
   - Modèle de playlist + sérialisation JSON.
   - Queue de lecture (`PlaybackQueue`) utilisée par Next/Previous.
@@ -82,6 +83,8 @@ Le dossier `assets/` est dédié aux éléments visuels (logos, fonts, captures,
 - Les genres sont dérivés (actuellement un genre « Unknown » global).
 - Certaines actions de préférences sont encore déclaratives (réindexation, logs).
 - Le cache est indexé par dossier d'album, sans détection fine au niveau piste.
+- L'égaliseur est limité aux bandes préconfigurées (3 ou 5) avec des gains entre -12 dB et +12 dB.
+- Si un périphérique audio sélectionné n'est pas disponible, la sortie repasse sur le système.
 
 ## Prochaines étapes suggérées
 
