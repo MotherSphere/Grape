@@ -255,7 +255,7 @@ impl Player {
         let (stream, resolved_options, last_fallback) =
             Self::stream_outcome_to_player_state(options, outcome);
         let sink = Sink::connect_new(stream.mixer());
-        let mut player = Self {
+        let player = Self {
             stream,
             sink,
             state: PlaybackState::Stopped,

@@ -710,6 +710,7 @@ fn scan_tracks_in_dir(dir: &Path, warn_on_dirs: bool) -> io::Result<Vec<Track>> 
     Ok(tracks)
 }
 
+#[allow(dead_code)]
 fn scan_tracks_with_cache(
     root: &Path,
     dir: &Path,

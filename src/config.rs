@@ -724,6 +724,7 @@ fn logs_dir() -> PathBuf {
     config_root().join("logs")
 }
 
+#[allow(dead_code)]
 pub fn cache_dir(settings: &UserSettings) -> PathBuf {
     let path = PathBuf::from(&settings.cache_path);
     if path.is_absolute() {
@@ -746,6 +747,7 @@ pub fn library_cache_dir(settings: &UserSettings, root: &Path) -> PathBuf {
     }
 }
 
+#[allow(dead_code)]
 pub fn logs_path() -> PathBuf {
     logs_dir()
 }
@@ -766,6 +768,7 @@ pub fn clear_history() -> io::Result<()> {
     Ok(())
 }
 
+#[allow(dead_code)]
 pub fn clear_cache(settings: &UserSettings) -> io::Result<()> {
     let path = cache_dir(settings);
     if path.exists() {
