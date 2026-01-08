@@ -247,7 +247,9 @@ impl GrapeApp {
         if let Some(query) = self.normalized_query() {
             artists.retain(|artist| Self::normalized_contains(&query, &artist.name));
         }
-        artists.sort_by(|a, b| Self::normalize_text(&a.name).cmp(&Self::normalize_text(&b.name)));
+        artists.sort_by(|a, b| {
+            Self::normalize_text(&a.name).cmp(&Self::normalize_text(&b.name))
+        });
         artists
     }
 
@@ -269,7 +271,9 @@ impl GrapeApp {
         if let Some(query) = self.normalized_query() {
             genres.retain(|genre| Self::normalized_contains(&query, &genre.name));
         }
-        genres.sort_by(|a, b| Self::normalize_text(&a.name).cmp(&Self::normalize_text(&b.name)));
+        genres.sort_by(|a, b| {
+            Self::normalize_text(&a.name).cmp(&Self::normalize_text(&b.name))
+        });
         genres
     }
 
@@ -414,7 +418,9 @@ impl GrapeApp {
         if let Some(query) = self.normalized_query() {
             folders.retain(|folder| Self::normalized_contains(&query, &folder.name));
         }
-        folders.sort_by(|a, b| Self::normalize_text(&a.name).cmp(&Self::normalize_text(&b.name)));
+        folders.sort_by(|a, b| {
+            Self::normalize_text(&a.name).cmp(&Self::normalize_text(&b.name))
+        });
         folders
     }
 
@@ -1034,7 +1040,7 @@ impl GrapeApp {
 
     fn playlist_view(&self) -> Element<'_, UiMessage> {
         let theme = self.theme_tokens();
-        PlaylistView::view(theme, &self.playlists, &self.ui.selection)
+        PlaylistView::view(theme, self.playlists.active())
     }
 
     fn preferences_view(&self) -> Element<'_, UiMessage> {
@@ -2861,17 +2867,12 @@ impl GrapeApp {
         };
         let playlists = PlaylistManager::load_or_default();
         let playback_queue = Self::playback_queue_from_playlist(&playlists);
-        let mut ui = UiState::new(settings);
-        if let Some(active) = playlists.active() {
-            ui.selection.selected_playlist = Some(playlists.active_index);
-            ui.selection.playlist_name_draft = active.name.clone();
-        }
         Self {
             catalog,
             player,
             playlists,
             playback_queue,
-            ui,
+            ui: UiState::new(settings),
         }
     }
 
@@ -2941,53 +2942,8 @@ impl GrapeApp {
             UiMessage::SelectTrack(track) => {
                 self.handle_track_selection(track);
             }
-            UiMessage::SelectPlaylist(index) => {
-                if self.playlists.set_active(*index) {
-                    if let Some(active) = self.playlists.active() {
-                        self.ui.selection.selected_playlist = Some(*index);
-                        self.ui.selection.playlist_name_draft = active.name.clone();
-                    }
-                    self.refresh_playback_queue(None);
-                }
-            }
             UiMessage::Playback(playback_message) => {
                 self.handle_playback_message(playback_message);
-            }
-            UiMessage::CreatePlaylist => {
-                let (index, name) = self
-                    .playlists
-                    .create_playlist(self.ui.selection.playlist_name_draft.clone());
-                self.ui.selection.selected_playlist = Some(index);
-                self.ui.selection.playlist_name_draft = name;
-                self.refresh_playback_queue(None);
-                self.persist_playlist();
-            }
-            UiMessage::RenamePlaylist => {
-                let index = self.playlists.active_index;
-                if let Some(name) = self
-                    .playlists
-                    .rename_playlist(index, self.ui.selection.playlist_name_draft.clone())
-                {
-                    self.ui.selection.playlist_name_draft = name;
-                    self.persist_playlist();
-                }
-            }
-            UiMessage::DeletePlaylist => {
-                let index = self.playlists.active_index;
-                if self.playlists.remove_playlist(index) {
-                    if let Some(active) = self.playlists.active() {
-                        self.ui.selection.selected_playlist = Some(self.playlists.active_index);
-                        self.ui.selection.playlist_name_draft = active.name.clone();
-                    }
-                    self.refresh_playback_queue(None);
-                    self.persist_playlist();
-                }
-            }
-            UiMessage::AddSelectedTrackToPlaylist => {
-                if let Some(track) = self.ui.selection.selected_track.as_ref() {
-                    let now_playing = Self::now_playing_from_ui_track(track);
-                    self.playlist_add(now_playing);
-                }
             }
             UiMessage::OpenPlaylist => {
                 self.ui.playlist_open = true;
@@ -3218,8 +3174,9 @@ impl GrapeApp {
         let target_progress = progress_ratio(self.ui.playback.position, self.ui.playback.duration);
         let needs_animation = (self.ui.playback.animated_progress - target_progress).abs() > 0.001;
         if self.ui.playback.is_playing || needs_animation {
-            subscriptions
-                .push(time::every(Duration::from_millis(33)).map(|_| UiMessage::PlaybackTick));
+            subscriptions.push(
+                time::every(Duration::from_millis(33)).map(|_| UiMessage::PlaybackTick),
+            );
         }
 
         Subscription::batch(subscriptions)

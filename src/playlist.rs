@@ -165,61 +165,14 @@ impl PlaylistManager {
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
-        let payload = self
-            .to_json()
-            .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
+        let payload =
+            self.to_json()
+                .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
         fs::write(path, payload)
     }
 
     pub fn active(&self) -> Option<&Playlist> {
         self.playlists.get(self.active_index)
-    }
-
-    pub fn set_active(&mut self, index: usize) -> bool {
-        if index < self.playlists.len() {
-            self.active_index = index;
-            true
-        } else {
-            false
-        }
-    }
-
-    pub fn create_playlist(&mut self, name: impl Into<String>) -> (usize, String) {
-        let name = name.into();
-        let base = name.trim();
-        let base = if base.is_empty() {
-            "Nouvelle playlist"
-        } else {
-            base
-        };
-        let unique = self.unique_name(base, None);
-        self.playlists.push(Playlist::empty(unique.clone()));
-        self.active_index = self.playlists.len().saturating_sub(1);
-        (self.active_index, unique)
-    }
-
-    pub fn rename_playlist(&mut self, index: usize, name: impl Into<String>) -> Option<String> {
-        let name = name.into();
-        let base = name.trim();
-        if base.is_empty() {
-            return None;
-        }
-        let unique = self.unique_name(base, Some(index));
-        self.playlists.get_mut(index).map(|playlist| {
-            playlist.name = unique.clone();
-            unique
-        })
-    }
-
-    pub fn remove_playlist(&mut self, index: usize) -> bool {
-        if self.playlists.len() <= 1 || index >= self.playlists.len() {
-            return false;
-        }
-        self.playlists.remove(index);
-        if self.active_index >= self.playlists.len() {
-            self.active_index = self.playlists.len().saturating_sub(1);
-        }
-        true
     }
 
     pub fn add(&mut self, item: NowPlaying) {
@@ -246,39 +199,14 @@ impl PlaylistManager {
         }
     }
 
-    fn unique_name(&self, base: &str, skip_index: Option<usize>) -> String {
-        let base = base.trim();
-        if base.is_empty() {
-            return "Nouvelle playlist".to_string();
-        }
-        let matches_name = |(index, playlist): (usize, &Playlist)| {
-            if skip_index == Some(index) {
-                return false;
-            }
-            playlist.name.eq_ignore_ascii_case(base)
-        };
-        if !self.playlists.iter().enumerate().any(matches_name) {
-            return base.to_string();
-        }
-        for suffix in 2..=999 {
-            let candidate = format!("{base} ({suffix})");
-            let exists = self.playlists.iter().enumerate().any(|(index, playlist)| {
-                if skip_index == Some(index) {
-                    return false;
-                }
-                playlist.name.eq_ignore_ascii_case(&candidate)
-            });
-            if !exists {
-                return candidate;
-            }
-        }
-        format!("{base} (1000)")
-    }
-
     pub fn to_exchange(&self) -> PlaylistManagerExchange {
         PlaylistManagerExchange {
             version: PlaylistManagerExchange::VERSION,
-            playlists: self.playlists.iter().map(Playlist::to_exchange).collect(),
+            playlists: self
+                .playlists
+                .iter()
+                .map(Playlist::to_exchange)
+                .collect(),
             active_index: self.active_index,
         }
     }
