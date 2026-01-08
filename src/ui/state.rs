@@ -420,6 +420,7 @@ pub struct UiState {
     pub theme_categories: ThemeCategoriesState,
     pub pending_action: Option<DeclarativeAction>,
     pub settings: UserSettings,
+    pub audio_notice: Option<String>,
 }
 
 impl UiState {
@@ -437,6 +438,7 @@ impl UiState {
             theme_categories: ThemeCategoriesState::default(),
             pending_action: None,
             settings,
+            audio_notice: None,
         }
     }
 
@@ -601,9 +603,23 @@ impl UiState {
             }
             UiMessage::SetEqPreset(preset) => {
                 self.settings.eq_preset = preset;
+                if preset != crate::config::EqPreset::Custom {
+                    let mut model = self.settings.eq_model.clone();
+                    preset.apply_to_model(&mut model);
+                    self.settings.eq_model = model;
+                }
+            }
+            UiMessage::SetEqBandGain(index, gain_db) => {
+                if let Some(band) = self.settings.eq_model.bands.get_mut(index) {
+                    band.gain_db = gain_db.clamp(-12.0, 12.0);
+                    self.settings.eq_preset = crate::config::EqPreset::Custom;
+                }
             }
             UiMessage::ResetEq => {
                 self.settings.eq_preset = crate::config::EqPreset::Flat;
+                let mut model = self.settings.eq_model.clone();
+                crate::config::EqPreset::Flat.apply_to_model(&mut model);
+                self.settings.eq_model = model;
             }
             UiMessage::SetAudioStabilityMode(mode) => {
                 self.settings.audio_stability_mode = mode;
@@ -702,6 +718,9 @@ impl UiState {
             UiMessage::RenamePlaylist => {}
             UiMessage::DeletePlaylist => {}
             UiMessage::AddSelectedTrackToPlaylist => {}
+            UiMessage::DismissAudioNotice => {
+                self.audio_notice = None;
+            }
         }
     }
 }

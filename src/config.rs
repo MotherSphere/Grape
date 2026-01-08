@@ -463,6 +463,30 @@ impl EqPreset {
             Self::Custom => "Custom…",
         }
     }
+
+    pub fn apply_to_model(self, model: &mut EqModel) {
+        let normalized = model.clone().normalized();
+        let gains = preset_gains(normalized.band_count, self);
+        let mut next = normalized;
+        for (band, gain) in next.bands.iter_mut().zip(gains) {
+            band.gain_db = gain;
+        }
+        *model = next;
+    }
+}
+
+fn preset_gains(band_count: crate::eq::EqBandCount, preset: EqPreset) -> Vec<f32> {
+    match (band_count, preset) {
+        (_, EqPreset::Custom) => vec![],
+        (crate::eq::EqBandCount::Three, EqPreset::Flat) => vec![0.0, 0.0, 0.0],
+        (crate::eq::EqBandCount::Three, EqPreset::Bass) => vec![4.5, 1.5, -1.0],
+        (crate::eq::EqBandCount::Three, EqPreset::Treble) => vec![-1.0, 1.0, 4.0],
+        (crate::eq::EqBandCount::Three, EqPreset::Vocal) => vec![-1.5, 3.0, 1.0],
+        (crate::eq::EqBandCount::Five, EqPreset::Flat) => vec![0.0, 0.0, 0.0, 0.0, 0.0],
+        (crate::eq::EqBandCount::Five, EqPreset::Bass) => vec![5.0, 3.0, 0.5, -1.5, -2.5],
+        (crate::eq::EqBandCount::Five, EqPreset::Treble) => vec![-2.0, -0.5, 1.5, 3.5, 4.5],
+        (crate::eq::EqBandCount::Five, EqPreset::Vocal) => vec![-1.5, 1.0, 4.0, 2.0, -1.0],
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -616,7 +640,7 @@ impl UserSettings {
                 self.output_sample_rate_hz = None;
             }
         }
-        self.eq_model = self.eq_model.normalized();
+        self.eq_model = self.eq_model.normalized().clamp_gains(-12.0, 12.0);
         if self.library_folder.trim().is_empty() {
             self.library_folder = default_library_folder();
         }
