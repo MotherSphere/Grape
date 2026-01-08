@@ -46,10 +46,7 @@ pub fn load_user_metadata_override(
     if !cache_path.exists() {
         return Ok(None);
     }
-    let contents = fs::read_to_string(&cache_path)?;
-    let entry = serde_json::from_str::<CachedOnlineMetadata>(&contents)
-        .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
-    Ok(entry.user_override)
+    Ok(load_cached_metadata(&cache_path).and_then(|entry| entry.user_override))
 }
 
 pub fn store_user_metadata_override(
@@ -62,9 +59,7 @@ pub fn store_user_metadata_override(
     let cache_key = metadata_cache_key(artist, album);
     let cache_path = cache_dir.join(format!("{cache_key}.json"));
     let existing = if cache_path.exists() {
-        fs::read_to_string(&cache_path)
-            .ok()
-            .and_then(|contents| serde_json::from_str::<CachedOnlineMetadata>(&contents).ok())
+        load_cached_metadata(&cache_path)
     } else {
         None
     };
@@ -77,9 +72,7 @@ pub fn store_user_metadata_override(
             .unwrap_or_default(),
         user_override: Some(metadata_override),
     };
-    let contents = serde_json::to_string_pretty(&payload)
-        .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
-    fs::write(&cache_path, contents)
+    write_metadata_cache(&cache_path, &payload)
 }
 
 pub fn fetch_album_metadata(
@@ -101,43 +94,10 @@ pub fn fetch_album_metadata(
     let now_secs = current_epoch_secs();
 
     let cached = if cache_path.exists() {
-        match fs::read_to_string(&cache_path) {
-            Ok(contents) => match serde_json::from_str::<CachedOnlineMetadata>(&contents) {
-                Ok(entry) => Some(entry),
-                Err(error) => {
-                    warn!(error = %error, "Failed to parse cached online metadata");
-                    None
-                }
-            },
-            Err(error) => {
-                warn!(error = %error, "Failed to read cached online metadata");
-                None
-            }
-        }
+        load_cached_metadata(&cache_path)
     } else {
         None
     };
-
-    if let Some(entry) = &cached {
-        if let Some(user_override) = &entry.user_override {
-            let has_override = user_override.genre_overridden || user_override.year_overridden;
-            if has_override {
-                let metadata = OnlineMetadata {
-                    genre: if user_override.genre_overridden {
-                        user_override.genre.clone()
-                    } else {
-                        entry.metadata.genre.clone()
-                    },
-                    year: if user_override.year_overridden {
-                        user_override.year
-                    } else {
-                        entry.metadata.year
-                    },
-                };
-                return Ok(Some(metadata));
-            }
-        }
-    }
 
     if !force_refresh {
         if let Some(entry) = &cached {
@@ -147,7 +107,11 @@ pub fn fetch_album_metadata(
         }
     }
 
-    let metadata = match fetch_lastfm_metadata(api_key, artist, album) {
+    let base_metadata = cached
+        .as_ref()
+        .map(|entry| entry.metadata.clone())
+        .unwrap_or_default();
+    let metadata = match enrich_with_lastfm_metadata(base_metadata, api_key, artist, album) {
         Ok(metadata) => metadata,
         Err(error) => {
             warn!(error = %error, "Failed to fetch online metadata");
@@ -165,13 +129,27 @@ pub fn fetch_album_metadata(
         user_override: cached.and_then(|entry| entry.user_override),
     };
 
-    if let Ok(contents) = serde_json::to_string_pretty(&payload) {
-        if let Err(error) = fs::write(&cache_path, contents) {
-            warn!(error = %error, "Failed to write online metadata cache");
-        }
+    if let Err(error) = write_metadata_cache(&cache_path, &payload) {
+        warn!(error = %error, "Failed to write online metadata cache");
     }
 
     Ok(Some(metadata))
+}
+
+fn enrich_with_lastfm_metadata(
+    mut metadata: OnlineMetadata,
+    api_key: &str,
+    artist: &str,
+    album: &str,
+) -> Result<OnlineMetadata, reqwest::Error> {
+    let lastfm_metadata = fetch_lastfm_metadata(api_key, artist, album)?;
+    if metadata.genre.is_none() {
+        metadata.genre = lastfm_metadata.genre;
+    }
+    if metadata.year.is_none() {
+        metadata.year = lastfm_metadata.year;
+    }
+    Ok(metadata)
 }
 
 fn fetch_lastfm_metadata(
@@ -263,6 +241,30 @@ fn metadata_cache_key(artist: &str, album: &str) -> String {
     use std::hash::Hasher;
     input.hash(&mut hasher);
     format!("{:x}", hasher.finish())
+}
+
+fn load_cached_metadata(path: &Path) -> Option<CachedOnlineMetadata> {
+    match fs::read_to_string(path) {
+        Ok(contents) => match serde_json::from_str::<CachedOnlineMetadata>(&contents) {
+            Ok(entry) => Some(entry),
+            Err(error) => {
+                warn!(error = %error, "Failed to parse cached online metadata");
+                None
+            }
+        },
+        Err(error) => {
+            warn!(error = %error, "Failed to read cached online metadata");
+            None
+        }
+    }
+}
+
+fn write_metadata_cache(path: &Path, payload: &CachedOnlineMetadata) -> io::Result<()> {
+    let contents = serde_json::to_string_pretty(payload)
+        .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
+    let temp_path = path.with_extension("json.tmp");
+    fs::write(&temp_path, contents)?;
+    fs::rename(&temp_path, path)
 }
 
 fn current_epoch_secs() -> u64 {
