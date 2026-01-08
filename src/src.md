@@ -5,8 +5,8 @@ Ce dossier contient le code applicatif Rust du lecteur Grape.
 ## Entrée
 
 - `main.rs`
-  - Lance le scan du `Catalog` depuis un chemin local.
-  - Lance l'application Iced via `ui::run`.
+  - Initialise le logging.
+  - Lance l'application Iced via `ui::run` (scan déclenché côté UI).
 
 ## Modules
 
@@ -17,18 +17,24 @@ Ce dossier contient le code applicatif Rust du lecteur Grape.
   - Scan du disque et construction d'un `Catalog`.
   - Convention : dossiers `Artiste/Album` + fichiers audio.
   - Parsing des années/numéros depuis les noms de dossier/fichier.
+  - Métadonnées audio (durée, codec, genre, année, cover embarquée).
+  - Enrichissement optionnel en ligne (Last.fm).
   - Détection des jaquettes et cache local.
 - `library/cache.rs`
   - Cache JSON `.grape_cache/` à la racine de la bibliothèque.
-  - Index global + cache par dossier d'album.
-  - Invalidation par date de modification du dossier.
+  - Index global de signatures de pistes + cache par dossier d'album.
+  - Cache des covers + metadata online.
+  - Invalidation par signature (taille + date de modification).
 - `library/metadata.rs`
-  - Lecture des durées audio via `lofty`.
+  - Lecture des métadonnées audio via `lofty`.
+- `library/metadata/online.rs`
+  - Enrichissement album (genre/année) via Last.fm + cache.
 - `player.rs`
   - Abstraction de lecture audio (`rodio`).
+  - Sortie audio configurable + EQ/normalisation.
   - Méthodes : `load`, `play`, `pause`, `seek`.
 - `playlist.rs`
-  - Modèle de playlist + sérialisation JSON.
+  - Modèle de playlist + sérialisation JSON (`~/.config/grape/playlist.json`).
   - File de lecture `PlaybackQueue` utilisée par Next/Previous.
 - `ui/`
   - Layout et états UI.
@@ -39,5 +45,5 @@ Ce dossier contient le code applicatif Rust du lecteur Grape.
 ## Notes
 
 - La lecture audio est branchée à la sélection de pistes dans l'UI.
-- La playlist est disponible comme vue, mais pas encore connectée aux données.
+- La playlist est connectée au modèle et persistée localement.
 - Les préférences modifient l'état UI et sont persistées.

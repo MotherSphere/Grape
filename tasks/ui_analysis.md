@@ -71,15 +71,15 @@ La vue Préférences remplace la grille principale quand elle est ouverte :
 
 ## Écarts actuels vs design cible
 
-- La playlist est une vue dédiée, mais sans données réelles.
-- Les genres sont dérivés (un genre « Unknown » pour l'instant).
+- La playlist est connectée, mais sans réordonnancement/suppression d'items.
+- Les genres sont dérivés (un genre « Unknown » si tags absents).
 - La file de lecture existe, mais n'est pas exposée dans une vue dédiée.
-- Certaines actions Préférences ne déclenchent pas d'actions système (logs, reset).
+- Certaines préférences restent déclaratives (updates, privacy, performance).
 
 ## Pistes de travail (prochaines étapes)
 
-1. Connecter `playlist.rs` au flux UI (affichage + actions).
+1. Ajouter la gestion des playlists (réordre, suppression d'items).
 2. Exposer la queue de lecture dans une vue dédiée (gestion de l'ordre).
-3. Mapper les données genres depuis les métadonnées audio.
+3. Enrichir les genres via metadata en ligne.
 4. Étendre la recherche/tri (filtres avancés, tags).
-5. Brancher les actions Préférences (logs, reset audio, réindexation).
+5. Compléter les actions Préférences (updates/logs/analytics).
