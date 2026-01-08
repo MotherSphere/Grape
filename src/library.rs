@@ -95,13 +95,16 @@ impl Catalog {
         for artist in &self.artists {
             for album in &artist.albums {
                 for track in &album.tracks {
-                    let name = track
-                        .genre
-                        .as_ref()
-                        .map(|genre| genre.trim())
-                        .filter(|genre| !genre.is_empty())
-                        .unwrap_or("Unknown");
-                    *counts.entry(name.to_string()).or_insert(0) += 1;
+                    let mut had_genre = false;
+                    if let Some(genre) = &track.genre {
+                        for name in split_genre_field(genre) {
+                            had_genre = true;
+                            *counts.entry(name.to_string()).or_insert(0) += 1;
+                        }
+                    }
+                    if !had_genre {
+                        *counts.entry("Unknown".to_string()).or_insert(0) += 1;
+                    }
                 }
             }
         }
@@ -908,16 +911,21 @@ fn dir_has_audio_files(dir: &Path) -> io::Result<bool> {
 fn dominant_genre<'a>(genres: impl Iterator<Item = &'a str>) -> Option<String> {
     let mut counts: std::collections::HashMap<&'a str, usize> = std::collections::HashMap::new();
     for genre in genres {
-        let trimmed = genre.trim();
-        if trimmed.is_empty() {
-            continue;
+        for trimmed in split_genre_field(genre) {
+            *counts.entry(trimmed).or_insert(0) += 1;
         }
-        *counts.entry(trimmed).or_insert(0) += 1;
     }
     counts
         .into_iter()
         .max_by_key(|(_, count)| *count)
         .map(|(genre, _)| genre.to_string())
+}
+
+fn split_genre_field(value: &str) -> impl Iterator<Item = &str> {
+    value
+        .split(|ch| matches!(ch, ';' | '/' | '\\' | ',' | '|'))
+        .map(|genre| genre.trim())
+        .filter(|genre| !genre.is_empty())
 }
 
 fn is_audio_file(path: &Path) -> bool {
