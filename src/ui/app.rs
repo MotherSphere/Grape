@@ -1083,9 +1083,9 @@ impl GrapeApp {
 
     fn scan_library_at_root(&mut self, root: &Path, use_cache: bool) {
         let scan_result = if use_cache {
-            library::scan_library(root, &self.ui.settings)
+            library::scan_library(root)
         } else {
-            library::scan_library_full(root, &self.ui.settings)
+            library::scan_library_full(root)
         };
         match scan_result {
             Ok(catalog) => {
