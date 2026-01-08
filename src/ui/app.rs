@@ -3743,6 +3743,24 @@ impl GrapeApp {
                     self.persist_playlist();
                 }
             }
+            UiMessage::MovePlaylistItemUp(index) => {
+                if *index > 0 {
+                    self.playlist_reorder(*index, (*index).saturating_sub(1));
+                }
+            }
+            UiMessage::MovePlaylistItemDown(index) => {
+                let can_move = self
+                    .playlists
+                    .active()
+                    .map(|playlist| *index + 1 < playlist.items.len())
+                    .unwrap_or(false);
+                if can_move {
+                    self.playlist_reorder(*index, *index + 1);
+                }
+            }
+            UiMessage::RemovePlaylistItem(index) => {
+                self.playlist_remove(*index);
+            }
             UiMessage::AddSelectedTrackToPlaylist => {
                 if let Some(track) = self.ui.selection.selected_track.as_ref() {
                     let now_playing = Self::now_playing_from_ui_track(track);
