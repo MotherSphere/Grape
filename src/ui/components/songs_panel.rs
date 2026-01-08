@@ -13,17 +13,26 @@ pub struct SongsPanel {
     artist: String,
     tracks: Vec<Track>,
     selected_track_id: Option<usize>,
+    total_count: usize,
+    load_more_message: Option<UiMessage>,
     scroll_offset: usize,
     viewport_size: usize,
 }
 
 impl SongsPanel {
-    pub fn new(album: impl Into<String>, artist: impl Into<String>, tracks: Vec<Track>) -> Self {
+    pub fn new(
+        album: impl Into<String>,
+        artist: impl Into<String>,
+        tracks: Vec<Track>,
+        total_count: usize,
+    ) -> Self {
         Self {
             album: album.into(),
             artist: artist.into(),
             tracks,
             selected_track_id: None,
+            total_count,
+            load_more_message: None,
             scroll_offset: 0,
             viewport_size: 8,
         }
@@ -37,6 +46,11 @@ impl SongsPanel {
     pub fn with_scroll(mut self, scroll_offset: usize, viewport_size: usize) -> Self {
         self.scroll_offset = scroll_offset.min(self.tracks.len());
         self.viewport_size = viewport_size.max(1);
+        self
+    }
+
+    pub fn with_load_more(mut self, message: Option<UiMessage>) -> Self {
+        self.load_more_message = message;
         self
     }
 
@@ -56,7 +70,7 @@ impl SongsPanel {
     ) -> Element<'static, UiMessage> {
         let selected_id = selection.selected_track.as_ref().map(|track| track.id);
         let header = row![
-            text(format!("{} Songs", self.tracks.len()))
+            text(format!("{} Songs", self.total_count))
                 .size(theme.size(16))
                 .font(style::font_propo(Weight::Semibold))
                 .style(move |_| style::text_style_primary(theme)),
@@ -99,7 +113,7 @@ impl SongsPanel {
                 .center_y(Length::Fill)
                 .into()
         } else {
-            let list_items = self
+            let mut list_items = self
                 .tracks
                 .iter()
                 .enumerate()
@@ -147,6 +161,24 @@ impl SongsPanel {
                         .into()
                 })
                 .collect::<Vec<Element<UiMessage>>>();
+            if let Some(message) = self.load_more_message.clone() {
+                let remaining = self.total_count.saturating_sub(self.tracks.len());
+                if remaining > 0 {
+                    let label = text(format!("Charger plus ({remaining} restants)"))
+                        .size(theme.size_accessible(12))
+                        .font(style::font_propo(Weight::Medium))
+                        .style(move |_| style::text_style_primary(theme));
+                    list_items.push(
+                        button(label)
+                            .style(move |_, status| {
+                                style::button_style(theme, style::ButtonKind::Control, status)
+                            })
+                            .padding([6, 10])
+                            .on_press(message)
+                            .into(),
+                    );
+                }
+            }
             let list = column(list_items)
                 .spacing(8)
                 .width(Length::Fill)
@@ -168,9 +200,7 @@ impl SongsPanel {
     pub fn render(&self) -> String {
         let header = format!(
             "{} Songs · {} — {}",
-            self.tracks.len(),
-            self.album,
-            self.artist
+            self.total_count, self.album, self.artist
         );
         let visible = self
             .tracks

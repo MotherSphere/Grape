@@ -170,7 +170,11 @@ fn parse_year(value: &str) -> Option<u16> {
 }
 
 fn metadata_cache_key(artist: &str, album: &str) -> String {
-    let input = format!("{}::{}", artist.trim().to_lowercase(), album.trim().to_lowercase());
+    let input = format!(
+        "{}::{}",
+        artist.trim().to_lowercase(),
+        album.trim().to_lowercase()
+    );
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     use std::hash::Hash;
     use std::hash::Hasher;
