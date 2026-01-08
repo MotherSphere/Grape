@@ -124,6 +124,7 @@ impl PlaylistView {
         let body: Element<'a, UiMessage> = match active_playlist {
             Some(playlist) if !playlist.items.is_empty() => {
                 let mut rows: Vec<Element<'a, UiMessage>> = Vec::new();
+                let total_items = playlist.items.len();
                 for (index, item) in playlist.items.iter().enumerate() {
                     let index_label = text(format!("{:02}", index + 1))
                         .size(theme.size_accessible(12))
@@ -138,7 +139,44 @@ impl PlaylistView {
                         .font(style::font_propo(Weight::Medium))
                         .style(move |_| style::text_style_muted(theme));
                     let track = column![title, subtitle].spacing(2);
-                    rows.push(row![index_label, track].spacing(12).into());
+                    let mut move_up = button(
+                        text("↑")
+                            .size(theme.size_accessible(12))
+                            .font(style::font_propo(Weight::Medium))
+                            .style(move |_| style::text_style_muted(theme)),
+                    )
+                    .style(move |_, status| style::button_style(theme, style::ButtonKind::Icon, status))
+                    .padding([2, 6]);
+                    if index > 0 {
+                        move_up = move_up.on_press(UiMessage::MovePlaylistItemUp(index));
+                    }
+                    let mut move_down = button(
+                        text("↓")
+                            .size(theme.size_accessible(12))
+                            .font(style::font_propo(Weight::Medium))
+                            .style(move |_| style::text_style_muted(theme)),
+                    )
+                    .style(move |_, status| style::button_style(theme, style::ButtonKind::Icon, status))
+                    .padding([2, 6]);
+                    if index + 1 < total_items {
+                        move_down = move_down.on_press(UiMessage::MovePlaylistItemDown(index));
+                    }
+                    let remove = button(
+                        text("✕")
+                            .size(theme.size_accessible(12))
+                            .font(style::font_propo(Weight::Medium))
+                            .style(move |_| style::text_style_muted(theme)),
+                    )
+                    .style(move |_, status| style::button_style(theme, style::ButtonKind::Icon, status))
+                    .padding([2, 6])
+                    .on_press(UiMessage::RemovePlaylistItem(index));
+                    let actions = row![move_up, move_down, remove].spacing(4);
+                    rows.push(
+                        row![index_label, track, actions]
+                            .align_y(Alignment::Center)
+                            .spacing(12)
+                            .into(),
+                    );
                 }
                 scrollable(column(rows).spacing(12)).into()
             }
