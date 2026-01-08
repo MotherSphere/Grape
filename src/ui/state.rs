@@ -343,10 +343,51 @@ impl Default for SortOption {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SearchFilter {
+    Genre,
+    Year,
+    Duration,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SearchFilters {
+    pub genre: bool,
+    pub year: bool,
+    pub duration: bool,
+}
+
+impl Default for SearchFilters {
+    fn default() -> Self {
+        Self {
+            genre: false,
+            year: true,
+            duration: false,
+        }
+    }
+}
+
+impl SearchFilters {
+    pub fn toggle(&mut self, filter: SearchFilter) {
+        match filter {
+            SearchFilter::Genre => {
+                self.genre = !self.genre;
+            }
+            SearchFilter::Year => {
+                self.year = !self.year;
+            }
+            SearchFilter::Duration => {
+                self.duration = !self.duration;
+            }
+        }
+    }
+}
+
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct SearchState {
     pub query: String,
     pub sort: SortOption,
+    pub filters: SearchFilters,
 }
 
 impl SearchState {
@@ -357,6 +398,9 @@ impl SearchState {
             }
             SearchMessage::SortChanged(sort) => {
                 self.sort = sort;
+            }
+            SearchMessage::ToggleFilter(filter) => {
+                self.filters.toggle(filter);
             }
         }
     }
