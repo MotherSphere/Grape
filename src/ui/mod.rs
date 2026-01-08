@@ -90,6 +90,9 @@ pub fn main_view() -> MainView {
     MainView::new()
 }
 
-pub fn run(catalog: crate::library::Catalog) -> iced::Result {
-    GrapeApp::run(catalog)
+pub fn run(
+    catalog: crate::library::Catalog,
+    library_root_override: Option<std::path::PathBuf>,
+) -> iced::Result {
+    GrapeApp::run(catalog, library_root_override)
 }

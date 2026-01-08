@@ -10,7 +10,7 @@ use crate::config::UserSettings;
 pub mod cache;
 mod metadata;
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Catalog {
     pub artists: Vec<Artist>,
 }
@@ -27,7 +27,7 @@ pub struct FolderSummary {
     pub track_count: usize,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Artist {
     pub name: String,
     pub albums: Vec<Album>,
@@ -35,7 +35,7 @@ pub struct Artist {
     pub genre: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Album {
     pub title: String,
     pub year: u16,
@@ -50,7 +50,7 @@ pub struct Album {
     pub cover: Option<CoverArt>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Track {
     pub number: u8,
     pub title: String,
@@ -70,14 +70,14 @@ pub struct Track {
     pub embedded_cover: Option<EmbeddedCover>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CoverArt {
     pub source_path: PathBuf,
     pub cached_path: PathBuf,
     pub modified_secs: u64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EmbeddedCover {
     #[serde(default)]
     pub mime_type: Option<String>,
@@ -375,8 +375,7 @@ fn scan_library_with_cache(
     let mut catalog = Catalog { artists };
     catalog.prune_missing_cover_art();
 
-    if let Err(error) =
-        cache::finalize(root, &mut cache_index, &used_cache_keys, &used_track_keys)
+    if let Err(error) = cache::finalize(root, &mut cache_index, &used_cache_keys, &used_track_keys)
     {
         warn!(error = %error, "Unable to persist cache index");
     }
@@ -463,7 +462,13 @@ fn scan_album_dir(
         }
     };
 
-    apply_online_metadata(root, settings, artist_name, &mut album, force_online_refresh);
+    apply_online_metadata(
+        root,
+        settings,
+        artist_name,
+        &mut album,
+        force_online_refresh,
+    );
 
     if let Ok(key) = cache::store_album(root, cache_index, album_path, &album) {
         used_cache_keys.insert(key);
@@ -653,7 +658,14 @@ fn scan_tracks_with_cache(
     track_entries: &std::collections::HashMap<String, cache::TrackEntry>,
     used_track_keys: &mut std::collections::HashSet<String>,
 ) -> io::Result<Vec<Track>> {
-    scan_tracks_with_cache_in_dir(root, dir, cached_tracks, track_entries, used_track_keys, true)
+    scan_tracks_with_cache_in_dir(
+        root,
+        dir,
+        cached_tracks,
+        track_entries,
+        used_track_keys,
+        true,
+    )
 }
 
 fn scan_tracks_with_cache_in_dir(
@@ -956,11 +968,7 @@ fn cache_cover_filename(path: &Path, modified_secs: u64) -> String {
     cache_cover_filename_with_extension(path, modified_secs, extension)
 }
 
-fn cache_cover_filename_with_extension(
-    path: &Path,
-    modified_secs: u64,
-    extension: &str,
-) -> String {
+fn cache_cover_filename_with_extension(path: &Path, modified_secs: u64, extension: &str) -> String {
     use std::hash::{Hash, Hasher};
 
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
@@ -1139,10 +1147,7 @@ fn normalized_path_key(root: &Path, path: &Path) -> String {
         }
     };
     let relative = normalized.strip_prefix(root).unwrap_or(&normalized);
-    relative
-        .to_string_lossy()
-        .replace('\\', "/")
-        .to_lowercase()
+    relative.to_string_lossy().replace('\\', "/").to_lowercase()
 }
 
 fn root_album_title(root: &Path) -> String {
@@ -1203,9 +1208,7 @@ fn parse_track_filename(name: &str) -> (Option<u8>, String) {
     if number_end > 0 {
         let number_part = &trimmed[..number_end];
         let title = trimmed[number_end..]
-            .trim_start_matches(|c: char| {
-                c == '-' || c == '_' || c == '.' || c.is_whitespace()
-            })
+            .trim_start_matches(|c: char| c == '-' || c == '_' || c == '.' || c.is_whitespace())
             .trim();
         let title = if title.is_empty() { trimmed } else { title };
         return (number_part.parse::<u8>().ok(), title.to_string());

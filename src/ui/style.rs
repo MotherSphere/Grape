@@ -540,8 +540,8 @@ pub fn button_style(theme: ThemeTokens, kind: ButtonKind, status: button::Status
             text_color: palette.text_primary,
             border: Border {
                 radius: 10.0.into(),
-                width: if selected { 1.0 } else { 0.0 },
-                color: if selected {
+                width: if selected || focused { 1.0 } else { 0.0 },
+                color: if selected || focused {
                     palette.accent
                 } else {
                     Color::TRANSPARENT
@@ -559,8 +559,8 @@ pub fn button_style(theme: ThemeTokens, kind: ButtonKind, status: button::Status
             text_color: palette.text_primary,
             border: Border {
                 radius: 12.0.into(),
-                width: if selected { 1.0 } else { 0.0 },
-                color: if selected {
+                width: if selected || focused { 1.0 } else { 0.0 },
+                color: if selected || focused {
                     palette.accent
                 } else {
                     Color::TRANSPARENT
