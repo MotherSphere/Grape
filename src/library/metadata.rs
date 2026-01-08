@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::path::Path;
 
 use lofty::file::{AudioFile, TaggedFileExt};
@@ -40,12 +41,7 @@ pub fn track_metadata(path: &Path) -> TrackMetadata {
         .filter(|bitrate| *bitrate > 0);
     let codec = Some(format!("{:?}", tagged_file.file_type()));
 
-    let genre = tagged_file
-        .primary_tag()
-        .or_else(|| tagged_file.first_tag())
-        .and_then(|tag| tag.get_string(&ItemKey::Genre))
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty());
+    let genre = extract_genre(&tagged_file);
 
     let embedded_cover = tagged_file
         .primary_tag()
@@ -72,4 +68,44 @@ pub fn track_metadata(path: &Path) -> TrackMetadata {
         genre,
         embedded_cover,
     }
+}
+
+fn extract_genre(tagged_file: &impl TaggedFileExt) -> Option<String> {
+    let mut genres = Vec::new();
+    let mut seen = HashSet::new();
+    let mut tags = Vec::new();
+
+    if let Some(primary_tag) = tagged_file.primary_tag() {
+        tags.push(primary_tag);
+    }
+
+    tags.extend(tagged_file.tags());
+
+    for tag in tags {
+        let values = tag
+            .get_strings(&ItemKey::Genre)
+            .chain(tag.get_locators(&ItemKey::Genre));
+
+        for value in values {
+            for genre in split_genre_field(value) {
+                let normalized = genre.to_lowercase();
+                if seen.insert(normalized) {
+                    genres.push(genre.to_string());
+                }
+            }
+        }
+    }
+
+    if genres.is_empty() {
+        None
+    } else {
+        Some(genres.join("; "))
+    }
+}
+
+fn split_genre_field(value: &str) -> impl Iterator<Item = &str> {
+    value
+        .split(|ch| matches!(ch, ';' | '/' | '\\' | ',' | '|'))
+        .map(|genre| genre.trim())
+        .filter(|genre| !genre.is_empty())
 }
