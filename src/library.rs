@@ -171,6 +171,23 @@ pub fn scan_library_full(root: impl AsRef<Path>, settings: &UserSettings) -> io:
     scan_library_with_cache(root, false, settings)
 }
 
+pub fn persist_album_metadata_override(
+    root: &Path,
+    artist: &str,
+    album: &str,
+    genre: Option<String>,
+    year: Option<u16>,
+) -> io::Result<()> {
+    let metadata_override = metadata::online::UserMetadataOverride {
+        genre,
+        year,
+        genre_overridden: true,
+        year_overridden: true,
+        edited_at: 0,
+    };
+    metadata::online::store_user_metadata_override(root, artist, album, metadata_override)
+}
+
 fn scan_library_with_cache(
     root: impl AsRef<Path>,
     use_cache: bool,
@@ -484,6 +501,22 @@ fn apply_online_metadata(
     album: &mut Album,
     force_refresh: bool,
 ) {
+    let user_override = metadata::online::load_user_metadata_override(root, artist_name, &album.title)
+        .ok()
+        .flatten();
+    let mut overridden_genre = false;
+    let mut overridden_year = false;
+    if let Some(metadata_override) = user_override {
+        if metadata_override.genre_overridden {
+            album.genre = metadata_override.genre.clone();
+            overridden_genre = true;
+        }
+        if metadata_override.year_overridden {
+            album.year = metadata_override.year.unwrap_or(0);
+            overridden_year = true;
+        }
+    }
+
     let metadata = match metadata::online::fetch_album_metadata(
         root,
         settings,
@@ -502,10 +535,10 @@ fn apply_online_metadata(
         return;
     };
 
-    if album.genre.is_none() {
+    if !overridden_genre && album.genre.is_none() {
         album.genre = metadata.genre;
     }
-    if album.year == 0 {
+    if !overridden_year && album.year == 0 {
         if let Some(year) = metadata.year {
             album.year = year;
         }
