@@ -364,6 +364,7 @@ pub enum SearchFilter {
     Genre,
     Year,
     Duration,
+    Codec,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -371,6 +372,7 @@ pub struct SearchFilters {
     pub genre: bool,
     pub year: bool,
     pub duration: bool,
+    pub codec: bool,
 }
 
 impl Default for SearchFilters {
@@ -379,6 +381,7 @@ impl Default for SearchFilters {
             genre: false,
             year: true,
             duration: false,
+            codec: false,
         }
     }
 }
@@ -394,6 +397,9 @@ impl SearchFilters {
             }
             SearchFilter::Duration => {
                 self.duration = !self.duration;
+            }
+            SearchFilter::Codec => {
+                self.codec = !self.codec;
             }
         }
     }
