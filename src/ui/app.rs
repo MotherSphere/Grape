@@ -2106,101 +2106,99 @@ impl GrapeApp {
             };
 
             column![
-                row![
-                    theme_category(
-                        "Catppuccin",
-                        self.ui.theme_categories.catppuccin,
-                        UiMessage::ToggleThemeCategory(ThemeCategory::Catppuccin),
-                        row![
-                            option_button(
-                                self.ui.settings.theme_mode == ThemeMode::Latte,
-                                ThemeMode::Latte.label(),
-                                UiMessage::SetThemeMode(ThemeMode::Latte),
-                            ),
-                            option_button(
-                                self.ui.settings.theme_mode == ThemeMode::Frappe,
-                                ThemeMode::Frappe.label(),
-                                UiMessage::SetThemeMode(ThemeMode::Frappe),
-                            ),
-                            option_button(
-                                self.ui.settings.theme_mode == ThemeMode::Macchiato,
-                                ThemeMode::Macchiato.label(),
-                                UiMessage::SetThemeMode(ThemeMode::Macchiato),
-                            ),
-                            option_button(
-                                self.ui.settings.theme_mode == ThemeMode::Mocha,
-                                ThemeMode::Mocha.label(),
-                                UiMessage::SetThemeMode(ThemeMode::Mocha),
-                            ),
-                        ]
-                        .spacing(8)
-                        .into(),
-                    ),
-                    theme_category(
-                        "Gruvbox",
-                        self.ui.theme_categories.gruvbox,
-                        UiMessage::ToggleThemeCategory(ThemeCategory::Gruvbox),
-                        row![
-                            option_button(
-                                self.ui.settings.theme_mode == ThemeMode::GruvboxLight,
-                                "Light Mode",
-                                UiMessage::SetThemeMode(ThemeMode::GruvboxLight),
-                            ),
-                            option_button(
-                                self.ui.settings.theme_mode == ThemeMode::GruvboxDark,
-                                "Dark Mode",
-                                UiMessage::SetThemeMode(ThemeMode::GruvboxDark),
-                            ),
-                        ]
-                        .spacing(8)
-                        .into(),
-                    ),
-                    theme_category(
-                        "Everblush",
-                        self.ui.theme_categories.everblush,
-                        UiMessage::ToggleThemeCategory(ThemeCategory::Everblush),
-                        row![
-                            option_button(
-                                self.ui.settings.theme_mode == ThemeMode::EverblushLight,
-                                "Light Mode",
-                                UiMessage::SetThemeMode(ThemeMode::EverblushLight),
-                            ),
-                            option_button(
-                                self.ui.settings.theme_mode == ThemeMode::EverblushDark,
-                                "Dark Mode",
-                                UiMessage::SetThemeMode(ThemeMode::EverblushDark),
-                            ),
-                        ]
-                        .spacing(8)
-                        .into(),
-                    ),
-                    theme_category(
-                        "Kanagawa",
-                        self.ui.theme_categories.kanagawa,
-                        UiMessage::ToggleThemeCategory(ThemeCategory::Kanagawa),
-                        row![
-                            option_button(
-                                self.ui.settings.theme_mode == ThemeMode::KanagawaLight,
-                                "Light Mode",
-                                UiMessage::SetThemeMode(ThemeMode::KanagawaLight),
-                            ),
-                            option_button(
-                                self.ui.settings.theme_mode == ThemeMode::KanagawaDark,
-                                "Dark Mode",
-                                UiMessage::SetThemeMode(ThemeMode::KanagawaDark),
-                            ),
-                            option_button(
-                                self.ui.settings.theme_mode == ThemeMode::KanagawaJournal,
-                                "Journal Mode",
-                                UiMessage::SetThemeMode(ThemeMode::KanagawaJournal),
-                            ),
-                        ]
-                        .spacing(8)
-                        .into(),
-                    ),
-                ]
-                .spacing(12),
+                theme_category(
+                    "Catppuccin",
+                    self.ui.theme_categories.catppuccin,
+                    UiMessage::ToggleThemeCategory(ThemeCategory::Catppuccin),
+                    row![
+                        option_button(
+                            self.ui.settings.theme_mode == ThemeMode::Latte,
+                            ThemeMode::Latte.label(),
+                            UiMessage::SetThemeMode(ThemeMode::Latte),
+                        ),
+                        option_button(
+                            self.ui.settings.theme_mode == ThemeMode::Frappe,
+                            ThemeMode::Frappe.label(),
+                            UiMessage::SetThemeMode(ThemeMode::Frappe),
+                        ),
+                        option_button(
+                            self.ui.settings.theme_mode == ThemeMode::Macchiato,
+                            ThemeMode::Macchiato.label(),
+                            UiMessage::SetThemeMode(ThemeMode::Macchiato),
+                        ),
+                        option_button(
+                            self.ui.settings.theme_mode == ThemeMode::Mocha,
+                            ThemeMode::Mocha.label(),
+                            UiMessage::SetThemeMode(ThemeMode::Mocha),
+                        ),
+                    ]
+                    .spacing(8)
+                    .into(),
+                ),
+                theme_category(
+                    "Gruvbox",
+                    self.ui.theme_categories.gruvbox,
+                    UiMessage::ToggleThemeCategory(ThemeCategory::Gruvbox),
+                    row![
+                        option_button(
+                            self.ui.settings.theme_mode == ThemeMode::GruvboxLight,
+                            "Light Mode",
+                            UiMessage::SetThemeMode(ThemeMode::GruvboxLight),
+                        ),
+                        option_button(
+                            self.ui.settings.theme_mode == ThemeMode::GruvboxDark,
+                            "Dark Mode",
+                            UiMessage::SetThemeMode(ThemeMode::GruvboxDark),
+                        ),
+                    ]
+                    .spacing(8)
+                    .into(),
+                ),
+                theme_category(
+                    "Everblush",
+                    self.ui.theme_categories.everblush,
+                    UiMessage::ToggleThemeCategory(ThemeCategory::Everblush),
+                    row![
+                        option_button(
+                            self.ui.settings.theme_mode == ThemeMode::EverblushLight,
+                            "Light Mode",
+                            UiMessage::SetThemeMode(ThemeMode::EverblushLight),
+                        ),
+                        option_button(
+                            self.ui.settings.theme_mode == ThemeMode::EverblushDark,
+                            "Dark Mode",
+                            UiMessage::SetThemeMode(ThemeMode::EverblushDark),
+                        ),
+                    ]
+                    .spacing(8)
+                    .into(),
+                ),
+                theme_category(
+                    "Kanagawa",
+                    self.ui.theme_categories.kanagawa,
+                    UiMessage::ToggleThemeCategory(ThemeCategory::Kanagawa),
+                    row![
+                        option_button(
+                            self.ui.settings.theme_mode == ThemeMode::KanagawaLight,
+                            "Light Mode",
+                            UiMessage::SetThemeMode(ThemeMode::KanagawaLight),
+                        ),
+                        option_button(
+                            self.ui.settings.theme_mode == ThemeMode::KanagawaDark,
+                            "Dark Mode",
+                            UiMessage::SetThemeMode(ThemeMode::KanagawaDark),
+                        ),
+                        option_button(
+                            self.ui.settings.theme_mode == ThemeMode::KanagawaJournal,
+                            "Journal Mode",
+                            UiMessage::SetThemeMode(ThemeMode::KanagawaJournal),
+                        ),
+                    ]
+                    .spacing(8)
+                    .into(),
+                ),
             ]
+            .spacing(12)
             .padding(section_padding)
         };
 
