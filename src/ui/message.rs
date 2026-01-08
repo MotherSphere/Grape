@@ -125,6 +125,9 @@ pub enum UiMessage {
     LoadMoreTracks,
     LoadMoreGenres,
     LoadMoreFolders,
+    AlbumGenreChanged(String),
+    AlbumYearChanged(String),
+    SaveAlbumMetadata,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
