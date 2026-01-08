@@ -181,12 +181,19 @@ fn scan_library_with_cache(root: impl AsRef<Path>, use_cache: bool) -> io::Resul
         cache::CacheIndex::default()
     };
     let mut used_cache_keys = std::collections::HashSet::new();
+    let mut used_track_keys = std::collections::HashSet::new();
 
     if !root.exists() {
         return Ok(Catalog::empty());
     }
 
-    if let Some(album) = scan_root_album(root, use_cache, &mut cache_index, &mut used_cache_keys)? {
+    if let Some(album) = scan_root_album(
+        root,
+        use_cache,
+        &mut cache_index,
+        &mut used_cache_keys,
+        &mut used_track_keys,
+    )? {
         root_artist_albums.push(album);
     }
 
@@ -216,6 +223,7 @@ fn scan_library_with_cache(root: impl AsRef<Path>, use_cache: bool) -> io::Resul
                 use_cache,
                 &mut cache_index,
                 &mut used_cache_keys,
+                &mut used_track_keys,
             )? {
                 root_artist_albums.push(album);
             }
@@ -237,7 +245,7 @@ fn scan_library_with_cache(root: impl AsRef<Path>, use_cache: bool) -> io::Resul
                 continue;
             }
             let cached_album = if use_cache {
-                match cache::load_album(root, &cache_index, &album_path) {
+                match cache::load_album(root, &album_path) {
                     Ok(cached) => cached,
                     Err(error) => {
                         warn!(
@@ -257,7 +265,8 @@ fn scan_library_with_cache(root: impl AsRef<Path>, use_cache: bool) -> io::Resul
                     root,
                     &album_path,
                     &cached.album.tracks,
-                    &cached.track_entries,
+                    cache_index.track_entries(),
+                    &mut used_track_keys,
                     true,
                 )?;
                 if tracks.is_empty() {
@@ -279,6 +288,7 @@ fn scan_library_with_cache(root: impl AsRef<Path>, use_cache: bool) -> io::Resul
                 if tracks.is_empty() {
                     continue;
                 }
+                record_track_keys(root, &tracks, &mut used_track_keys);
                 let genre = dominant_genre(tracks.iter().flat_map(|track| track.genre.as_deref()));
                 let cover = scan_cover_art(root, &album_path)?;
                 let total_duration_secs = tracks.iter().map(|track| track.duration_secs).sum();
@@ -336,7 +346,9 @@ fn scan_library_with_cache(root: impl AsRef<Path>, use_cache: bool) -> io::Resul
     let mut catalog = Catalog { artists };
     catalog.prune_missing_cover_art();
 
-    if let Err(error) = cache::finalize(root, &mut cache_index, &used_cache_keys) {
+    if let Err(error) =
+        cache::finalize(root, &mut cache_index, &used_cache_keys, &used_track_keys)
+    {
         warn!(error = %error, "Unable to persist cache index");
     }
 
@@ -355,9 +367,10 @@ fn scan_album_dir(
     use_cache: bool,
     cache_index: &mut cache::CacheIndex,
     used_cache_keys: &mut std::collections::HashSet<String>,
+    used_track_keys: &mut std::collections::HashSet<String>,
 ) -> io::Result<Option<Album>> {
     let cached_album = if use_cache {
-        match cache::load_album(root, cache_index, album_path) {
+        match cache::load_album(root, album_path) {
             Ok(cached) => cached,
             Err(error) => {
                 warn!(
@@ -377,7 +390,8 @@ fn scan_album_dir(
             root,
             album_path,
             &cached.album.tracks,
-            &cached.track_entries,
+            cache_index.track_entries(),
+            used_track_keys,
             true,
         )?;
         if tracks.is_empty() {
@@ -399,6 +413,7 @@ fn scan_album_dir(
         if tracks.is_empty() {
             return Ok(None);
         }
+        record_track_keys(root, &tracks, used_track_keys);
         let genre = dominant_genre(tracks.iter().flat_map(|track| track.genre.as_deref()));
         let cover = scan_cover_art(root, album_path)?;
         let total_duration_secs = tracks.iter().map(|track| track.duration_secs).sum();
@@ -481,8 +496,9 @@ fn scan_tracks_with_cache(
     dir: &Path,
     cached_tracks: &[Track],
     track_entries: &std::collections::HashMap<String, cache::TrackEntry>,
+    used_track_keys: &mut std::collections::HashSet<String>,
 ) -> io::Result<Vec<Track>> {
-    scan_tracks_with_cache_in_dir(root, dir, cached_tracks, track_entries, true)
+    scan_tracks_with_cache_in_dir(root, dir, cached_tracks, track_entries, used_track_keys, true)
 }
 
 fn scan_tracks_with_cache_in_dir(
@@ -490,6 +506,7 @@ fn scan_tracks_with_cache_in_dir(
     dir: &Path,
     cached_tracks: &[Track],
     track_entries: &std::collections::HashMap<String, cache::TrackEntry>,
+    used_track_keys: &mut std::collections::HashSet<String>,
     warn_on_dirs: bool,
 ) -> io::Result<Vec<Track>> {
     let mut tracks = Vec::new();
@@ -531,6 +548,7 @@ fn scan_tracks_with_cache_in_dir(
         });
 
         let key = cache::track_key(root, &path);
+        used_track_keys.insert(key.clone());
         let cached_track = cached_by_path.get(&path);
         let mut duration_secs = 0;
         let mut duration_millis = None;
@@ -540,17 +558,19 @@ fn scan_tracks_with_cache_in_dir(
         let mut embedded_cover = None;
         let mut used_cache = false;
 
-        if let (Some(entry), Some(cached_track)) = (track_entries.get(&key), cached_track) {
-            if let Ok(signature) = cache::track_signature(&path) {
-                if signature == *entry {
-                    duration_secs = cached_track.duration_secs;
-                    duration_millis = cached_track.duration_millis;
-                    bitrate_kbps = cached_track.bitrate_kbps;
-                    codec = cached_track.codec.clone();
-                    genre = cached_track.genre.clone();
-                    embedded_cover = cached_track.embedded_cover.clone();
-                    used_cache = true;
-                }
+        let signature = cache::track_signature(&path).ok();
+
+        if let (Some(entry), Some(cached_track), Some(signature)) =
+            (track_entries.get(&key), cached_track, signature)
+        {
+            if signature == *entry {
+                duration_secs = cached_track.duration_secs;
+                duration_millis = cached_track.duration_millis;
+                bitrate_kbps = cached_track.bitrate_kbps;
+                codec = cached_track.codec.clone();
+                genre = cached_track.genre.clone();
+                embedded_cover = cached_track.embedded_cover.clone();
+                used_cache = true;
             }
         }
 
@@ -581,15 +601,26 @@ fn scan_tracks_with_cache_in_dir(
     Ok(tracks)
 }
 
+fn record_track_keys(
+    root: &Path,
+    tracks: &[Track],
+    used_track_keys: &mut std::collections::HashSet<String>,
+) {
+    for track in tracks {
+        used_track_keys.insert(cache::track_key(root, &track.path));
+    }
+}
+
 fn scan_root_album(
     root: &Path,
     use_cache: bool,
     cache_index: &mut cache::CacheIndex,
     used_cache_keys: &mut std::collections::HashSet<String>,
+    used_track_keys: &mut std::collections::HashSet<String>,
 ) -> io::Result<Option<Album>> {
     let album_path = root.to_path_buf();
     let cached_album = if use_cache {
-        match cache::load_album(root, cache_index, &album_path) {
+        match cache::load_album(root, &album_path) {
             Ok(cached) => cached,
             Err(error) => {
                 warn!(
@@ -610,7 +641,8 @@ fn scan_root_album(
             root,
             &album_path,
             &cached.album.tracks,
-            &cached.track_entries,
+            cache_index.track_entries(),
+            used_track_keys,
             false,
         )?;
         if tracks.is_empty() {
@@ -632,6 +664,7 @@ fn scan_root_album(
         if tracks.is_empty() {
             return Ok(None);
         }
+        record_track_keys(root, &tracks, used_track_keys);
         let genre = dominant_genre(tracks.iter().flat_map(|track| track.genre.as_deref()));
         let cover = scan_cover_art(root, &album_path)?;
         let total_duration_secs = tracks.iter().map(|track| track.duration_secs).sum();
