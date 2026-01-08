@@ -34,6 +34,42 @@ impl PlaybackQueue {
         }
     }
 
+    pub fn items(&self) -> &[NowPlaying] {
+        &self.items
+    }
+
+    pub fn index(&self) -> usize {
+        self.index
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
+
+    pub fn clear(&mut self) {
+        self.items.clear();
+        self.index = 0;
+    }
+
+    pub fn reorder(&mut self, from: usize, to: usize) -> bool {
+        if from >= self.items.len() || to >= self.items.len() {
+            return false;
+        }
+        if from == to {
+            return true;
+        }
+        let item = self.items.remove(from);
+        self.items.insert(to, item);
+        if self.index == from {
+            self.index = to;
+        } else if from < self.index && to >= self.index {
+            self.index = self.index.saturating_sub(1);
+        } else if from > self.index && to <= self.index {
+            self.index = (self.index + 1).min(self.items.len().saturating_sub(1));
+        }
+        true
+    }
+
     pub fn current(&self) -> Option<NowPlaying> {
         self.items.get(self.index).cloned()
     }

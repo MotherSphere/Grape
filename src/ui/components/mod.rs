@@ -6,4 +6,5 @@ pub mod folders_panel;
 pub mod genres_panel;
 pub mod player_bar;
 pub mod playlist_view;
+pub mod queue_view;
 pub mod songs_panel;

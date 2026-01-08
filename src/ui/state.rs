@@ -473,6 +473,7 @@ pub struct UiState {
     pub library_focus: LibraryFocus,
     pub menu_open: bool,
     pub playlist_open: bool,
+    pub queue_open: bool,
     pub preferences_open: bool,
     pub preferences_tab: PreferencesTab,
     pub preferences_sections: PreferencesSectionsState,
@@ -496,6 +497,7 @@ impl UiState {
             library_focus: LibraryFocus::default(),
             menu_open: false,
             playlist_open: false,
+            queue_open: false,
             preferences_open: false,
             preferences_tab: PreferencesTab::default(),
             preferences_sections: PreferencesSectionsState::default(),
@@ -514,6 +516,7 @@ impl UiState {
             UiMessage::TabSelected(tab) => {
                 self.active_tab = tab;
                 self.playlist_open = false;
+                self.queue_open = false;
                 self.preferences_open = false;
                 self.library_focus = match tab {
                     ActiveTab::Artists => LibraryFocus::Artists,
@@ -566,19 +569,31 @@ impl UiState {
             UiMessage::OpenPlaylist => {
                 self.menu_open = false;
                 self.playlist_open = true;
+                self.queue_open = false;
                 self.preferences_open = false;
             }
             UiMessage::ClosePlaylist => {
                 self.playlist_open = false;
             }
+            UiMessage::OpenQueue => {
+                self.menu_open = false;
+                self.playlist_open = false;
+                self.queue_open = true;
+                self.preferences_open = false;
+            }
+            UiMessage::CloseQueue => {
+                self.queue_open = false;
+            }
             UiMessage::ShowLibrary => {
                 self.menu_open = false;
                 self.playlist_open = false;
+                self.queue_open = false;
                 self.preferences_open = false;
             }
             UiMessage::OpenPreferences => {
                 self.menu_open = false;
                 self.playlist_open = false;
+                self.queue_open = false;
                 self.preferences_open = true;
             }
             UiMessage::ClosePreferences => {
@@ -834,6 +849,9 @@ impl UiState {
             | UiMessage::MovePlaylistItemDown(_)
             | UiMessage::RemovePlaylistItem(_) => {}
             UiMessage::AddSelectedTrackToPlaylist => {}
+            UiMessage::ClearQueue
+            | UiMessage::MoveQueueItemUp(_)
+            | UiMessage::MoveQueueItemDown(_) => {}
             UiMessage::DismissAudioNotice => {
                 self.audio_notice = None;
             }

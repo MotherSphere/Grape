@@ -16,6 +16,7 @@ use crate::ui::components::folders_panel::FoldersPanel;
 use crate::ui::components::genres_panel::GenresPanel;
 use crate::ui::components::player_bar::PlayerBar;
 use crate::ui::components::playlist_view::PlaylistView;
+use crate::ui::components::queue_view::QueueView;
 use crate::ui::components::songs_panel::SongsPanel;
 use crate::ui::message::{LibraryNavigation, PlaybackMessage, SearchMessage, UiMessage};
 use crate::ui::state::{
@@ -884,6 +885,7 @@ impl GrapeApp {
             column![
                 menu_button("Bibliothèque", UiMessage::ShowLibrary),
                 menu_button("Playlist", UiMessage::OpenPlaylist),
+                menu_button("Queue", UiMessage::OpenQueue),
                 menu_button("Préférences", UiMessage::OpenPreferences),
                 text("Filtres")
                     .size(theme.size(11))
@@ -1242,11 +1244,17 @@ impl GrapeApp {
                 )
             });
 
+        let queue_message = if self.ui.queue_open {
+            Some(UiMessage::CloseQueue)
+        } else {
+            Some(UiMessage::OpenQueue)
+        };
         PlayerBar::new(title, artist)
             .with_cover(cover_path)
             .with_playback(self.ui.playback)
             .with_volume(self.ui.settings.default_volume)
-            .with_queue(false)
+            .with_queue(self.ui.queue_open)
+            .with_queue_action(queue_message)
             .view(theme)
     }
 
@@ -1616,6 +1624,11 @@ impl GrapeApp {
     fn playlist_view(&self) -> Element<'_, UiMessage> {
         let theme = self.theme_tokens();
         PlaylistView::view(theme, &self.playlists, &self.ui.selection)
+    }
+
+    fn queue_view(&self) -> Element<'_, UiMessage> {
+        let theme = self.theme_tokens();
+        QueueView::view(theme, &self.playback_queue)
     }
 
     fn preferences_view(&self) -> Element<'_, UiMessage> {
@@ -3767,6 +3780,19 @@ impl GrapeApp {
                     self.playlist_add(now_playing);
                 }
             }
+            UiMessage::ClearQueue => {
+                self.playlist_clear();
+            }
+            UiMessage::MoveQueueItemUp(index) => {
+                if *index > 0 {
+                    self.playlist_reorder(*index, (*index).saturating_sub(1));
+                }
+            }
+            UiMessage::MoveQueueItemDown(index) => {
+                if *index + 1 < self.playback_queue.items().len() {
+                    self.playlist_reorder(*index, *index + 1);
+                }
+            }
             UiMessage::OpenPlaylist => {
                 self.ui.playlist_open = true;
             }
@@ -3961,6 +3987,9 @@ impl GrapeApp {
 
     fn view(&self) -> Element<'_, UiMessage> {
         let theme = self.theme_tokens();
+        if self.ui.queue_open {
+            return self.queue_view();
+        }
         if self.ui.playlist_open {
             return self.playlist_view();
         }
@@ -4067,6 +4096,17 @@ impl GrapeApp {
             }));
         }
 
+        if self.ui.queue_open {
+            subscriptions.push(event::listen_with(|event, _status, _| match event {
+                event::Event::Keyboard(keyboard::Event::KeyPressed { key, .. })
+                    if matches!(key, keyboard::Key::Named(keyboard::key::Named::Escape)) =>
+                {
+                    Some(UiMessage::CloseQueue)
+                }
+                _ => None,
+            }));
+        }
+
         if self.ui.preferences_open {
             subscriptions.push(event::listen_with(|event, _status, _| match event {
                 event::Event::Keyboard(keyboard::Event::KeyPressed { key, .. })
@@ -4078,7 +4118,11 @@ impl GrapeApp {
             }));
         }
 
-        if !self.ui.menu_open && !self.ui.playlist_open && !self.ui.preferences_open {
+        if !self.ui.menu_open
+            && !self.ui.playlist_open
+            && !self.ui.queue_open
+            && !self.ui.preferences_open
+        {
             subscriptions.push(event::listen_with(|event, status, _| match event {
                 event::Event::Keyboard(keyboard::Event::KeyPressed { key, modifiers, .. })
                     if status == event::Status::Ignored =>
