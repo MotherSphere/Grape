@@ -150,6 +150,12 @@ impl GrapeApp {
         Self::normalize_text(value).contains(query)
     }
 
+    fn codec_matches(query: &str, codec: Option<&str>) -> bool {
+        codec
+            .map(|value| Self::normalized_contains(query, value))
+            .unwrap_or(false)
+    }
+
     fn apply_limit<T>(items: Vec<T>, limit: usize) -> (Vec<T>, usize) {
         let total = items.len();
         let limited = items.into_iter().take(limit).collect();
@@ -522,6 +528,17 @@ impl GrapeApp {
                 if filters.duration {
                     matches |= Self::duration_matches(&query, album.total_duration);
                 }
+                if filters.codec {
+                    matches |= self
+                        .album_entry_by_id(album.id)
+                        .map(|(_, entry)| {
+                            entry
+                                .tracks
+                                .iter()
+                                .any(|track| Self::codec_matches(&query, track.codec.as_deref()))
+                        })
+                        .unwrap_or(false);
+                }
                 matches
             });
         }
@@ -758,6 +775,13 @@ impl GrapeApp {
                 if filters.duration {
                     matches |= Self::duration_matches(&query, track.duration);
                 }
+                if filters.codec {
+                    matches |= album
+                        .tracks
+                        .get(track.id)
+                        .map(|entry| Self::codec_matches(&query, entry.codec.as_deref()))
+                        .unwrap_or(false);
+                }
                 matches
             });
         }
@@ -827,7 +851,7 @@ impl GrapeApp {
             let filters = self.ui.search.filters;
             folders.retain(|folder| {
                 let mut matches = Self::normalized_contains(&query, &folder.name);
-                if filters.genre || filters.year || filters.duration {
+                if filters.genre || filters.year || filters.duration || filters.codec {
                     let Some((_, entry)) = self.folder_entry_by_id(folder.id) else {
                         return matches;
                     };
@@ -849,6 +873,12 @@ impl GrapeApp {
                     if filters.duration {
                         let duration = Duration::from_secs(entry.total_duration_secs as u64);
                         matches |= Self::duration_matches(&query, duration);
+                    }
+                    if filters.codec {
+                        matches |= entry
+                            .tracks
+                            .iter()
+                            .any(|track| Self::codec_matches(&query, track.codec.as_deref()));
                     }
                 }
                 matches
@@ -943,6 +973,7 @@ impl GrapeApp {
                     self.ui.search.filters.duration,
                     SearchFilter::Duration,
                 ),
+                menu_toggle("Codec", self.ui.search.filters.codec, SearchFilter::Codec),
             ]
             .spacing(6),
         )
