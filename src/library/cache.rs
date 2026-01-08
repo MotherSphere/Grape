@@ -7,15 +7,14 @@ use std::time::UNIX_EPOCH;
 
 use serde::{Deserialize, Serialize};
 
-use crate::library::{Album, EmbeddedCover, Track};
+use crate::library::Album;
 
 const CACHE_DIRNAME: &str = ".grape_cache";
 const INDEX_FILENAME: &str = "index.json";
 const FOLDERS_DIRNAME: &str = "folders";
-const TRACKS_DIRNAME: &str = "tracks";
 const COVER_DIRNAME: &str = "covers";
 const METADATA_DIRNAME: &str = "metadata";
-const CACHE_VERSION: u32 = 5;
+const CACHE_VERSION: u32 = 4;
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct CacheIndex {
@@ -39,48 +38,8 @@ struct FolderCacheFile {
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 pub struct TrackEntry {
-    #[serde(default)]
-    id: String,
     modified_secs: u64,
     hash: u64,
-    #[serde(default)]
-    file_len: Option<u64>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
-pub struct TrackSignature {
-    modified_secs: u64,
-    hash: u64,
-    #[serde(default)]
-    file_len: Option<u64>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct TrackMetadata {
-    number: u8,
-    title: String,
-    duration_secs: u32,
-    #[serde(default)]
-    duration_millis: Option<u64>,
-    #[serde(default)]
-    bitrate_kbps: Option<u32>,
-    #[serde(default)]
-    codec: Option<String>,
-    #[serde(default)]
-    artist: Option<String>,
-    #[serde(default)]
-    year: Option<u16>,
-    #[serde(default)]
-    genre: Option<String>,
-    #[serde(default)]
-    embedded_cover: Option<EmbeddedCover>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct TrackCacheFile {
-    id: String,
-    signature: TrackSignature,
-    metadata: TrackMetadata,
 }
 
 pub struct CachedAlbum {
@@ -119,16 +78,7 @@ pub fn load_index(root: &Path) -> io::Result<CacheIndex> {
         let mut tracks = HashMap::new();
         for entry in legacy.entries.values() {
             for (key, track_entry) in &entry.tracks {
-                let id = hash_key(key);
-                tracks.insert(
-                    key.clone(),
-                    TrackEntry {
-                        id,
-                        modified_secs: track_entry.modified_secs,
-                        hash: track_entry.hash,
-                        file_len: None,
-                    },
-                );
+                tracks.insert(key.clone(), *track_entry);
             }
         }
         return Ok(CacheIndex {
@@ -143,12 +93,6 @@ pub fn load_index(root: &Path) -> io::Result<CacheIndex> {
     if index.version != CACHE_VERSION {
         index.legacy_version = Some(index.version);
         index.version = CACHE_VERSION;
-    }
-
-    for (key, entry) in &mut index.tracks {
-        if entry.id.is_empty() {
-            entry.id = hash_key(key);
-        }
     }
 
     Ok(index)
@@ -188,7 +132,7 @@ pub fn store_album(
         .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
     fs::write(folder_cache_path(root, &key), contents)?;
 
-    let track_entries = build_track_entries(root, album)?;
+    let track_entries = build_track_entries(root, album);
     for (track_key, track_entry) in track_entries {
         index.tracks.insert(track_key, track_entry);
     }
@@ -201,7 +145,6 @@ pub fn finalize(
     index: &mut CacheIndex,
     used_keys: &HashSet<String>,
     used_track_keys: &HashSet<String>,
-    used_track_ids: &HashSet<String>,
 ) -> io::Result<()> {
     if !root.exists() {
         return Ok(());
@@ -238,27 +181,6 @@ pub fn finalize(
 
     for key in removed_tracks {
         index.tracks.remove(&key);
-    }
-
-    let tracks_dir = root.join(CACHE_DIRNAME).join(TRACKS_DIRNAME);
-    if tracks_dir.exists() {
-        if let Ok(read_dir) = fs::read_dir(&tracks_dir) {
-            for entry_result in read_dir {
-                let Ok(entry) = entry_result else {
-                    continue;
-                };
-                let path = entry.path();
-                if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
-                    continue;
-                }
-                let Some(stem) = path.file_stem().and_then(|name| name.to_str()) else {
-                    continue;
-                };
-                if !used_track_ids.contains(stem) {
-                    let _ = fs::remove_file(path);
-                }
-            }
-        }
     }
 
     let contents = serde_json::to_string_pretty(index)
@@ -304,11 +226,7 @@ pub fn track_key(root: &Path, track_path: &Path) -> String {
     relative_path(root, track_path)
 }
 
-pub fn track_id(root: &Path, track_path: &Path) -> String {
-    hash_key(&track_key(root, track_path))
-}
-
-pub fn track_signature(path: &Path) -> io::Result<TrackSignature> {
+pub fn track_signature(path: &Path) -> io::Result<TrackEntry> {
     let metadata = fs::metadata(path)?;
     let modified = metadata.modified().unwrap_or(UNIX_EPOCH);
     let duration = modified.duration_since(UNIX_EPOCH).unwrap_or_default();
@@ -317,10 +235,9 @@ pub fn track_signature(path: &Path) -> io::Result<TrackSignature> {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     file_len.hash(&mut hasher);
     modified_secs.hash(&mut hasher);
-    Ok(TrackSignature {
+    Ok(TrackEntry {
         modified_secs,
         hash: hasher.finish(),
-        file_len: Some(file_len),
     })
 }
 
@@ -331,120 +248,13 @@ fn relative_path(root: &Path, path: &Path) -> String {
         .replace('\\', "/")
 }
 
-fn build_track_entries(root: &Path, album: &Album) -> io::Result<HashMap<String, TrackEntry>> {
+fn build_track_entries(root: &Path, album: &Album) -> HashMap<String, TrackEntry> {
     let mut entries = HashMap::new();
     for track in &album.tracks {
         if let Ok(signature) = track_signature(&track.path) {
             let key = track_key(root, &track.path);
-            let id = track_id(root, &track.path);
-            store_track_metadata(root, &id, &signature, track)?;
-            entries.insert(
-                key,
-                TrackEntry {
-                    id,
-                    modified_secs: signature.modified_secs,
-                    hash: signature.hash,
-                    file_len: signature.file_len,
-                },
-            );
+            entries.insert(key, signature);
         }
     }
-    Ok(entries)
-}
-
-fn track_cache_path(root: &Path, id: &str) -> PathBuf {
-    root.join(CACHE_DIRNAME)
-        .join(TRACKS_DIRNAME)
-        .join(format!("{id}.json"))
-}
-
-pub fn load_track_metadata(root: &Path, id: &str) -> io::Result<Option<TrackCacheFile>> {
-    let path = track_cache_path(root, id);
-    if !path.exists() {
-        return Ok(None);
-    }
-    let contents = fs::read_to_string(&path)?;
-    let cache_file: TrackCacheFile = serde_json::from_str(&contents)
-        .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
-    Ok(Some(cache_file))
-}
-
-pub fn store_track_metadata(
-    root: &Path,
-    id: &str,
-    signature: &TrackSignature,
-    track: &Track,
-) -> io::Result<()> {
-    let cache_dir = root.join(CACHE_DIRNAME).join(TRACKS_DIRNAME);
-    fs::create_dir_all(&cache_dir)?;
-    let cache_file = TrackCacheFile {
-        id: id.to_string(),
-        signature: signature.clone(),
-        metadata: TrackMetadata::from_track(track),
-    };
-    let contents = serde_json::to_string_pretty(&cache_file)
-        .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
-    fs::write(track_cache_path(root, id), contents)
-}
-
-impl TrackEntry {
-    pub fn matches_signature(&self, signature: &TrackSignature) -> bool {
-        if self.modified_secs != signature.modified_secs || self.hash != signature.hash {
-            return false;
-        }
-        match (self.file_len, signature.file_len) {
-            (Some(left), Some(right)) => left == right,
-            _ => true,
-        }
-    }
-
-    pub fn id(&self) -> &str {
-        &self.id
-    }
-}
-
-impl TrackSignature {
-    pub fn matches_cache(&self, cache: &TrackCacheFile) -> bool {
-        if self.modified_secs != cache.signature.modified_secs || self.hash != cache.signature.hash
-        {
-            return false;
-        }
-        match (self.file_len, cache.signature.file_len) {
-            (Some(left), Some(right)) => left == right,
-            _ => true,
-        }
-    }
-}
-
-impl TrackMetadata {
-    pub fn from_track(track: &Track) -> Self {
-        Self {
-            number: track.number,
-            title: track.title.clone(),
-            duration_secs: track.duration_secs,
-            duration_millis: track.duration_millis,
-            bitrate_kbps: track.bitrate_kbps,
-            codec: track.codec.clone(),
-            artist: track.artist.clone(),
-            year: track.year,
-            genre: track.genre.clone(),
-            embedded_cover: track.embedded_cover.clone(),
-        }
-    }
-
-    pub fn into_track(self, path: PathBuf) -> Track {
-        Track {
-            number: self.number,
-            title: self.title,
-            duration_secs: self.duration_secs,
-            duration_millis: self.duration_millis,
-            bitrate_kbps: self.bitrate_kbps,
-            codec: self.codec,
-            path,
-            artist: self.artist,
-            year: self.year,
-            genre: self.genre,
-            embedded_cover: self.embedded_cover,
-        }
-    }
+    entries
 }
