@@ -19,6 +19,7 @@ pub struct TrackMetadata {
     pub title: Option<String>,
     pub track_number: Option<u8>,
     pub artist: Option<String>,
+    #[allow(dead_code)]
     pub album: Option<String>,
     pub genre: Option<String>,
     pub year: Option<u16>,
