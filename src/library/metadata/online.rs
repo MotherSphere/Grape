@@ -15,10 +15,71 @@ pub struct OnlineMetadata {
     pub year: Option<u16>,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UserMetadataOverride {
+    pub genre: Option<String>,
+    pub year: Option<u16>,
+    #[serde(default)]
+    pub genre_overridden: bool,
+    #[serde(default)]
+    pub year_overridden: bool,
+    #[serde(default)]
+    pub edited_at: u64,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 struct CachedOnlineMetadata {
     fetched_at: u64,
     metadata: OnlineMetadata,
+    #[serde(default)]
+    user_override: Option<UserMetadataOverride>,
+}
+
+pub fn load_user_metadata_override(
+    root: &Path,
+    artist: &str,
+    album: &str,
+) -> io::Result<Option<UserMetadataOverride>> {
+    let cache_dir = cache::ensure_metadata_cache_dir(root)?;
+    let cache_key = metadata_cache_key(artist, album);
+    let cache_path = cache_dir.join(format!("{cache_key}.json"));
+    if !cache_path.exists() {
+        return Ok(None);
+    }
+    let contents = fs::read_to_string(&cache_path)?;
+    let entry = serde_json::from_str::<CachedOnlineMetadata>(&contents)
+        .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
+    Ok(entry.user_override)
+}
+
+pub fn store_user_metadata_override(
+    root: &Path,
+    artist: &str,
+    album: &str,
+    mut metadata_override: UserMetadataOverride,
+) -> io::Result<()> {
+    let cache_dir = cache::ensure_metadata_cache_dir(root)?;
+    let cache_key = metadata_cache_key(artist, album);
+    let cache_path = cache_dir.join(format!("{cache_key}.json"));
+    let existing = if cache_path.exists() {
+        fs::read_to_string(&cache_path)
+            .ok()
+            .and_then(|contents| serde_json::from_str::<CachedOnlineMetadata>(&contents).ok())
+    } else {
+        None
+    };
+    metadata_override.edited_at = current_epoch_secs();
+    let payload = CachedOnlineMetadata {
+        fetched_at: existing.as_ref().map(|entry| entry.fetched_at).unwrap_or(0),
+        metadata: existing
+            .as_ref()
+            .map(|entry| entry.metadata.clone())
+            .unwrap_or_default(),
+        user_override: Some(metadata_override),
+    };
+    let contents = serde_json::to_string_pretty(&payload)
+        .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
+    fs::write(&cache_path, contents)
 }
 
 pub fn fetch_album_metadata(
@@ -57,6 +118,27 @@ pub fn fetch_album_metadata(
         None
     };
 
+    if let Some(entry) = &cached {
+        if let Some(user_override) = &entry.user_override {
+            let has_override = user_override.genre_overridden || user_override.year_overridden;
+            if has_override {
+                let metadata = OnlineMetadata {
+                    genre: if user_override.genre_overridden {
+                        user_override.genre.clone()
+                    } else {
+                        entry.metadata.genre.clone()
+                    },
+                    year: if user_override.year_overridden {
+                        user_override.year
+                    } else {
+                        entry.metadata.year
+                    },
+                };
+                return Ok(Some(metadata));
+            }
+        }
+    }
+
     if !force_refresh {
         if let Some(entry) = &cached {
             if ttl_secs > 0 && now_secs.saturating_sub(entry.fetched_at) < ttl_secs {
@@ -80,6 +162,7 @@ pub fn fetch_album_metadata(
     let payload = CachedOnlineMetadata {
         fetched_at: now_secs,
         metadata: metadata.clone(),
+        user_override: cached.and_then(|entry| entry.user_override),
     };
 
     if let Ok(contents) = serde_json::to_string_pretty(&payload) {

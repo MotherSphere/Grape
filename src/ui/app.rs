@@ -355,6 +355,7 @@ impl GrapeApp {
                             .next()
                     });
         }
+        self.refresh_album_metadata_drafts();
     }
 
     fn apply_album_selection(&mut self, album: UiAlbum) {
@@ -369,6 +370,7 @@ impl GrapeApp {
                         .next()
                 });
         self.ui.library_focus = LibraryFocus::Songs;
+        self.refresh_album_metadata_drafts();
     }
 
     fn apply_genre_selection(&mut self, genre: UiGenre) {
@@ -393,6 +395,7 @@ impl GrapeApp {
                     .map(|(artist, entry)| self.filtered_tracks_for_album(artist, entry))
             })
             .and_then(|tracks| tracks.into_iter().next());
+        self.refresh_album_metadata_drafts();
     }
 
     fn apply_track_selection(&mut self, track: UiTrack) {
@@ -640,6 +643,44 @@ impl GrapeApp {
             }
         }
         None
+    }
+
+    fn album_entry_by_id_mut(
+        &mut self,
+        album_id: usize,
+    ) -> Option<&mut crate::library::Album> {
+        let mut id = 0usize;
+        for artist in &mut self.catalog.artists {
+            for album in &mut artist.albums {
+                if id == album_id {
+                    return Some(album);
+                }
+                id += 1;
+            }
+        }
+        None
+    }
+
+    fn refresh_album_metadata_drafts(&mut self) {
+        let draft = self
+            .ui
+            .selection
+            .selected_album
+            .as_ref()
+            .and_then(|selected| self.album_entry_by_id(selected.id))
+            .map(|(_, album)| {
+                (
+                    album.genre.clone().unwrap_or_default(),
+                    if album.year > 0 {
+                        album.year.to_string()
+                    } else {
+                        String::new()
+                    },
+                )
+            })
+            .unwrap_or_else(|| (String::new(), String::new()));
+        self.ui.album_genre_draft = draft.0;
+        self.ui.album_year_draft = draft.1;
     }
 
     fn folder_entry_by_id(
@@ -1132,16 +1173,18 @@ impl GrapeApp {
                             .map(|(artist, entry)| (artist, entry))
                     })
             });
-        let (album_title, artist_name, tracks) = match selected_album {
+        let (album_title, artist_name, tracks, show_metadata_editor) = match selected_album {
             Some((artist, album)) => (
                 album.title.clone(),
                 artist.name.clone(),
                 self.filtered_tracks_for_album(artist, album),
+                true,
             ),
             None => (
                 "Select an album".to_string(),
                 "Pick a track to start".to_string(),
                 Vec::new(),
+                false,
             ),
         };
         let (tracks, total) = Self::apply_limit(tracks, self.ui.list_limits.tracks);
@@ -1154,7 +1197,12 @@ impl GrapeApp {
             .map(|track| track.id);
         let panel = SongsPanel::new(album_title, artist_name, tracks, total)
             .with_selection(selected_id)
-            .with_load_more(load_more);
+            .with_load_more(load_more)
+            .with_metadata_editor(
+                self.ui.album_genre_draft.clone(),
+                self.ui.album_year_draft.clone(),
+                show_metadata_editor,
+            );
         panel.view(
             &self.ui.selection,
             self.ui.library_focus == crate::ui::state::LibraryFocus::Songs,
@@ -1619,6 +1667,55 @@ impl GrapeApp {
             }
         }
         Task::none()
+    }
+
+    fn handle_album_metadata_save(&mut self) {
+        let Some(selected_album) = self.ui.selection.selected_album.as_ref() else {
+            return;
+        };
+        let Some(root) = self.library_root() else {
+            return;
+        };
+        let Some((artist, album)) = self.album_entry_by_id(selected_album.id) else {
+            return;
+        };
+        let genre_value = self.ui.album_genre_draft.trim();
+        let genre = if genre_value.is_empty() {
+            None
+        } else {
+            Some(genre_value.to_string())
+        };
+        let year_value = self.ui.album_year_draft.trim();
+        let year = if year_value.is_empty() {
+            None
+        } else {
+            match year_value.parse::<u16>() {
+                Ok(value) if value > 0 => Some(value),
+                Ok(_) => None,
+                Err(error) => {
+                    warn!(error = %error, "Invalid album year input");
+                    return;
+                }
+            }
+        };
+        if let Err(error) = library::persist_album_metadata_override(
+            &root,
+            &artist.name,
+            &album.title,
+            genre.clone(),
+            year,
+        ) {
+            warn!(error = %error, "Failed to persist album metadata override");
+            return;
+        }
+        if let Some(album) = self.album_entry_by_id_mut(selected_album.id) {
+            album.genre = genre.clone();
+            album.year = year.unwrap_or(0);
+        }
+        if let Some(selected_album) = self.ui.selection.selected_album.as_mut() {
+            selected_album.year = year.map(|value| value as u32);
+        }
+        self.refresh_album_metadata_drafts();
     }
 
     fn playlist_view(&self) -> Element<'_, UiMessage> {
@@ -3726,6 +3823,9 @@ impl GrapeApp {
             UiMessage::Playback(playback_message) => {
                 self.handle_playback_message(playback_message);
             }
+            UiMessage::SaveAlbumMetadata => {
+                self.handle_album_metadata_save();
+            }
             UiMessage::CreatePlaylist => {
                 let (index, name) = self
                     .playlists
@@ -3910,6 +4010,8 @@ impl GrapeApp {
                         );
                         self.catalog = catalog;
                         self.ui.selection = SelectionState::default();
+                        self.ui.album_genre_draft.clear();
+                        self.ui.album_year_draft.clear();
                         self.ui.search = SearchState::default();
                         self.ui.list_limits = ListLimits::default();
                     }
