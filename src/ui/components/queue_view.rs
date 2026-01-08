@@ -12,12 +12,30 @@ impl QueueView {
         Self
     }
 
-    pub fn view<'a>(theme: style::ThemeTokens, playback_queue: &'a PlaybackQueue) -> Element<'a, UiMessage> {
+    pub fn view<'a>(
+        theme: style::ThemeTokens,
+        playback_queue: &'a PlaybackQueue,
+        play_from_queue: bool,
+    ) -> Element<'a, UiMessage> {
+        let play_from_queue_label = if play_from_queue {
+            "Lecture depuis queue : activée"
+        } else {
+            "Lecture depuis queue : désactivée"
+        };
         let header = row![
             text("Queue")
                 .size(theme.size(24))
                 .font(style::font_propo(Weight::Semibold))
                 .style(move |_| style::text_style_primary(theme)),
+            button(
+                text(play_from_queue_label)
+                    .size(theme.size(13))
+                    .font(style::font_propo(Weight::Medium))
+                    .style(move |_| style::text_style_primary(theme)),
+            )
+            .style(move |_, status| style::button_style(theme, style::ButtonKind::Control, status))
+            .padding([6, 10])
+            .on_press(UiMessage::TogglePlayFromQueue),
             button(
                 text("Vider")
                     .size(theme.size(13))
@@ -92,7 +110,16 @@ impl QueueView {
                     if index + 1 < total_items {
                         move_down = move_down.on_press(UiMessage::MoveQueueItemDown(index));
                     }
-                    let actions = row![move_up, move_down].spacing(4);
+                    let remove = button(
+                        text("✕")
+                            .size(theme.size_accessible(12))
+                            .font(style::font_propo(Weight::Medium))
+                            .style(move |_| style::text_style_muted(theme)),
+                    )
+                    .style(move |_, status| style::button_style(theme, style::ButtonKind::Icon, status))
+                    .padding([2, 6])
+                    .on_press(UiMessage::RemoveQueueItem(index));
+                    let actions = row![move_up, move_down, remove].spacing(4);
 
                     row![index_text, track, actions]
                         .align_y(Alignment::Center)
