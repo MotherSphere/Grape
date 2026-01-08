@@ -830,6 +830,9 @@ impl UiState {
             UiMessage::CreatePlaylist => {}
             UiMessage::RenamePlaylist => {}
             UiMessage::DeletePlaylist => {}
+            UiMessage::MovePlaylistItemUp(_)
+            | UiMessage::MovePlaylistItemDown(_)
+            | UiMessage::RemovePlaylistItem(_) => {}
             UiMessage::AddSelectedTrackToPlaylist => {}
             UiMessage::DismissAudioNotice => {
                 self.audio_notice = None;
