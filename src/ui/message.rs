@@ -2,8 +2,8 @@
 
 use crate::config::{
     AccentColor, AccessibleTextSize, AudioOutputDevice, AudioStabilityMode, CloseBehavior,
-    EqPreset, InterfaceDensity, InterfaceLanguage, MissingDeviceBehavior, StartupScreen,
-    SubtitleSize, TextScale, ThemeMode, TimeFormat, UpdateChannel, VolumeLevel,
+    DeclarativeAction, EqPreset, InterfaceDensity, InterfaceLanguage, MissingDeviceBehavior,
+    StartupScreen, SubtitleSize, TextScale, ThemeMode, TimeFormat, UpdateChannel, VolumeLevel,
 };
 use crate::ui::state::{
     ActiveTab, Album, Artist, Folder, Genre, PreferencesSection, PreferencesTab, SortOption,
@@ -89,6 +89,9 @@ pub enum UiMessage {
     OpenLogsFolder,
     ReindexLibrary,
     ResetPreferences,
+    RequestDeclarativeAction(DeclarativeAction),
+    ConfirmDeclarativeAction(DeclarativeAction),
+    CancelDeclarativeAction,
     TogglePreferencesSection(PreferencesSection),
     ToggleThemeCategory(ThemeCategory),
     CloseMenu,

@@ -211,6 +211,17 @@ impl Player {
         })
     }
 
+    pub fn reset(&mut self, options: AudioOptions) -> Result<(), PlayerError> {
+        let stream = options.open_stream()?;
+        let sink = Sink::connect_new(stream.mixer());
+        self.stream = stream;
+        self.sink = sink;
+        self.state = PlaybackState::Stopped;
+        self.current_track = None;
+        self.position = Duration::ZERO;
+        Ok(())
+    }
+
     pub fn load(&mut self, path: impl AsRef<Path>) -> Result<(), PlayerError> {
         let path = path.as_ref().to_path_buf();
         info!(path = %path.display(), "Loading track");

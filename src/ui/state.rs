@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-use crate::config::{ThemeMode, UserSettings};
+use crate::config::{DeclarativeAction, ThemeMode, UserSettings};
 use crate::ui::message::{PlaybackMessage, SearchMessage, UiMessage};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -374,6 +374,7 @@ pub struct UiState {
     pub preferences_tab: PreferencesTab,
     pub preferences_sections: PreferencesSectionsState,
     pub theme_categories: ThemeCategoriesState,
+    pub pending_action: Option<DeclarativeAction>,
     pub settings: UserSettings,
 }
 
@@ -390,6 +391,7 @@ impl UiState {
             preferences_tab: PreferencesTab::default(),
             preferences_sections: PreferencesSectionsState::default(),
             theme_categories: ThemeCategoriesState::default(),
+            pending_action: None,
             settings,
         }
     }
@@ -457,6 +459,7 @@ impl UiState {
             }
             UiMessage::ClosePreferences => {
                 self.preferences_open = false;
+                self.pending_action = None;
             }
             UiMessage::PreferencesTabSelected(tab) => {
                 self.preferences_tab = tab;
@@ -631,6 +634,15 @@ impl UiState {
             UiMessage::ReindexLibrary => {}
             UiMessage::ResetPreferences => {
                 self.settings = UserSettings::default();
+            }
+            UiMessage::RequestDeclarativeAction(action) => {
+                self.pending_action = Some(action);
+            }
+            UiMessage::ConfirmDeclarativeAction(_) => {
+                self.pending_action = None;
+            }
+            UiMessage::CancelDeclarativeAction => {
+                self.pending_action = None;
             }
             UiMessage::TogglePreferencesSection(section) => {
                 self.preferences_sections.toggle(section);
