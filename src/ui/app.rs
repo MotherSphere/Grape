@@ -1532,16 +1532,10 @@ impl GrapeApp {
                 }
             }
             PlaybackMessage::NextTrack => {
-                if !self.ui.play_from_queue {
-                    return;
-                }
                 let next_track = self.playback_queue.next();
                 self.load_from_queue(next_track);
             }
             PlaybackMessage::PreviousTrack => {
-                if !self.ui.play_from_queue {
-                    return;
-                }
                 let previous_track = self.playback_queue.previous();
                 self.load_from_queue(previous_track);
             }
@@ -1748,7 +1742,7 @@ impl GrapeApp {
 
     fn queue_view(&self) -> Element<'_, UiMessage> {
         let theme = self.theme_tokens();
-        QueueView::view(theme, &self.playback_queue, self.ui.play_from_queue)
+        QueueView::view(theme, &self.playback_queue)
     }
 
     fn preferences_view(&self) -> Element<'_, UiMessage> {
@@ -3941,9 +3935,6 @@ impl GrapeApp {
                 if *index + 1 < self.playback_queue.items().len() {
                     self.playlist_reorder(*index, *index + 1);
                 }
-            }
-            UiMessage::RemoveQueueItem(index) => {
-                self.playlist_remove(*index);
             }
             UiMessage::OpenPlaylist => {
                 self.ui.playlist_open = true;
