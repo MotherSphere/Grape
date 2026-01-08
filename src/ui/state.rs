@@ -270,6 +270,7 @@ pub struct SelectionState {
     pub selected_track: Option<Track>,
     pub selected_playlist: Option<usize>,
     pub playlist_name_draft: String,
+    pub playlist_drag_source: Option<usize>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -858,7 +859,10 @@ impl UiState {
             UiMessage::DeletePlaylist => {}
             UiMessage::MovePlaylistItemUp(_)
             | UiMessage::MovePlaylistItemDown(_)
-            | UiMessage::RemovePlaylistItem(_) => {}
+            | UiMessage::StartPlaylistItemDrag(_)
+            | UiMessage::MovePlaylistItemDrag { .. }
+            | UiMessage::DeletePlaylistItem(_)
+            | UiMessage::SavePlaylistOrder => {}
             UiMessage::AddSelectedTrackToPlaylist => {}
             UiMessage::ClearQueue
             | UiMessage::MoveQueueItemUp(_)

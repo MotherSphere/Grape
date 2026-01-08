@@ -1430,7 +1430,7 @@ impl GrapeApp {
 
     #[allow(dead_code)]
     fn playlist_remove(&mut self, index: usize) -> Option<NowPlaying> {
-        let removed = self.playlists.remove(index);
+        let removed = self.playlists.delete_item(index);
         if removed.is_some() {
             self.refresh_playback_queue(None);
             self.persist_playlist();
@@ -1440,7 +1440,7 @@ impl GrapeApp {
 
     #[allow(dead_code)]
     fn playlist_reorder(&mut self, from: usize, to: usize) -> bool {
-        let changed = self.playlists.reorder(from, to);
+        let changed = self.playlists.move_item(from, to);
         if changed {
             self.refresh_playback_queue(None);
             self.persist_playlist();
@@ -1451,6 +1451,11 @@ impl GrapeApp {
     #[allow(dead_code)]
     fn playlist_clear(&mut self) {
         self.playlists.clear();
+        self.refresh_playback_queue(None);
+        self.persist_playlist();
+    }
+
+    fn playlist_save_order(&mut self) {
         self.refresh_playback_queue(None);
         self.persist_playlist();
     }
@@ -3831,6 +3836,7 @@ impl GrapeApp {
                     }
                     self.refresh_playback_queue(None);
                 }
+                self.ui.selection.playlist_drag_source = None;
             }
             UiMessage::Playback(playback_message) => {
                 self.handle_playback_message(playback_message);
@@ -3844,6 +3850,7 @@ impl GrapeApp {
                     .create_playlist(self.ui.selection.playlist_name_draft.clone());
                 self.ui.selection.selected_playlist = Some(index);
                 self.ui.selection.playlist_name_draft = name;
+                self.ui.selection.playlist_drag_source = None;
                 self.refresh_playback_queue(None);
                 self.persist_playlist();
             }
@@ -3864,6 +3871,7 @@ impl GrapeApp {
                         self.ui.selection.selected_playlist = Some(self.playlists.active_index);
                         self.ui.selection.playlist_name_draft = active.name.clone();
                     }
+                    self.ui.selection.playlist_drag_source = None;
                     self.refresh_playback_queue(None);
                     self.persist_playlist();
                 }
@@ -3883,8 +3891,31 @@ impl GrapeApp {
                     self.playlist_reorder(*index, *index + 1);
                 }
             }
-            UiMessage::RemovePlaylistItem(index) => {
+            UiMessage::StartPlaylistItemDrag(index) => {
+                if self.ui.selection.playlist_drag_source == Some(*index) {
+                    self.ui.selection.playlist_drag_source = None;
+                } else {
+                    self.ui.selection.playlist_drag_source = Some(*index);
+                }
+            }
+            UiMessage::MovePlaylistItemDrag { from, to } => {
+                if self
+                    .playlists
+                    .active()
+                    .map(|playlist| *from < playlist.items.len() && *to < playlist.items.len())
+                    .unwrap_or(false)
+                {
+                    self.playlist_reorder(*from, *to);
+                }
+                self.ui.selection.playlist_drag_source = None;
+            }
+            UiMessage::DeletePlaylistItem(index) => {
                 self.playlist_remove(*index);
+                self.ui.selection.playlist_drag_source = None;
+            }
+            UiMessage::SavePlaylistOrder => {
+                self.playlist_save_order();
+                self.ui.selection.playlist_drag_source = None;
             }
             UiMessage::AddSelectedTrackToPlaylist => {
                 if let Some(track) = self.ui.selection.selected_track.as_ref() {

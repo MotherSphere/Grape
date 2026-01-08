@@ -111,12 +111,20 @@ impl Playlist {
         self.items.push(item);
     }
 
+    pub fn delete_item(&mut self, index: usize) -> Option<NowPlaying> {
+        self.remove(index)
+    }
+
     pub fn remove(&mut self, index: usize) -> Option<NowPlaying> {
         if index < self.items.len() {
             Some(self.items.remove(index))
         } else {
             None
         }
+    }
+
+    pub fn move_item(&mut self, from: usize, to: usize) -> bool {
+        self.reorder(from, to)
     }
 
     pub fn reorder(&mut self, from: usize, to: usize) -> bool {
@@ -264,16 +272,32 @@ impl PlaylistManager {
         }
     }
 
+    pub fn delete_item(&mut self, index: usize) -> Option<NowPlaying> {
+        self.playlists
+            .get_mut(self.active_index)
+            .and_then(|playlist| playlist.delete_item(index))
+    }
+
     pub fn remove(&mut self, index: usize) -> Option<NowPlaying> {
         self.playlists
             .get_mut(self.active_index)
             .and_then(|playlist| playlist.remove(index))
     }
 
+    pub fn move_item(&mut self, from: usize, to: usize) -> bool {
+        self.playlists
+            .get_mut(self.active_index)
+            .map_or(false, |playlist| playlist.move_item(from, to))
+    }
+
     pub fn reorder(&mut self, from: usize, to: usize) -> bool {
         self.playlists
             .get_mut(self.active_index)
             .map_or(false, |playlist| playlist.reorder(from, to))
+    }
+
+    pub fn save_order(&self) -> io::Result<()> {
+        self.save()
     }
 
     pub fn clear(&mut self) {
