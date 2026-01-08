@@ -60,6 +60,7 @@ pub enum UiMessage {
     SetVolumeLevel(VolumeLevel),
     SetEqEnabled(bool),
     SetEqPreset(EqPreset),
+    SetEqBandGain(usize, f32),
     ResetEq,
     SetAudioStabilityMode(AudioStabilityMode),
     ResetAudioEngine,
@@ -101,6 +102,7 @@ pub enum UiMessage {
     RenamePlaylist,
     DeletePlaylist,
     AddSelectedTrackToPlaylist,
+    DismissAudioNotice,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
