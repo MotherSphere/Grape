@@ -53,6 +53,7 @@ pub enum UiMessage {
     SetSubtitlesEnabled(bool),
     SetSubtitleSize(SubtitleSize),
     SetHighlightKeyboardFocus(bool),
+    ToggleInlineVolumeBar,
     SetAdvancedShortcuts(bool),
     SetDefaultPlaybackSpeed(u8),
     SetPauseOnFocusLoss(bool),
