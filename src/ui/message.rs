@@ -124,7 +124,6 @@ pub enum UiMessage {
     MoveQueueItemDown(usize),
     RemoveQueueItem(usize),
     TogglePlayFromQueue,
-    ToggleVolumeOverlay,
     DismissAudioNotice,
     LoadMoreArtists,
     LoadMoreAlbums,
