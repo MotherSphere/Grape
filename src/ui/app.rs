@@ -1340,6 +1340,8 @@ impl GrapeApp {
             .with_volume(self.ui.settings.default_volume)
             .with_queue(self.ui.queue_open)
             .with_queue_action(queue_message)
+            .with_inline_volume_bar(self.ui.inline_volume_bar_open)
+            .with_inline_volume_toggle(Some(UiMessage::ToggleInlineVolumeBar))
             .view(theme)
     }
 
