@@ -481,7 +481,6 @@ pub struct UiState {
     pub menu_open: bool,
     pub playlist_open: bool,
     pub queue_open: bool,
-    pub volume_bar_open: bool,
     pub preferences_open: bool,
     pub preferences_tab: PreferencesTab,
     pub preferences_sections: PreferencesSectionsState,
@@ -509,7 +508,6 @@ impl UiState {
             menu_open: false,
             playlist_open: false,
             queue_open: false,
-            volume_bar_open: false,
             preferences_open: false,
             preferences_tab: PreferencesTab::default(),
             preferences_sections: PreferencesSectionsState::default(),
@@ -532,7 +530,6 @@ impl UiState {
                 self.active_tab = tab;
                 self.playlist_open = false;
                 self.queue_open = false;
-                self.volume_bar_open = false;
                 self.preferences_open = false;
                 self.library_focus = match tab {
                     ActiveTab::Artists => LibraryFocus::Artists,
@@ -597,7 +594,6 @@ impl UiState {
                 self.menu_open = false;
                 self.playlist_open = true;
                 self.queue_open = false;
-                self.volume_bar_open = false;
                 self.preferences_open = false;
             }
             UiMessage::ClosePlaylist => {
@@ -607,35 +603,21 @@ impl UiState {
                 self.menu_open = false;
                 self.playlist_open = false;
                 self.queue_open = true;
-                self.volume_bar_open = false;
                 self.preferences_open = false;
             }
             UiMessage::CloseQueue => {
                 self.queue_open = false;
             }
-            UiMessage::ToggleVolumeBar => {
-                let next_state = !self.volume_bar_open;
-                self.menu_open = false;
-                self.playlist_open = false;
-                self.queue_open = false;
-                self.preferences_open = false;
-                self.volume_bar_open = next_state;
-            }
-            UiMessage::CloseVolumeBar => {
-                self.volume_bar_open = false;
-            }
             UiMessage::ShowLibrary => {
                 self.menu_open = false;
                 self.playlist_open = false;
                 self.queue_open = false;
-                self.volume_bar_open = false;
                 self.preferences_open = false;
             }
             UiMessage::OpenPreferences => {
                 self.menu_open = false;
                 self.playlist_open = false;
                 self.queue_open = false;
-                self.volume_bar_open = false;
                 self.preferences_open = true;
             }
             UiMessage::ClosePreferences => {
