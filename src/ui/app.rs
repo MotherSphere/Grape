@@ -3898,6 +3898,7 @@ impl GrapeApp {
         let should_refresh_audio = matches!(
             message,
             UiMessage::SetAudioOutputDevice(_)
+                | UiMessage::SetDefaultVolume(_)
                 | UiMessage::SetMissingDeviceBehavior(_)
                 | UiMessage::SetNormalizeVolume(_)
                 | UiMessage::SetVolumeLevel(_)
