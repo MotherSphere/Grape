@@ -464,10 +464,12 @@ struct AudioProcessingConfig {
     eq_model: EqModel,
     normalize_volume: bool,
     volume_level: VolumeLevel,
+    master_gain: f32,
 }
 
 impl AudioProcessingConfig {
     fn from_settings(settings: &UserSettings) -> Self {
+        let master_gain = (settings.default_volume as f32 / 100.0).clamp(0.0, 1.0);
         Self {
             eq_enabled: settings.eq_enabled,
             eq_preset: settings.eq_preset,
@@ -478,6 +480,7 @@ impl AudioProcessingConfig {
                 .clamp_gains(-12.0, 12.0),
             normalize_volume: settings.normalize_volume,
             volume_level: settings.volume_level,
+            master_gain,
         }
     }
 
@@ -519,6 +522,7 @@ struct AudioProcessingSource<S> {
     channels: u16,
     channel_index: u16,
     gain: f32,
+    master_gain: f32,
     eq: Option<EqFilters>,
 }
 
@@ -539,6 +543,7 @@ where
             channels,
             channel_index: 0,
             gain: config.target_gain(),
+            master_gain: config.master_gain,
             eq,
         })
     }
@@ -558,7 +563,7 @@ where
         if let Some(eq) = self.eq.as_mut() {
             processed = eq.apply(channel, processed);
         }
-        Some(processed * self.gain)
+        Some(processed * self.gain * self.master_gain)
     }
 }
 
