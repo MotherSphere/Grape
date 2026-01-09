@@ -8,14 +8,14 @@ expérience rapide et claire pour explorer une bibliothèque locale et lancer la
 - **UI desktop Iced** : layout complet (top bar, colonnes, player bar) avec navigation et états.
 - **Scan local** : lecture de dossiers `Artiste/Album` (ou albums à la racine) + construction d'un catalogue.
 - **Métadonnées audio** : durée, bitrate, codec, année, genre et covers embarquées via `lofty`.
-- **Cache local** : index piste + cache album/covers + cache métadonnées dans `.grape_cache/`.
+- **Cache local** : index piste + cache album/covers + cache de métadonnées (locales & en ligne) dans le dossier configurable (par défaut `.grape_cache/`).
 - **Jaquettes** : priorité aux covers embarquées, fallback sur images locales mises en cache.
-- **Métadonnées en ligne** : enrichissement optionnel via Last.fm (API key + TTL).
+- **Métadonnées en ligne** : enrichissement optionnel via Last.fm (API key + TTL) + surcharge manuelle en UI.
 - **Lecture audio** : module `player` basé sur `rodio`, EQ 3/5 bandes, normalisation, sortie audio configurable.
-- **File de lecture** : queue basée sur la playlist active + actions Next/Previous.
+- **File de lecture** : queue basée sur la playlist active + vue dédiée + actions Next/Previous.
 - **Navigation enrichie** : onglets Genres/Folders + recherche/tri appliqués aux listes.
 - **Préférences UI** : écrans General/Appearance/Accessibility/Audio avec persistance locale.
-- **Playlists** : création/renommage/suppression + ajout de pistes, persistance JSON locale.
+- **Playlists** : création/renommage/suppression + ajout de pistes + réordonnancement/suppression d'items, persistance JSON locale.
 
 ## Stack technique
 
@@ -55,18 +55,20 @@ Formats supportés pour le scan : `mp3`, `flac`, `wav`, `ogg`, `m4a`.
 
 ### Cache local
 
-Après un scan réussi, Grape conserve un cache dans `.grape_cache/` à la racine de la
-bibliothèque :
+Après un scan réussi, Grape conserve un cache dans le dossier configuré (par défaut
+`.grape_cache/` à la racine de la bibliothèque si le chemin est relatif) :
 
 - `index.json` : index global des signatures de pistes.
 - `folders/` : un fichier JSON par dossier d'album.
+- `tracks/` : cache des signatures et métadonnées locales par piste.
 - `covers/` : jaquettes mises en cache (covers embarquées ou images locales).
 - `metadata/` : métadonnées en ligne mises en cache (Last.fm).
 
 Le cache est invalidé par piste en comparant la signature (taille + date de modification).
 
-Les préférences exposent aussi un chemin de cache configurable (action “Vider le cache”), mais
-le scan actuel s'appuie toujours sur la cache locale de la bibliothèque.
+Les préférences exposent un chemin de cache configurable (action “Vider le cache”). Un
+chemin relatif est interprété dans la bibliothèque scannée, un chemin absolu est utilisé tel
+quel.
 
 ## Documentation
 
@@ -77,6 +79,6 @@ le scan actuel s'appuie toujours sur la cache locale de la bibliothèque.
 
 ## Feuille de route (résumé)
 
-- Compléter l'édition des playlists (reorder, suppression d'items, vue queue dédiée).
 - Étendre les métadonnées (sources en ligne, tags avancés, covers hi-res).
+- Améliorer la recherche/tri (filtres avancés, multi-critères).
 - Améliorer l'indexation (métadonnées enrichies, cache plus fin, genres réels).

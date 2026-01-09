@@ -20,9 +20,10 @@ Cette documentation couvre l'état actuel du projet, l'architecture et les choix
   - Détection de covers embarquées + fallback sur images locales.
   - Enrichissement optionnel via `library::metadata::online` (Last.fm).
 - **Cache** : `src/library/cache.rs`
-  - Dossier `.grape_cache/` en racine de la bibliothèque (ou chemin configuré).
+  - Dossier configurable (par défaut `.grape_cache/` en racine de la bibliothèque si chemin relatif).
   - Index global des signatures de pistes + JSON par dossier d'album.
-  - Cache covers + cache metadata (Last.fm).
+  - Cache covers + cache metadata locales + cache metadata (Last.fm).
+  - Cache des pistes (signatures + métadonnées locales).
   - Invalidation par signature (taille + date de modification).
 - **Lecture audio** : `src/player.rs`
   - Player `rodio` (load/play/pause/seek).
@@ -30,7 +31,7 @@ Cette documentation couvre l'état actuel du projet, l'architecture et les choix
   - Traitement EQ et normalisation de volume.
 - **Playlists & queue** : `src/playlist.rs`
   - Modèle de playlist + sérialisation JSON (`~/.config/grape/playlist.json`).
-  - Queue de lecture (`PlaybackQueue`) basée sur la playlist active.
+  - Queue de lecture (`PlaybackQueue`) basée sur la playlist active + vue dédiée.
 - **UI** : `src/ui/*`
   - Iced (layout en 3 colonnes + player bar).
   - État UI centralisé (`UiState`).
@@ -38,6 +39,7 @@ Cette documentation couvre l'état actuel du projet, l'architecture et les choix
 - **Préférences** : `src/config.rs`
   - Paramètres persistés dans `~/.config/grape/preferences.json`.
   - Actions locales (clear cache, clear history, reset audio, reindex) exposées dans l'UI.
+  - Configuration du cache + TTL métadonnées + clé API Last.fm.
 
 ## UI : layout et composants
 
@@ -56,8 +58,10 @@ Composants Iced :
 - `GenresPanel` (`src/ui/components/genres_panel.rs`)
 - `FoldersPanel` (`src/ui/components/folders_panel.rs`)
 - `SongsPanel` (`src/ui/components/songs_panel.rs`)
+  - Éditeur de métadonnées album (genre/année) dans la liste de pistes
 - `PlayerBar` (`src/ui/components/player_bar.rs`)
 - `PlaylistView` (`src/ui/components/playlist_view.rs`)
+- `QueueView` (`src/ui/components/queue_view.rs`)
 
 ## État UI
 
@@ -82,13 +86,12 @@ Le dossier `assets/` est dédié aux éléments visuels (logos, fonts, captures,
 
 ## Limitations actuelles
 
-- L'édition de playlist est limitée (pas de réordonnancement ni suppression d'items depuis l'UI).
 - Les genres restent « Unknown » si les tags audio sont absents.
 - L'égaliseur est limité aux bandes préconfigurées (3 ou 5) avec des gains entre -12 dB et +12 dB.
 - Si un périphérique audio sélectionné n'est pas disponible, la sortie repasse sur le système.
 
 ## Prochaines étapes suggérées
 
-- Compléter les actions playlist (réorder, suppression de pistes, vue queue dédiée).
 - Enrichir les métadonnées (genres réels, sources en ligne supplémentaires).
 - Étendre les préférences (actions système avancées, logs détaillés).
+- Améliorer la découverte (filtres avancés, recommandations locales).

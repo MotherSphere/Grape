@@ -14,18 +14,19 @@
 - [x] Recherche/tri appliqués aux listes.
 - [x] Module de lecture audio (`rodio`) branché à la sélection de pistes.
 - [x] Queue de lecture simple (Next/Previous) basée sur la playlist active.
+- [x] Vue dédiée de la queue + actions (vider/réordonner/supprimer).
 - [x] Sortie audio configurable + EQ/normalisation.
 - [x] Écrans Préférences (General/Appearance/Accessibility/Audio).
 - [x] Persistance des préférences (`~/.config/grape/preferences.json`).
 - [x] Playlists connectées (création/renommage/suppression + ajout de pistes).
+- [x] Édition de playlist (réordonnancement/suppression d'items).
 - [x] Persistance des playlists (`~/.config/grape/playlist.json`).
 - [x] Actions Préférences (réindexation, clear cache/history, reset audio).
 
 ## À faire (priorité MVP)
 
-- [ ] Permettre le réordonnancement/suppression d'items de playlist dans l'UI.
-- [ ] Exposer une vue dédiée de la queue avec actions (clear/reorder).
-- [ ] Afficher/éditer les métadonnées en ligne (genre/année) dans l'UI.
+- [ ] Enrichir les genres (tags manquants, sources en ligne supplémentaires).
+- [ ] Améliorer la recherche/tri (filtres avancés, multi-critères).
 
 ## À planifier (après MVP)
 

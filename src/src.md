@@ -21,9 +21,9 @@ Ce dossier contient le code applicatif Rust du lecteur Grape.
   - Enrichissement optionnel en ligne (Last.fm).
   - Détection des jaquettes et cache local.
 - `library/cache.rs`
-  - Cache JSON `.grape_cache/` à la racine de la bibliothèque.
+  - Cache JSON dans le dossier configuré (par défaut `.grape_cache/` si chemin relatif).
   - Index global de signatures de pistes + cache par dossier d'album.
-  - Cache des covers + metadata online.
+  - Cache des covers + metadata locales + metadata online.
   - Invalidation par signature (taille + date de modification).
 - `library/metadata.rs`
   - Lecture des métadonnées audio via `lofty`.
@@ -35,7 +35,7 @@ Ce dossier contient le code applicatif Rust du lecteur Grape.
   - Méthodes : `load`, `play`, `pause`, `seek`.
 - `playlist.rs`
   - Modèle de playlist + sérialisation JSON (`~/.config/grape/playlist.json`).
-  - File de lecture `PlaybackQueue` utilisée par Next/Previous.
+  - File de lecture `PlaybackQueue` utilisée par Next/Previous + vue queue dédiée.
 - `ui/`
   - Layout et états UI.
   - Composants : `ArtistsPanel`, `AlbumsGrid`, `GenresPanel`, `FoldersPanel`,
