@@ -239,6 +239,7 @@ pub struct Player {
     position: Duration,
     options: AudioOptions,
     processing: AudioProcessingConfig,
+    output_volume: f32,
     last_fallback: Option<AudioFallback>,
     debug_logs: bool,
 }
@@ -251,11 +252,12 @@ impl Player {
     pub fn new_with_settings(settings: &UserSettings) -> Result<Self, PlayerError> {
         let options = AudioOptions::from_settings(settings);
         let processing = AudioProcessingConfig::from_settings(settings);
+        let output_volume = output_volume_from_settings(settings);
         let outcome = options.open_stream()?;
         let (stream, resolved_options, last_fallback) =
             Self::stream_outcome_to_player_state(options, outcome);
         let sink = Sink::connect_new(stream.mixer());
-        let player = Self {
+        let mut player = Self {
             stream,
             sink,
             state: PlaybackState::Stopped,
@@ -263,9 +265,11 @@ impl Player {
             position: Duration::ZERO,
             options: resolved_options,
             processing,
+            output_volume,
             last_fallback,
             debug_logs: settings.audio_debug_logs,
         };
+        player.apply_output_volume();
         player.log_audio_config("init");
         Ok(player)
     }
@@ -284,6 +288,7 @@ impl Player {
         self.options = resolved_options;
         self.processing = processing;
         self.last_fallback = last_fallback;
+        self.apply_output_volume();
         self.log_audio_config("reset");
         Ok(())
     }
@@ -293,6 +298,7 @@ impl Player {
         let was_debug_logs = self.debug_logs;
         let options = AudioOptions::from_settings(settings);
         let processing = AudioProcessingConfig::from_settings(settings);
+        let output_volume = output_volume_from_settings(settings);
         if self.debug_logs != settings.audio_debug_logs {
             self.debug_logs = settings.audio_debug_logs;
             info!(
@@ -316,6 +322,10 @@ impl Player {
             self.processing = processing;
             updated = true;
         }
+        if (self.output_volume - output_volume).abs() > f32::EPSILON {
+            self.output_volume = output_volume;
+            self.apply_output_volume();
+        }
         if updated {
             self.reload_current_track()?;
             self.log_audio_config("apply_settings");
@@ -330,6 +340,7 @@ impl Player {
         self.position = Duration::ZERO;
         self.sink.stop();
         self.sink = Sink::connect_new(self.stream.mixer());
+        self.apply_output_volume();
         let source = self.processed_source(&path, None).map_err(|err| {
             error!(error = %err, path = %path.display(), "Failed to load track");
             err
@@ -361,6 +372,7 @@ impl Player {
         self.position = position;
         self.sink.stop();
         self.sink = Sink::connect_new(self.stream.mixer());
+        self.apply_output_volume();
         let source = self
             .processed_source(&path, Some(position))
             .map_err(|err| {
@@ -401,6 +413,7 @@ impl Player {
     fn reload_current_track(&mut self) -> Result<(), PlayerError> {
         self.sink.stop();
         self.sink = Sink::connect_new(self.stream.mixer());
+        self.apply_output_volume();
         let Some(path) = self.current_track.clone() else {
             self.state = PlaybackState::Stopped;
             self.position = Duration::ZERO;
@@ -455,6 +468,10 @@ impl Player {
             (outcome.stream, options, None)
         }
     }
+
+    fn apply_output_volume(&mut self) {
+        self.sink.set_volume(self.output_volume);
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -464,12 +481,10 @@ struct AudioProcessingConfig {
     eq_model: EqModel,
     normalize_volume: bool,
     volume_level: VolumeLevel,
-    master_gain: f32,
 }
 
 impl AudioProcessingConfig {
     fn from_settings(settings: &UserSettings) -> Self {
-        let master_gain = (settings.default_volume as f32 / 100.0).clamp(0.0, 1.0);
         Self {
             eq_enabled: settings.eq_enabled,
             eq_preset: settings.eq_preset,
@@ -480,7 +495,6 @@ impl AudioProcessingConfig {
                 .clamp_gains(-12.0, 12.0),
             normalize_volume: settings.normalize_volume,
             volume_level: settings.volume_level,
-            master_gain,
         }
     }
 
@@ -522,7 +536,6 @@ struct AudioProcessingSource<S> {
     channels: u16,
     channel_index: u16,
     gain: f32,
-    master_gain: f32,
     eq: Option<EqFilters>,
 }
 
@@ -543,7 +556,6 @@ where
             channels,
             channel_index: 0,
             gain: config.target_gain(),
-            master_gain: config.master_gain,
             eq,
         })
     }
@@ -563,8 +575,12 @@ where
         if let Some(eq) = self.eq.as_mut() {
             processed = eq.apply(channel, processed);
         }
-        Some(processed * self.gain * self.master_gain)
+        Some(processed * self.gain)
     }
+}
+
+fn output_volume_from_settings(settings: &UserSettings) -> f32 {
+    (settings.default_volume as f32 / 100.0).clamp(0.0, 1.0)
 }
 
 impl<S> Source for AudioProcessingSource<S>
