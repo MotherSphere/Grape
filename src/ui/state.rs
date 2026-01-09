@@ -492,7 +492,6 @@ pub struct UiState {
     pub list_limits: ListLimits,
     pub scan_status: Option<ScanStatus>,
     pub needs_initial_scan: bool,
-    pub inline_volume_bar_open: bool,
     pub album_genre_draft: String,
     pub album_year_draft: String,
 }
@@ -520,7 +519,6 @@ impl UiState {
             list_limits: ListLimits::default(),
             scan_status: None,
             needs_initial_scan,
-            inline_volume_bar_open: false,
             album_genre_draft: String::new(),
             album_year_draft: String::new(),
         }
@@ -705,9 +703,6 @@ impl UiState {
                 self.settings.reduce_transitions = enabled;
                 self.settings.accessibility_reduce_motion =
                     self.settings.reduce_animations || self.settings.reduce_transitions;
-            }
-            UiMessage::ToggleInlineVolumeBar => {
-                self.inline_volume_bar_open = !self.inline_volume_bar_open;
             }
             UiMessage::SetSubtitlesEnabled(enabled) => {
                 self.settings.subtitles_enabled = enabled;

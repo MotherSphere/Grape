@@ -4,7 +4,7 @@ use crate::ui::message::{PlaybackMessage, UiMessage};
 use crate::ui::state::{PlaybackState, RepeatMode};
 use crate::ui::style;
 use iced::font::Weight;
-use iced::widget::{button, column, container, image, progress_bar, row, slider, text};
+use iced::widget::{button, column, container, image, progress_bar, row, text};
 use iced::{Alignment, Element, Length};
 
 #[derive(Debug, Clone)]
@@ -16,8 +16,6 @@ pub struct PlayerBar {
     volume: u8,
     queue_active: bool,
     queue_message: Option<UiMessage>,
-    inline_volume_bar_open: bool,
-    inline_volume_toggle_message: Option<UiMessage>,
 }
 
 impl PlayerBar {
@@ -30,8 +28,6 @@ impl PlayerBar {
             volume: 70,
             queue_active: false,
             queue_message: None,
-            inline_volume_bar_open: false,
-            inline_volume_toggle_message: None,
         }
     }
 
@@ -57,16 +53,6 @@ impl PlayerBar {
 
     pub fn with_queue_action(mut self, message: Option<UiMessage>) -> Self {
         self.queue_message = message;
-        self
-    }
-
-    pub fn with_inline_volume_bar(mut self, inline_volume_bar_open: bool) -> Self {
-        self.inline_volume_bar_open = inline_volume_bar_open;
-        self
-    }
-
-    pub fn with_inline_volume_toggle(mut self, message: Option<UiMessage>) -> Self {
-        self.inline_volume_toggle_message = message;
         self
     }
 
@@ -99,8 +85,6 @@ impl PlayerBar {
             volume,
             queue_active,
             queue_message,
-            inline_volume_bar_open,
-            inline_volume_toggle_message,
         } = self;
         let cover_content: Element<UiMessage> = if let Some(path) = cover_path {
             image(image::Handle::from_path(path))
@@ -205,32 +189,14 @@ impl PlayerBar {
         } else {
             queue_label.into()
         };
-        let volume_label = text(volume_icon(volume))
-            .font(style::font_propo(Weight::Medium))
-            .style(move |_| style::text_style_muted(theme));
-        let volume_control: Element<UiMessage> = if let Some(message) = inline_volume_toggle_message
-        {
-            button(volume_label)
-                .style(move |_, status| style::button_style(theme, style::ButtonKind::Icon, status))
-                .on_press(message)
-                .into()
-        } else {
-            volume_label.into()
-        };
-        let inline_volume_control = container(
-            slider(0.0..=100.0, f32::from(volume), |value| {
-                UiMessage::SetDefaultVolume(value.round() as u8)
-            })
-            .width(Length::Fixed(70.0))
-            .height(Length::Fixed(10.0)),
-        )
-        .width(Length::Fixed(70.0))
-        .height(Length::Fixed(10.0));
-        let mut audio_icons = row![].spacing(8).align_y(Alignment::Center);
-        if inline_volume_bar_open {
-            audio_icons = audio_icons.push(inline_volume_control);
-        }
-        audio_icons = audio_icons.push(volume_control).push(queue_control);
+        let audio_icons = row![
+            text(volume_icon(volume))
+                .font(style::font_propo(Weight::Medium))
+                .style(move |_| style::text_style_muted(theme)),
+            queue_control
+        ]
+        .spacing(8)
+        .align_y(Alignment::Center);
         let right = column![progress_row, audio_icons]
             .spacing(6)
             .align_x(Alignment::End)
