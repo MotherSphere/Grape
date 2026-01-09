@@ -239,7 +239,6 @@ pub struct Player {
     position: Duration,
     options: AudioOptions,
     processing: AudioProcessingConfig,
-    volume_gain: f32,
     last_fallback: Option<AudioFallback>,
     debug_logs: bool,
 }
@@ -256,8 +255,6 @@ impl Player {
         let (stream, resolved_options, last_fallback) =
             Self::stream_outcome_to_player_state(options, outcome);
         let sink = Sink::connect_new(stream.mixer());
-        let volume_gain = Self::volume_gain_from_settings(settings);
-        sink.set_volume(volume_gain);
         let player = Self {
             stream,
             sink,
@@ -266,7 +263,6 @@ impl Player {
             position: Duration::ZERO,
             options: resolved_options,
             processing,
-            volume_gain,
             last_fallback,
             debug_logs: settings.audio_debug_logs,
         };
@@ -282,7 +278,6 @@ impl Player {
         let sink = Sink::connect_new(stream.mixer());
         self.stream = stream;
         self.sink = sink;
-        self.sink.set_volume(self.volume_gain);
         self.state = PlaybackState::Stopped;
         self.current_track = None;
         self.position = Duration::ZERO;
@@ -298,8 +293,6 @@ impl Player {
         let was_debug_logs = self.debug_logs;
         let options = AudioOptions::from_settings(settings);
         let processing = AudioProcessingConfig::from_settings(settings);
-        self.volume_gain = Self::volume_gain_from_settings(settings);
-        self.sink.set_volume(self.volume_gain);
         if self.debug_logs != settings.audio_debug_logs {
             self.debug_logs = settings.audio_debug_logs;
             info!(
@@ -337,7 +330,6 @@ impl Player {
         self.position = Duration::ZERO;
         self.sink.stop();
         self.sink = Sink::connect_new(self.stream.mixer());
-        self.sink.set_volume(self.volume_gain);
         let source = self.processed_source(&path, None).map_err(|err| {
             error!(error = %err, path = %path.display(), "Failed to load track");
             err
@@ -369,7 +361,6 @@ impl Player {
         self.position = position;
         self.sink.stop();
         self.sink = Sink::connect_new(self.stream.mixer());
-        self.sink.set_volume(self.volume_gain);
         let source = self
             .processed_source(&path, Some(position))
             .map_err(|err| {
@@ -410,7 +401,6 @@ impl Player {
     fn reload_current_track(&mut self) -> Result<(), PlayerError> {
         self.sink.stop();
         self.sink = Sink::connect_new(self.stream.mixer());
-        self.sink.set_volume(self.volume_gain);
         let Some(path) = self.current_track.clone() else {
             self.state = PlaybackState::Stopped;
             self.position = Duration::ZERO;
@@ -425,10 +415,6 @@ impl Player {
             PlaybackState::Paused | PlaybackState::Stopped => self.sink.pause(),
         }
         Ok(())
-    }
-
-    fn volume_gain_from_settings(settings: &UserSettings) -> f32 {
-        settings.default_volume.min(100) as f32 / 100.0
     }
 
     fn processed_source(
