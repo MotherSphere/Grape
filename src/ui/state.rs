@@ -481,7 +481,6 @@ pub struct UiState {
     pub menu_open: bool,
     pub playlist_open: bool,
     pub queue_open: bool,
-    pub volume_overlay_open: bool,
     pub preferences_open: bool,
     pub preferences_tab: PreferencesTab,
     pub preferences_sections: PreferencesSectionsState,
@@ -509,7 +508,6 @@ impl UiState {
             menu_open: false,
             playlist_open: false,
             queue_open: false,
-            volume_overlay_open: false,
             preferences_open: false,
             preferences_tab: PreferencesTab::default(),
             preferences_sections: PreferencesSectionsState::default(),
@@ -532,7 +530,6 @@ impl UiState {
                 self.active_tab = tab;
                 self.playlist_open = false;
                 self.queue_open = false;
-                self.volume_overlay_open = false;
                 self.preferences_open = false;
                 self.library_focus = match tab {
                     ActiveTab::Artists => LibraryFocus::Artists,
@@ -587,14 +584,8 @@ impl UiState {
                 self.play_from_queue = !self.play_from_queue;
             }
             UiMessage::RemoveQueueItem(_) => {}
-            UiMessage::ToggleVolumeOverlay => {
-                self.volume_overlay_open = !self.volume_overlay_open;
-            }
             UiMessage::ToggleLogoMenu => {
                 self.menu_open = !self.menu_open;
-                if self.menu_open {
-                    self.volume_overlay_open = false;
-                }
             }
             UiMessage::WindowMinimize => {}
             UiMessage::WindowToggleMaximize => {}
@@ -603,7 +594,6 @@ impl UiState {
                 self.menu_open = false;
                 self.playlist_open = true;
                 self.queue_open = false;
-                self.volume_overlay_open = false;
                 self.preferences_open = false;
             }
             UiMessage::ClosePlaylist => {
@@ -613,7 +603,6 @@ impl UiState {
                 self.menu_open = false;
                 self.playlist_open = false;
                 self.queue_open = true;
-                self.volume_overlay_open = false;
                 self.preferences_open = false;
             }
             UiMessage::CloseQueue => {
@@ -623,14 +612,12 @@ impl UiState {
                 self.menu_open = false;
                 self.playlist_open = false;
                 self.queue_open = false;
-                self.volume_overlay_open = false;
                 self.preferences_open = false;
             }
             UiMessage::OpenPreferences => {
                 self.menu_open = false;
                 self.playlist_open = false;
                 self.queue_open = false;
-                self.volume_overlay_open = false;
                 self.preferences_open = true;
             }
             UiMessage::ClosePreferences => {
@@ -870,7 +857,6 @@ impl UiState {
             }
             UiMessage::CloseMenu => {
                 self.menu_open = false;
-                self.volume_overlay_open = false;
             }
             UiMessage::PlaybackTick => {}
             UiMessage::StartInitialScan => {}
