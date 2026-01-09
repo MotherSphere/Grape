@@ -9,7 +9,7 @@ chantiers. La plupart des blocs décrits ci-dessous ont déjà des composants Ic
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ Top bar                                                                      │
 │ - Logo/app icon (gauche)                                                     │
-│   - Menu vertical: Bibliothèque | Playlist | Préférences                     │
+│   - Menu vertical: Bibliothèque | Playlist | Queue | Préférences             │
 │ - Tabs navigation: Artists | Genres | Albums | Folders                       │
 │ - Search box + boutons fenêtre (droite)                                      │
 ├────────────────────────┬─────────────────────────────────┬───────────────────┤
@@ -39,23 +39,36 @@ La vue Préférences remplace la grille principale quand elle est ouverte :
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
+La vue Queue remplace la grille principale quand elle est ouverte :
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ Queue                                                                        │
+│ - Liste des pistes en file d'attente                                        │
+│ - Actions : activer lecture queue, vider, réordonner, supprimer             │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
 ## Mapping composants → code
 
 - **Top bar** : `ui::app::top_bar` (`src/ui/app.rs`)
 - **Menu logo (Grape)** : `AnchoredOverlay` + `UiMessage::OpenPlaylist` (`src/ui/app.rs`)
 - **Playlist view** : `PlaylistView` (`src/ui/components/playlist_view.rs`)
+- **Queue view** : `QueueView` (`src/ui/components/queue_view.rs`)
 - **Préférences** : `preferences_view` (`src/ui/app.rs`)
 - **Artists** : `ArtistsPanel` (`src/ui/components/artists_panel.rs`)
 - **Genres** : `GenresPanel` (`src/ui/components/genres_panel.rs`)
 - **Albums grid** : `AlbumsGrid` (`src/ui/components/albums_grid.rs`)
 - **Folders grid/list** : `FoldersPanel` (`src/ui/components/folders_panel.rs`)
 - **Songs list** : `SongsPanel` (`src/ui/components/songs_panel.rs`)
+  - Éditeur de métadonnées album (genre/année) dans la liste de pistes
 - **Player bar** : `PlayerBar` (`src/ui/components/player_bar.rs`)
 
 ## États UI
 
 - Onglet actif : `ActiveTab` (Artists/Genres/Albums/Folders)
 - Vue playlist : `ui.playlist_open` (`UiState`)
+- Vue queue : `ui.queue_open` (`UiState`)
 - Vue préférences : `ui.preferences_open` (`UiState`)
 - Sélections : `SelectionState` (artist/album/genre/folder/track)
 - Lecture : `PlaybackState` (position, durée, shuffle, repeat)
@@ -71,15 +84,11 @@ La vue Préférences remplace la grille principale quand elle est ouverte :
 
 ## Écarts actuels vs design cible
 
-- La playlist est connectée, mais sans réordonnancement/suppression d'items.
 - Les genres sont dérivés (un genre « Unknown » si tags absents).
-- La file de lecture existe, mais n'est pas exposée dans une vue dédiée.
 - Certaines préférences restent déclaratives (updates, privacy, performance).
 
 ## Pistes de travail (prochaines étapes)
 
-1. Ajouter la gestion des playlists (réordre, suppression d'items).
-2. Exposer la queue de lecture dans une vue dédiée (gestion de l'ordre).
-3. Enrichir les genres via metadata en ligne.
-4. Étendre la recherche/tri (filtres avancés, tags).
-5. Compléter les actions Préférences (updates/logs/analytics).
+1. Enrichir les genres via metadata en ligne.
+2. Étendre la recherche/tri (filtres avancés, tags).
+3. Compléter les actions Préférences (updates/logs/analytics).
