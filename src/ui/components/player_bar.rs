@@ -1,10 +1,11 @@
 #![allow(dead_code)]
 
+use crate::ui::components::anchored_overlay::AnchoredOverlay;
 use crate::ui::message::{PlaybackMessage, UiMessage};
 use crate::ui::state::{PlaybackState, RepeatMode};
 use crate::ui::style;
 use iced::font::Weight;
-use iced::widget::{button, column, container, image, progress_bar, row, text};
+use iced::widget::{button, column, container, image, progress_bar, row, slider, text};
 use iced::{Alignment, Element, Length};
 
 #[derive(Debug, Clone)]
@@ -14,6 +15,8 @@ pub struct PlayerBar {
     artist: String,
     playback: PlaybackState,
     volume: u8,
+    volume_overlay_open: bool,
+    volume_message: Option<UiMessage>,
     queue_active: bool,
     queue_message: Option<UiMessage>,
 }
@@ -26,6 +29,8 @@ impl PlayerBar {
             artist: artist.into(),
             playback: PlaybackState::default(),
             volume: 70,
+            volume_overlay_open: false,
+            volume_message: None,
             queue_active: false,
             queue_message: None,
         }
@@ -43,6 +48,16 @@ impl PlayerBar {
 
     pub fn with_volume(mut self, volume: u8) -> Self {
         self.volume = volume.min(100);
+        self
+    }
+
+    pub fn with_volume_overlay(mut self, volume_overlay_open: bool) -> Self {
+        self.volume_overlay_open = volume_overlay_open;
+        self
+    }
+
+    pub fn with_volume_action(mut self, message: Option<UiMessage>) -> Self {
+        self.volume_message = message;
         self
     }
 
@@ -83,6 +98,8 @@ impl PlayerBar {
             artist,
             playback,
             volume,
+            volume_overlay_open,
+            volume_message,
             queue_active,
             queue_message,
         } = self;
@@ -189,14 +206,41 @@ impl PlayerBar {
         } else {
             queue_label.into()
         };
-        let audio_icons = row![
-            text(volume_icon(volume))
-                .font(style::font_propo(Weight::Medium))
-                .style(move |_| style::text_style_muted(theme)),
-            queue_control
-        ]
-        .spacing(8)
-        .align_y(Alignment::Center);
+        let volume_label = text(volume_icon(volume))
+            .font(style::font_propo(Weight::Medium))
+            .style(move |_| style::text_style_muted(theme));
+        let volume_button: Element<UiMessage> = if let Some(message) = volume_message {
+            button(volume_label)
+                .style(move |_, status| style::button_style(theme, style::ButtonKind::Icon, status))
+                .on_press(message)
+                .into()
+        } else {
+            volume_label.into()
+        };
+        let volume_control = if volume_overlay_open {
+            let volume_value = volume as f32;
+            let overlay = container(
+                column![
+                    text(format!("{volume}%"))
+                        .size(theme.size(12))
+                        .font(style::font_propo(Weight::Medium))
+                        .style(move |_| style::text_style_muted(theme)),
+                    slider(0.0..=100.0, volume_value, |value| {
+                        UiMessage::SetDefaultVolume(value.round().clamp(0.0, 100.0) as u8)
+                    })
+                    .width(Length::Fixed(160.0))
+                ]
+                .spacing(6),
+            )
+            .padding([8, 10])
+            .style(move |_| style::surface_style(theme, style::Surface::Panel));
+            AnchoredOverlay::new(volume_button, overlay).into()
+        } else {
+            volume_button
+        };
+        let audio_icons = row![volume_control, queue_control]
+            .spacing(8)
+            .align_y(Alignment::Center);
         let right = column![progress_row, audio_icons]
             .spacing(6)
             .align_x(Alignment::End)
