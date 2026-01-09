@@ -1334,13 +1334,41 @@ impl GrapeApp {
         } else {
             Some(UiMessage::OpenQueue)
         };
+        let volume_message = Some(UiMessage::ToggleVolumeBar);
         PlayerBar::new(title, artist)
             .with_cover(cover_path)
             .with_playback(self.ui.playback)
             .with_volume(self.ui.settings.default_volume)
             .with_queue(self.ui.queue_open)
             .with_queue_action(queue_message)
+            .with_volume_bar(self.ui.volume_bar_open)
+            .with_volume_action(volume_message)
             .view(theme)
+    }
+
+    fn volume_bar_panel(&self) -> Element<'_, UiMessage> {
+        let theme = self.theme_tokens();
+        let volume_value = self.ui.settings.default_volume as f32;
+        let content = column![
+            text("Volume")
+                .size(theme.size(14))
+                .font(style::font_propo(Weight::Medium))
+                .style(move |_| style::text_style_primary(theme)),
+            slider(0.0..=100.0, volume_value, |value| {
+                UiMessage::SetDefaultVolume(value.round().clamp(0.0, 100.0) as u8)
+            }),
+            text(format!("{} %", self.ui.settings.default_volume))
+                .size(theme.size(12))
+                .font(style::font_propo(Weight::Medium))
+                .style(move |_| style::text_style_muted(theme)),
+        ]
+        .spacing(8);
+        container(content)
+            .padding(16)
+            .width(Length::Fixed(220.0))
+            .height(Length::Fill)
+            .style(move |_| style::surface_style(theme, style::Surface::Panel))
+            .into()
     }
 
     fn handle_track_selection(&mut self, track: &UiTrack) {
@@ -4233,37 +4261,86 @@ impl GrapeApp {
         let content = if self.ui.preferences_open {
             self.preferences_view()
         } else {
+            let volume_panel = self.volume_bar_panel();
             match self.ui.active_tab {
-                ActiveTab::Artists | ActiveTab::Albums => row![
-                    container(self.artists_panel())
-                        .width(Length::FillPortion(2))
-                        .height(Length::Fill),
-                    container(self.albums_panel())
-                        .width(Length::FillPortion(5))
-                        .height(Length::Fill),
-                    container(self.songs_panel())
-                        .width(Length::FillPortion(3))
-                        .height(Length::Fill),
-                ],
-                ActiveTab::Genres => row![
-                    container(self.genres_panel())
-                        .width(Length::FillPortion(2))
-                        .height(Length::Fill),
-                    container(self.albums_panel())
-                        .width(Length::FillPortion(5))
-                        .height(Length::Fill),
-                    container(self.songs_panel())
-                        .width(Length::FillPortion(3))
-                        .height(Length::Fill),
-                ],
-                ActiveTab::Folders => row![
-                    container(self.folders_panel())
-                        .width(Length::FillPortion(7))
-                        .height(Length::Fill),
-                    container(self.songs_panel())
-                        .width(Length::FillPortion(3))
-                        .height(Length::Fill),
-                ],
+                ActiveTab::Artists | ActiveTab::Albums => {
+                    if self.ui.volume_bar_open {
+                        row![
+                            volume_panel,
+                            container(self.artists_panel())
+                                .width(Length::FillPortion(2))
+                                .height(Length::Fill),
+                            container(self.albums_panel())
+                                .width(Length::FillPortion(5))
+                                .height(Length::Fill),
+                            container(self.songs_panel())
+                                .width(Length::FillPortion(3))
+                                .height(Length::Fill),
+                        ]
+                    } else {
+                        row![
+                            container(self.artists_panel())
+                                .width(Length::FillPortion(2))
+                                .height(Length::Fill),
+                            container(self.albums_panel())
+                                .width(Length::FillPortion(5))
+                                .height(Length::Fill),
+                            container(self.songs_panel())
+                                .width(Length::FillPortion(3))
+                                .height(Length::Fill),
+                        ]
+                    }
+                }
+                ActiveTab::Genres => {
+                    if self.ui.volume_bar_open {
+                        row![
+                            volume_panel,
+                            container(self.genres_panel())
+                                .width(Length::FillPortion(2))
+                                .height(Length::Fill),
+                            container(self.albums_panel())
+                                .width(Length::FillPortion(5))
+                                .height(Length::Fill),
+                            container(self.songs_panel())
+                                .width(Length::FillPortion(3))
+                                .height(Length::Fill),
+                        ]
+                    } else {
+                        row![
+                            container(self.genres_panel())
+                                .width(Length::FillPortion(2))
+                                .height(Length::Fill),
+                            container(self.albums_panel())
+                                .width(Length::FillPortion(5))
+                                .height(Length::Fill),
+                            container(self.songs_panel())
+                                .width(Length::FillPortion(3))
+                                .height(Length::Fill),
+                        ]
+                    }
+                }
+                ActiveTab::Folders => {
+                    if self.ui.volume_bar_open {
+                        row![
+                            volume_panel,
+                            container(self.folders_panel())
+                                .width(Length::FillPortion(7))
+                                .height(Length::Fill),
+                            container(self.songs_panel())
+                                .width(Length::FillPortion(3))
+                                .height(Length::Fill),
+                        ]
+                    } else {
+                        row![
+                            container(self.folders_panel())
+                                .width(Length::FillPortion(7))
+                                .height(Length::Fill),
+                            container(self.songs_panel())
+                                .width(Length::FillPortion(3))
+                                .height(Length::Fill),
+                        ]
+                    }
+                }
             }
             .spacing(16)
             .height(Length::Fill)
@@ -4354,10 +4431,22 @@ impl GrapeApp {
             }));
         }
 
+        if self.ui.volume_bar_open {
+            subscriptions.push(event::listen_with(|event, _status, _| match event {
+                event::Event::Keyboard(keyboard::Event::KeyPressed { key, .. })
+                    if matches!(key, keyboard::Key::Named(keyboard::key::Named::Escape)) =>
+                {
+                    Some(UiMessage::CloseVolumeBar)
+                }
+                _ => None,
+            }));
+        }
+
         if !self.ui.menu_open
             && !self.ui.playlist_open
             && !self.ui.queue_open
             && !self.ui.preferences_open
+            && !self.ui.volume_bar_open
         {
             subscriptions.push(event::listen_with(|event, status, _| match event {
                 event::Event::Keyboard(keyboard::Event::KeyPressed { key, modifiers, .. })
