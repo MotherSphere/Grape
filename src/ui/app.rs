@@ -1338,6 +1338,8 @@ impl GrapeApp {
             .with_cover(cover_path)
             .with_playback(self.ui.playback)
             .with_volume(self.ui.settings.default_volume)
+            .with_volume_overlay(self.ui.volume_overlay_open)
+            .with_volume_action(Some(UiMessage::ToggleVolumeOverlay))
             .with_queue(self.ui.queue_open)
             .with_queue_action(queue_message)
             .view(theme)
