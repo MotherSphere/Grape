@@ -30,6 +30,8 @@ pub enum UiMessage {
     ClosePlaylist,
     OpenQueue,
     CloseQueue,
+    ToggleVolumeBar,
+    CloseVolumeBar,
     ShowLibrary,
     OpenPreferences,
     ClosePreferences,
