@@ -549,8 +549,25 @@ impl GrapeApp {
                 let normalized_genre = Self::normalize_text(selected_genre.name.trim());
                 albums.retain(|album| {
                     self.album_entry_by_id(album.id)
-                        .and_then(|(_, entry)| entry.genre.as_deref())
-                        .map(|genre| Self::normalize_text(genre.trim()) == normalized_genre)
+                        .map(|(_, entry)| {
+                            let mut has_genre = false;
+                            let matches_genre = entry.tracks.iter().any(|track| {
+                                if let Some(genre) = track.genre.as_deref() {
+                                    let trimmed = genre.trim();
+                                    if trimmed.is_empty() {
+                                        false
+                                    } else {
+                                        has_genre = true;
+                                        Self::normalize_text(trimmed) == normalized_genre
+                                    }
+                                } else {
+                                    false
+                                }
+                            });
+                            matches_genre
+                                || (!has_genre
+                                    && normalized_genre == Self::normalize_text("Unknown"))
+                        })
                         .unwrap_or(false)
                 });
             }
