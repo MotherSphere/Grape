@@ -1614,6 +1614,29 @@ impl GrapeApp {
                 let previous_track = self.playback_queue.previous();
                 self.load_from_queue(previous_track);
             }
+            PlaybackMessage::SeekToRatio(ratio) => {
+                let Some(player) = &mut self.player else {
+                    return;
+                };
+                let total = self.ui.playback.duration.as_secs_f32();
+                if total <= 0.0 {
+                    return;
+                }
+                let clamped = ratio.clamp(0.0, 1.0);
+                let target = Duration::from_secs_f32(total * clamped);
+                let current = player.position();
+                let delta = if target > current {
+                    target - current
+                } else {
+                    current - target
+                };
+                if delta < Duration::from_millis(200) {
+                    return;
+                }
+                if let Err(err) = player.seek(target) {
+                    error!(error = %err, "Failed to seek");
+                }
+            }
             PlaybackMessage::ToggleShuffle | PlaybackMessage::CycleRepeat => {}
         }
     }
