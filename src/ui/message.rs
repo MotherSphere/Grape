@@ -5,6 +5,7 @@ use crate::config::{
     DeclarativeAction, EqPreset, InterfaceDensity, InterfaceLanguage, MissingDeviceBehavior,
     StartupScreen, SubtitleSize, TextScale, ThemeMode, TimeFormat, UpdateChannel, VolumeLevel,
 };
+use crate::library::OnlineMetadata;
 use crate::library::Catalog;
 use crate::ui::state::{
     ActiveTab, Album, Artist, Folder, Genre, PreferencesSection, PreferencesTab, SearchFilter,
@@ -134,6 +135,13 @@ pub enum UiMessage {
     AlbumGenreChanged(String),
     AlbumYearChanged(String),
     SaveAlbumMetadata,
+    EnrichAlbumMetadata,
+    AlbumMetadataFetched {
+        album_id: usize,
+        artist: String,
+        result: Result<Option<OnlineMetadata>, String>,
+        enrichment_confirmed: bool,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
