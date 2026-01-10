@@ -551,10 +551,8 @@ fn apply_online_metadata(
         return;
     };
 
-    if !genre_locked {
-        if let Some(genre) =
-            metadata::merge_genres(album.genre.as_deref(), metadata.genre.as_deref())
-        {
+    if !genre_locked && album.genre.is_none() {
+        if let Some(genre) = metadata.genre {
             apply_album_genre(album, Some(genre));
         }
     }

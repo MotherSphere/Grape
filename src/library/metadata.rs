@@ -120,7 +120,10 @@ fn extract_genre(tagged_file: &impl TaggedFileExt) -> Option<String> {
 
         for value in values {
             for genre in split_genre_field(value) {
-                push_genre(&mut genres, &mut seen, genre);
+                let normalized = genre.to_lowercase();
+                if seen.insert(normalized) {
+                    genres.push(genre.to_string());
+                }
             }
         }
     }
@@ -130,48 +133,6 @@ fn extract_genre(tagged_file: &impl TaggedFileExt) -> Option<String> {
     } else {
         Some(genres.join("; "))
     }
-}
-
-pub(crate) fn merge_genres(primary: Option<&str>, secondary: Option<&str>) -> Option<String> {
-    let mut genres = Vec::new();
-    let mut seen = HashSet::new();
-
-    if let Some(value) = primary {
-        for genre in split_genre_field(value) {
-            push_genre(&mut genres, &mut seen, genre);
-        }
-    }
-
-    if let Some(value) = secondary {
-        for genre in split_genre_field(value) {
-            push_genre(&mut genres, &mut seen, genre);
-        }
-    }
-
-    if genres.is_empty() {
-        None
-    } else {
-        Some(genres.join("; "))
-    }
-}
-
-fn push_genre(genres: &mut Vec<String>, seen: &mut HashSet<String>, genre: &str) {
-    let trimmed = genre.trim();
-    if trimmed.is_empty() {
-        return;
-    }
-    let normalized = normalize_genre_token(trimmed);
-    if normalized.is_empty() {
-        return;
-    }
-    if seen.insert(normalized) {
-        genres.push(trimmed.to_string());
-    }
-}
-
-fn normalize_genre_token(value: &str) -> String {
-    use unicode_normalization::UnicodeNormalization;
-    value.nfkc().collect::<String>().to_lowercase()
 }
 
 fn extract_first_string(tagged_file: &impl TaggedFileExt, keys: &[ItemKey]) -> Option<String> {
