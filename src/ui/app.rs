@@ -1399,7 +1399,15 @@ impl GrapeApp {
 
     fn handle_track_selection(&mut self, track: &UiTrack) {
         let now_playing = Self::now_playing_from_ui_track(track);
-        self.playlist_add(now_playing.clone());
+        if let Some(preferred_index) = self
+            .queue_tracks_in_album_order()
+            .and_then(|tracks| self.playlist_replace_with_tracks(tracks, track))
+        {
+            self.refresh_playback_queue(Some(preferred_index));
+            self.persist_playlist();
+        } else {
+            self.playlist_add(now_playing.clone());
+        }
         let Some(player) = &mut self.player else {
             return;
         };
@@ -1545,6 +1553,39 @@ impl GrapeApp {
     fn playlist_save_order(&mut self) {
         self.refresh_playback_queue(None);
         self.persist_playlist();
+    }
+
+    fn playlist_replace_with_tracks(
+        &mut self,
+        tracks: Vec<UiTrack>,
+        selected_track: &UiTrack,
+    ) -> Option<usize> {
+        let items: Vec<NowPlaying> = tracks
+            .iter()
+            .map(Self::now_playing_from_ui_track)
+            .collect();
+        let preferred_index = tracks.iter().position(|track| track.path == selected_track.path)?;
+        self.playlists.set_items(items);
+        Some(preferred_index)
+    }
+
+    fn queue_tracks_in_album_order(&self) -> Option<Vec<UiTrack>> {
+        let mut tracks = self.current_tracks();
+        if tracks.is_empty() {
+            return None;
+        }
+        if self.ui.selection.selected_album.is_some() || self.ui.selection.selected_folder.is_some()
+        {
+            tracks.sort_by(|a, b| {
+                a.track_number
+                    .unwrap_or(u32::MAX)
+                    .cmp(&b.track_number.unwrap_or(u32::MAX))
+                    .then_with(|| {
+                        Self::normalize_text(&a.title).cmp(&Self::normalize_text(&b.title))
+                    })
+            });
+        }
+        Some(tracks)
     }
 
     fn refresh_playback_queue(&mut self, preferred_index: Option<usize>) {
