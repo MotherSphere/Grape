@@ -236,6 +236,7 @@ pub struct Player {
     sink: Sink,
     state: PlaybackState,
     current_track: Option<PathBuf>,
+    current_duration: Option<Duration>,
     position: Duration,
     started_at: Option<Instant>,
     options: AudioOptions,
@@ -263,6 +264,7 @@ impl Player {
             sink,
             state: PlaybackState::Stopped,
             current_track: None,
+            current_duration: None,
             position: Duration::ZERO,
             started_at: None,
             options: resolved_options,
@@ -286,6 +288,7 @@ impl Player {
         self.sink = sink;
         self.state = PlaybackState::Stopped;
         self.current_track = None;
+        self.current_duration = None;
         self.position = Duration::ZERO;
         self.started_at = None;
         self.options = resolved_options;
@@ -340,6 +343,7 @@ impl Player {
         let path = path.as_ref().to_path_buf();
         info!(path = %path.display(), "Loading track");
         self.current_track = Some(path.clone());
+        self.current_duration = None;
         self.position = Duration::ZERO;
         self.started_at = None;
         self.sink.stop();
@@ -349,6 +353,7 @@ impl Player {
             error!(error = %err, path = %path.display(), "Failed to load track");
             err
         })?;
+        self.current_duration = source.total_duration();
         self.sink.append(source);
         self.sink.pause();
         self.state = PlaybackState::Paused;
@@ -391,6 +396,9 @@ impl Player {
                 error!(error = %err, path = %path.display(), "Failed to seek");
                 err
             })?;
+        if self.current_duration.is_none() {
+            self.current_duration = source.total_duration();
+        }
         self.sink.append(source);
         match self.state {
             PlaybackState::Playing => {
@@ -418,6 +426,25 @@ impl Player {
         self.position
     }
 
+    pub fn is_finished(&self) -> bool {
+        if self.state != PlaybackState::Playing {
+            return false;
+        }
+        if self.current_track.is_none() {
+            return false;
+        }
+        if self.sink.empty() {
+            return true;
+        }
+        let Some(duration) = self.current_duration else {
+            return false;
+        };
+        if duration.is_zero() {
+            return false;
+        }
+        self.position() >= duration
+    }
+
     pub fn take_last_fallback_notice(&mut self) -> Option<AudioFallback> {
         self.last_fallback.take()
     }
@@ -441,11 +468,15 @@ impl Player {
             self.state = PlaybackState::Stopped;
             self.position = Duration::ZERO;
             self.started_at = None;
+            self.current_duration = None;
             return Ok(());
         };
         let position = self.position;
         let state = self.state;
         let source = self.processed_source(&path, Some(position))?;
+        if self.current_duration.is_none() {
+            self.current_duration = source.total_duration();
+        }
         self.sink.append(source);
         match state {
             PlaybackState::Playing => {
