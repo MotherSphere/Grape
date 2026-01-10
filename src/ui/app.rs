@@ -54,6 +54,7 @@ const GENRE_FOCUS_ORDER: [LibraryFocus; 3] = [
     LibraryFocus::Songs,
 ];
 const FOLDER_FOCUS_ORDER: [LibraryFocus; 2] = [LibraryFocus::Folders, LibraryFocus::Songs];
+const PREFINISH_LEAD: Duration = Duration::from_millis(250);
 
 pub struct GrapeApp {
     catalog: Catalog,
@@ -1654,6 +1655,22 @@ impl GrapeApp {
     }
 
     fn sync_playback_state(&mut self) {
+        if let Some(player) = &mut self.player {
+            if let Some(path) = player.advance_if_ready() {
+                if self.ui.play_from_queue {
+                    let fallback = NowPlaying {
+                        artist: String::new(),
+                        album: String::new(),
+                        title: String::new(),
+                        duration_secs: 0,
+                        path: path.clone(),
+                    };
+                    let now_playing = self.playback_queue.next().unwrap_or(fallback);
+                    self.ui.selection.selected_track =
+                        Some(self.ui_track_from_now_playing(&now_playing));
+                }
+            }
+        }
         let finished = self
             .player
             .as_ref()
@@ -1682,6 +1699,29 @@ impl GrapeApp {
             .as_ref()
             .map(|track| track.duration)
             .unwrap_or(Duration::ZERO);
+    }
+
+    fn prepare_next_track(&mut self) {
+        if !self.ui.play_from_queue {
+            return;
+        }
+        let Some(player) = &mut self.player else {
+            return;
+        };
+        let duration = self.ui.playback.duration;
+        if duration.is_zero() {
+            return;
+        }
+        let threshold = duration.saturating_sub(PREFINISH_LEAD);
+        if player.position() < threshold {
+            return;
+        }
+        let Some(next_track) = self.playback_queue.peek_next() else {
+            return;
+        };
+        if let Err(err) = player.queue_next_track(&next_track.path) {
+            error!(error = %err, path = %next_track.path.display(), "Failed to queue next track");
+        }
     }
 
     fn library_root(&self) -> Option<PathBuf> {
@@ -4002,6 +4042,7 @@ impl GrapeApp {
         match &message {
             UiMessage::PlaybackTick => {
                 self.sync_playback_state();
+                self.prepare_next_track();
                 self.ui.playback.update_animated_progress();
                 handled_playback_tick = true;
             }

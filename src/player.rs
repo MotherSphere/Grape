@@ -239,6 +239,7 @@ pub struct Player {
     current_duration: Option<Duration>,
     position: Duration,
     started_at: Option<Instant>,
+    queued_next: Option<QueuedTrack>,
     options: AudioOptions,
     processing: AudioProcessingConfig,
     output_volume: f32,
@@ -267,6 +268,7 @@ impl Player {
             current_duration: None,
             position: Duration::ZERO,
             started_at: None,
+            queued_next: None,
             options: resolved_options,
             processing,
             output_volume,
@@ -291,6 +293,7 @@ impl Player {
         self.current_duration = None;
         self.position = Duration::ZERO;
         self.started_at = None;
+        self.queued_next = None;
         self.options = resolved_options;
         self.processing = processing;
         self.last_fallback = last_fallback;
@@ -346,6 +349,7 @@ impl Player {
         self.current_duration = None;
         self.position = Duration::ZERO;
         self.started_at = None;
+        self.queued_next = None;
         self.sink.stop();
         self.sink = Sink::connect_new(self.stream.mixer());
         self.apply_output_volume();
@@ -390,6 +394,7 @@ impl Player {
         self.sink.stop();
         self.sink = Sink::connect_new(self.stream.mixer());
         self.apply_output_volume();
+        self.queued_next = None;
         let source = self
             .processed_source(&path, Some(position))
             .map_err(|err| {
@@ -433,7 +438,7 @@ impl Player {
         if self.current_track.is_none() {
             return false;
         }
-        if self.sink.empty() {
+        if self.sink.empty() && self.queued_next.is_none() {
             return true;
         }
         let Some(duration) = self.current_duration else {
@@ -442,11 +447,59 @@ impl Player {
         if duration.is_zero() {
             return false;
         }
+        if self.queued_next.is_some() && self.position() >= duration {
+            return false;
+        }
         self.position() >= duration
     }
 
     pub fn take_last_fallback_notice(&mut self) -> Option<AudioFallback> {
         self.last_fallback.take()
+    }
+
+    pub fn queue_next_track(&mut self, path: impl AsRef<Path>) -> Result<bool, PlayerError> {
+        if self.state == PlaybackState::Stopped {
+            return Ok(false);
+        }
+        let path = path.as_ref().to_path_buf();
+        if self.current_track.as_ref().is_some_and(|current| *current == path) {
+            return Ok(false);
+        }
+        if self
+            .queued_next
+            .as_ref()
+            .is_some_and(|queued| queued.path == path)
+        {
+            return Ok(false);
+        }
+        if self.queued_next.is_some() {
+            return Ok(false);
+        }
+        let source = self.processed_source(&path, None)?;
+        let duration = source.total_duration();
+        self.sink.append(source);
+        self.queued_next = Some(QueuedTrack { path, duration });
+        Ok(true)
+    }
+
+    pub fn advance_if_ready(&mut self) -> Option<PathBuf> {
+        if self.state != PlaybackState::Playing {
+            return None;
+        }
+        let duration = self.current_duration?;
+        if duration.is_zero() {
+            return None;
+        }
+        if self.position() < duration {
+            return None;
+        }
+        let queued = self.queued_next.take()?;
+        let overflow = self.position().saturating_sub(duration);
+        self.current_track = Some(queued.path.clone());
+        self.current_duration = queued.duration;
+        self.position = overflow;
+        self.started_at = Some(Instant::now());
+        Some(queued.path)
     }
 
     fn log_audio_config(&self, context: &str) {
@@ -464,6 +517,7 @@ impl Player {
         self.sink.stop();
         self.sink = Sink::connect_new(self.stream.mixer());
         self.apply_output_volume();
+        self.queued_next = None;
         let Some(path) = self.current_track.clone() else {
             self.state = PlaybackState::Stopped;
             self.position = Duration::ZERO;
@@ -533,6 +587,12 @@ impl Player {
     fn apply_output_volume(&mut self) {
         self.sink.set_volume(self.output_volume);
     }
+}
+
+#[derive(Debug, Clone)]
+struct QueuedTrack {
+    path: PathBuf,
+    duration: Option<Duration>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
