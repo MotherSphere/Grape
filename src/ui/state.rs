@@ -311,8 +311,7 @@ impl PlaybackState {
             }
             PlaybackMessage::TogglePlayPause
             | PlaybackMessage::NextTrack
-            | PlaybackMessage::PreviousTrack
-            | PlaybackMessage::SeekToRatio(_) => {}
+            | PlaybackMessage::PreviousTrack => {}
         }
     }
 

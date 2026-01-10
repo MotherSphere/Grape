@@ -1,11 +1,9 @@
 #![allow(dead_code)]
 
-use crate::ui::components::seek_area::seek_area;
 use crate::ui::message::{PlaybackMessage, UiMessage};
 use crate::ui::state::{PlaybackState, RepeatMode};
 use crate::ui::style;
 use iced::font::Weight;
-use iced::mouse;
 use iced::widget::{button, column, container, image, progress_bar, row, slider, text};
 use iced::{Alignment, Element, Length};
 
@@ -174,11 +172,8 @@ impl PlayerBar {
 
         let elapsed = format_duration(playback.position);
         let duration = format_duration(playback.duration);
-        let progress = seek_area(
-            container(progress_bar(0.0..=1.0, playback.animated_progress)).width(Length::Fill),
-        )
-        .interaction(mouse::Interaction::Pointer)
-        .on_press(|ratio| UiMessage::Playback(PlaybackMessage::SeekToRatio(ratio)));
+        let progress =
+            container(progress_bar(0.0..=1.0, playback.animated_progress)).width(Length::Fill);
         let progress_row = row![
             text(elapsed)
                 .size(theme.size_accessible(12))
