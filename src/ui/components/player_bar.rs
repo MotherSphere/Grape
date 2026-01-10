@@ -4,8 +4,9 @@ use crate::ui::message::{PlaybackMessage, UiMessage};
 use crate::ui::state::{PlaybackState, RepeatMode};
 use crate::ui::style;
 use iced::font::Weight;
-use iced::widget::{button, column, container, image, progress_bar, row, slider, text};
+use iced::widget::{button, column, container, image, row, slider, text};
 use iced::{Alignment, Element, Length};
+use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub struct PlayerBar {
@@ -170,10 +171,21 @@ impl PlayerBar {
         .align_y(Alignment::Center)
         .width(Length::FillPortion(4));
 
-        let elapsed = format_duration(playback.position);
+        let display_position = playback.scrub_position.unwrap_or(playback.position);
+        let elapsed = format_duration(display_position);
         let duration = format_duration(playback.duration);
-        let progress =
-            container(progress_bar(0.0..=1.0, playback.animated_progress)).width(Length::Fill);
+        let total_seconds = playback.duration.as_secs_f32();
+        let slider_value = display_position.as_secs_f32().clamp(0.0, total_seconds);
+        let progress = container(
+            slider(0.0..=total_seconds, slider_value, |value| {
+                UiMessage::PlaybackScrubbed(Duration::from_secs_f32(value))
+            })
+            .on_release(UiMessage::Playback(PlaybackMessage::SeekTo(
+                Duration::from_secs_f32(slider_value),
+            )))
+            .height(10.0),
+        )
+        .width(Length::Fill);
         let progress_row = row![
             text(elapsed)
                 .size(theme.size_accessible(12))

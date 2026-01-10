@@ -1615,6 +1615,19 @@ impl GrapeApp {
                 self.load_from_queue(previous_track);
             }
             PlaybackMessage::ToggleShuffle | PlaybackMessage::CycleRepeat => {}
+            PlaybackMessage::SeekTo(position) => {
+                let Some(player) = &mut self.player else {
+                    return;
+                };
+                let duration = self.ui.playback.duration;
+                if duration.is_zero() {
+                    return;
+                }
+                let clamped = position.min(duration);
+                if let Err(err) = player.seek(clamped) {
+                    warn!(error = %err, "Failed to seek");
+                }
+            }
         }
     }
 
