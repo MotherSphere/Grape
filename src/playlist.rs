@@ -83,14 +83,6 @@ impl PlaybackQueue {
         }
     }
 
-    pub fn peek_next(&self) -> Option<NowPlaying> {
-        if self.index + 1 < self.items.len() {
-            self.items.get(self.index + 1).cloned()
-        } else {
-            None
-        }
-    }
-
     pub fn previous(&mut self) -> Option<NowPlaying> {
         if self.index > 0 {
             self.index -= 1;
