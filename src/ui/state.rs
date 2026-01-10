@@ -573,6 +573,8 @@ impl UiState {
                 self.album_year_draft = value;
             }
             UiMessage::SaveAlbumMetadata => {}
+            UiMessage::EnrichAlbumMetadata => {}
+            UiMessage::AlbumMetadataFetched { .. } => {}
             UiMessage::SelectPlaylist(index) => {
                 self.selection.selected_playlist = Some(index);
             }
