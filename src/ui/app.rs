@@ -62,6 +62,7 @@ pub struct GrapeApp {
     playback_queue: PlaybackQueue,
     ui: UiState,
     cover_preloads: Vec<image::Handle>,
+    last_finished_track: Option<PathBuf>,
 }
 
 impl GrapeApp {
@@ -1670,6 +1671,42 @@ impl GrapeApp {
             .as_ref()
             .map(|track| track.duration)
             .unwrap_or(Duration::ZERO);
+    }
+
+    fn maybe_auto_advance_track(&mut self) {
+        if !self.ui.play_from_queue || !self.ui.playback.is_playing {
+            return;
+        }
+        let Some(current_track) = self.ui.selection.selected_track.as_ref() else {
+            return;
+        };
+        let duration = self.ui.playback.duration;
+        if duration.is_zero() {
+            return;
+        }
+        let position = self.ui.playback.position;
+        let finished_grace = Duration::from_millis(150);
+        let is_finished = position.saturating_add(finished_grace) >= duration;
+        if !is_finished {
+            if self
+                .last_finished_track
+                .as_ref()
+                .is_some_and(|path| path == &current_track.path)
+            {
+                self.last_finished_track = None;
+            }
+            return;
+        }
+        if self
+            .last_finished_track
+            .as_ref()
+            .is_some_and(|path| path == &current_track.path)
+        {
+            return;
+        }
+        self.last_finished_track = Some(current_track.path.clone());
+        let next_track = self.playback_queue.next();
+        self.load_from_queue(next_track);
     }
 
     fn library_root(&self) -> Option<PathBuf> {
@@ -3859,6 +3896,7 @@ impl GrapeApp {
             playback_queue,
             ui,
             cover_preloads: Vec::new(),
+            last_finished_track: None,
         }
     }
 
@@ -3991,6 +4029,7 @@ impl GrapeApp {
             UiMessage::PlaybackTick => {
                 self.sync_playback_state();
                 self.ui.playback.update_animated_progress();
+                self.maybe_auto_advance_track();
                 handled_playback_tick = true;
             }
             UiMessage::SelectTrack(track) => {
