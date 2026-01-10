@@ -143,10 +143,6 @@ impl Playlist {
         self.items.clear();
     }
 
-    pub fn set_items(&mut self, items: Vec<NowPlaying>) {
-        self.items = items;
-    }
-
     pub fn to_exchange(&self) -> PlaylistExchange {
         PlaylistExchange {
             version: PlaylistExchange::VERSION,
@@ -307,12 +303,6 @@ impl PlaylistManager {
     pub fn clear(&mut self) {
         if let Some(playlist) = self.playlists.get_mut(self.active_index) {
             playlist.clear();
-        }
-    }
-
-    pub fn set_items(&mut self, items: Vec<NowPlaying>) {
-        if let Some(playlist) = self.playlists.get_mut(self.active_index) {
-            playlist.set_items(items);
         }
     }
 
