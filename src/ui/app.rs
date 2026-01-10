@@ -1654,18 +1654,6 @@ impl GrapeApp {
     }
 
     fn sync_playback_state(&mut self) {
-        let finished = self
-            .player
-            .as_ref()
-            .is_some_and(|player| player.is_finished());
-        if finished && self.ui.play_from_queue {
-            let next_track = self.playback_queue.next();
-            if next_track.is_some() {
-                self.load_from_queue(next_track);
-            } else if let Some(player) = &mut self.player {
-                player.pause();
-            }
-        }
         let (is_playing, position) = match &self.player {
             Some(player) => (
                 matches!(player.state(), PlayerPlaybackState::Playing),
