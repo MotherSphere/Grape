@@ -11,6 +11,7 @@ use crate::ui::state::{
     ActiveTab, Album, Artist, Folder, Genre, PreferencesSection, PreferencesTab, SearchFilter,
     SortOption, ThemeCategory, Track,
 };
+use std::time::Duration;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum UiMessage {
@@ -142,6 +143,7 @@ pub enum UiMessage {
         result: Result<Option<OnlineMetadata>, String>,
         enrichment_confirmed: bool,
     },
+    PlaybackScrubbed(Duration),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -151,6 +153,7 @@ pub enum PlaybackMessage {
     PreviousTrack,
     ToggleShuffle,
     CycleRepeat,
+    SeekTo(Duration),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
