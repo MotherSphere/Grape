@@ -465,12 +465,19 @@ impl Player {
         path: &Path,
         position: Option<Duration>,
     ) -> Result<
-        AudioProcessingSource<rodio::source::SkipDuration<Decoder<io::BufReader<File>>>>,
+        AudioProcessingSource<Box<dyn Source<Item = f32> + Send>>,
         PlayerError,
     > {
+        let position = position.unwrap_or(Duration::ZERO);
+        let seekable = self.decode_seekable_source(path);
+        if let Ok(mut decoder) = seekable {
+            if position == Duration::ZERO || decoder.try_seek(position).is_ok() {
+                return AudioProcessingSource::new(Box::new(decoder), &self.processing);
+            }
+        }
         let source = self.decode_source(path)?;
-        let source = source.skip_duration(position.unwrap_or(Duration::ZERO));
-        AudioProcessingSource::new(source, &self.processing)
+        let source = source.skip_duration(position);
+        AudioProcessingSource::new(Box::new(source), &self.processing)
     }
 
     fn decode_source(&self, path: &Path) -> Result<Decoder<io::BufReader<File>>, PlayerError> {
@@ -482,6 +489,28 @@ impl Player {
             error!(error = %err, path = %path.display(), "Failed to decode track");
             err.into()
         })
+    }
+
+    fn decode_seekable_source(
+        &self,
+        path: &Path,
+    ) -> Result<Decoder<io::BufReader<File>>, PlayerError> {
+        let file = File::open(path).map_err(|err| {
+            error!(error = %err, path = %path.display(), "Failed to open track file");
+            err
+        })?;
+        let byte_len = file.metadata().map_err(|err| {
+            error!(error = %err, path = %path.display(), "Failed to read track metadata");
+            err
+        })?;
+        Decoder::builder()
+            .with_data(io::BufReader::new(file))
+            .with_byte_len(byte_len.len())
+            .build()
+            .map_err(|err| {
+                error!(error = %err, path = %path.display(), "Failed to decode track");
+                err.into()
+            })
     }
 
     fn stream_outcome_to_player_state(
