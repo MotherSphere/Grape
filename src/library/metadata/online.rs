@@ -8,6 +8,7 @@ use tracing::warn;
 
 use crate::config::UserSettings;
 use crate::library::cache;
+use crate::library::metadata;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct OnlineMetadata {
@@ -83,9 +84,6 @@ pub fn fetch_album_metadata(
     force_refresh: bool,
 ) -> io::Result<Option<OnlineMetadata>> {
     let api_key = settings.metadata_api_key.trim();
-    if api_key.is_empty() {
-        return Ok(None);
-    }
 
     let cache_key = metadata_cache_key(artist, album);
     let cache_dir = cache::ensure_metadata_cache_dir(root)?;
@@ -111,15 +109,9 @@ pub fn fetch_album_metadata(
         .as_ref()
         .map(|entry| entry.metadata.clone())
         .unwrap_or_default();
-    let metadata = match enrich_with_lastfm_metadata(base_metadata, api_key, artist, album) {
-        Ok(metadata) => metadata,
-        Err(error) => {
-            warn!(error = %error, "Failed to fetch online metadata");
-            return Ok(cached.map(|entry| entry.metadata));
-        }
-    };
-
-    if metadata.genre.is_none() && metadata.year.is_none() {
+    let (metadata, refreshed) =
+        enrich_with_online_metadata(base_metadata, api_key, artist, album);
+    if !refreshed {
         return Ok(cached.map(|entry| entry.metadata));
     }
 
@@ -136,20 +128,47 @@ pub fn fetch_album_metadata(
     Ok(Some(metadata))
 }
 
-fn enrich_with_lastfm_metadata(
+fn enrich_with_online_metadata(
     mut metadata: OnlineMetadata,
     api_key: &str,
     artist: &str,
     album: &str,
-) -> Result<OnlineMetadata, reqwest::Error> {
-    let lastfm_metadata = fetch_lastfm_metadata(api_key, artist, album)?;
-    if metadata.genre.is_none() {
-        metadata.genre = lastfm_metadata.genre;
+) -> (OnlineMetadata, bool) {
+    let mut refreshed = false;
+
+    if !api_key.is_empty() {
+        match fetch_lastfm_metadata(api_key, artist, album) {
+            Ok(lastfm_metadata) => {
+                refreshed |= lastfm_metadata.genre.is_some() || lastfm_metadata.year.is_some();
+                metadata = merge_online_metadata(metadata, lastfm_metadata);
+            }
+            Err(error) => {
+                warn!(error = %error, "Failed to fetch Last.fm metadata");
+            }
+        }
     }
-    if metadata.year.is_none() {
-        metadata.year = lastfm_metadata.year;
+
+    match fetch_musicbrainz_metadata(artist, album) {
+        Ok(musicbrainz_metadata) => {
+            refreshed |= musicbrainz_metadata.genre.is_some() || musicbrainz_metadata.year.is_some();
+            metadata = merge_online_metadata(metadata, musicbrainz_metadata);
+        }
+        Err(error) => {
+            warn!(error = %error, "Failed to fetch MusicBrainz metadata");
+        }
     }
-    Ok(metadata)
+
+    match fetch_itunes_metadata(artist, album) {
+        Ok(itunes_metadata) => {
+            refreshed |= itunes_metadata.genre.is_some() || itunes_metadata.year.is_some();
+            metadata = merge_online_metadata(metadata, itunes_metadata);
+        }
+        Err(error) => {
+            warn!(error = %error, "Failed to fetch iTunes metadata");
+        }
+    }
+
+    (metadata, refreshed)
 }
 
 fn fetch_lastfm_metadata(
@@ -171,10 +190,67 @@ fn fetch_lastfm_metadata(
         .error_for_status()?;
 
     let payload: serde_json::Value = response.json()?;
-    let genre = extract_genre(&payload);
+    let genre = extract_genre(&payload).and_then(|value| metadata::merge_genres(Some(&value), None));
     let year = extract_year(&payload);
 
     Ok(OnlineMetadata { genre, year })
+}
+
+fn fetch_musicbrainz_metadata(artist: &str, album: &str) -> Result<OnlineMetadata, reqwest::Error> {
+    let client = reqwest::blocking::Client::new();
+    let query = format!("artist:\"{}\" AND releasegroup:\"{}\"", artist, album);
+    let response = client
+        .get("https://musicbrainz.org/ws/2/release-group/")
+        .header("User-Agent", "Grape/0.1 (metadata)")
+        .query(&[("query", query), ("fmt", "json".to_string()), ("limit", "1".to_string())])
+        .send()?
+        .error_for_status()?;
+
+    let payload: serde_json::Value = response.json()?;
+    let release_group = payload.pointer("/release-groups/0");
+    let genre = release_group
+        .and_then(|value| value.get("tags"))
+        .and_then(|tags| tags.as_array())
+        .and_then(|tags| tags.iter().find_map(|tag| tag.get("name")))
+        .and_then(|name| name.as_str())
+        .and_then(|name| metadata::merge_genres(Some(name), None));
+    let year = release_group
+        .and_then(|value| value.get("first-release-date"))
+        .and_then(|value| value.as_str())
+        .and_then(parse_year);
+
+    Ok(OnlineMetadata { genre, year })
+}
+
+fn fetch_itunes_metadata(artist: &str, album: &str) -> Result<OnlineMetadata, reqwest::Error> {
+    let client = reqwest::blocking::Client::new();
+    let term = format!("{} {}", artist, album);
+    let response = client
+        .get("https://itunes.apple.com/search")
+        .query(&[("term", term), ("entity", "album".to_string()), ("limit", "1".to_string())])
+        .send()?
+        .error_for_status()?;
+
+    let payload: serde_json::Value = response.json()?;
+    let result = payload.pointer("/results/0");
+    let genre = result
+        .and_then(|value| value.get("primaryGenreName"))
+        .and_then(|value| value.as_str())
+        .and_then(|name| metadata::merge_genres(Some(name), None));
+    let year = result
+        .and_then(|value| value.get("releaseDate"))
+        .and_then(|value| value.as_str())
+        .and_then(parse_year);
+
+    Ok(OnlineMetadata { genre, year })
+}
+
+fn merge_online_metadata(mut base: OnlineMetadata, incoming: OnlineMetadata) -> OnlineMetadata {
+    base.genre = metadata::merge_genres(base.genre.as_deref(), incoming.genre.as_deref());
+    if base.year.is_none() {
+        base.year = incoming.year;
+    }
+    base
 }
 
 fn extract_genre(payload: &serde_json::Value) -> Option<String> {
