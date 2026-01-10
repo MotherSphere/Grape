@@ -144,13 +144,14 @@ pub enum UiMessage {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum PlaybackMessage {
     TogglePlayPause,
     NextTrack,
     PreviousTrack,
     ToggleShuffle,
     CycleRepeat,
+    SeekToRatio(f32),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
