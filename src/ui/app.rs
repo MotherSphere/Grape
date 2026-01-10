@@ -3951,7 +3951,13 @@ impl GrapeApp {
                 | UiMessage::SetAudioDebugLogs(_)
         );
         let mut task = Task::none();
+        let mut handled_playback_tick = false;
         match &message {
+            UiMessage::PlaybackTick => {
+                self.sync_playback_state();
+                self.ui.playback.update_animated_progress();
+                handled_playback_tick = true;
+            }
             UiMessage::SelectTrack(track) => {
                 self.handle_track_selection(track);
             }
@@ -4300,12 +4306,19 @@ impl GrapeApp {
         if should_refresh_preloads {
             self.refresh_cover_preloads();
         }
-        self.sync_playback_state();
-        if self.ui.settings.reduce_animations || self.ui.settings.accessibility_reduce_motion {
-            self.ui.playback.animated_progress =
-                progress_ratio(self.ui.playback.position, self.ui.playback.duration);
+        if handled_playback_tick {
+            if self.ui.settings.reduce_animations || self.ui.settings.accessibility_reduce_motion {
+                self.ui.playback.animated_progress =
+                    progress_ratio(self.ui.playback.position, self.ui.playback.duration);
+            }
         } else {
-            self.ui.playback.update_animated_progress();
+            self.sync_playback_state();
+            if self.ui.settings.reduce_animations || self.ui.settings.accessibility_reduce_motion {
+                self.ui.playback.animated_progress =
+                    progress_ratio(self.ui.playback.position, self.ui.playback.duration);
+            } else {
+                self.ui.playback.update_animated_progress();
+            }
         }
         task
     }
@@ -4492,15 +4505,7 @@ impl GrapeApp {
                 .push(time::every(Duration::from_millis(120)).map(|_| UiMessage::ScanTick));
         }
 
-        let target_progress = progress_ratio(self.ui.playback.position, self.ui.playback.duration);
-        let needs_animation = (self.ui.playback.animated_progress - target_progress).abs() > 0.001;
-        if (self.ui.playback.is_playing || needs_animation)
-            && !self.ui.settings.accessibility_reduce_motion
-            && !self.ui.settings.reduce_animations
-        {
-            subscriptions
-                .push(time::every(Duration::from_millis(33)).map(|_| UiMessage::PlaybackTick));
-        }
+        subscriptions.push(time::every(Duration::from_millis(225)).map(|_| UiMessage::PlaybackTick));
 
         Subscription::batch(subscriptions)
     }
