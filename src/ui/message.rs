@@ -105,6 +105,7 @@ pub enum UiMessage {
     ToggleThemeCategory(ThemeCategory),
     CloseMenu,
     PlaybackTick,
+    PlaybackSyncTick,
     StartInitialScan,
     ScanTick,
     LibraryScanCompleted(Result<Catalog, String>),
