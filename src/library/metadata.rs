@@ -102,30 +102,6 @@ pub fn track_metadata(path: &Path) -> TrackMetadata {
     }
 }
 
-pub fn merge_genre(
-    local_genre: Option<String>,
-    online_genre: Option<String>,
-    enrichment_confirmed: bool,
-) -> Option<String> {
-    if enrichment_confirmed {
-        online_genre.or(local_genre)
-    } else if local_genre.is_some() {
-        local_genre
-    } else {
-        online_genre
-    }
-}
-
-pub fn merge_year(local_year: u16, online_year: Option<u16>, enrichment_confirmed: bool) -> u16 {
-    if enrichment_confirmed {
-        online_year.unwrap_or(local_year)
-    } else if local_year > 0 {
-        local_year
-    } else {
-        online_year.unwrap_or(0)
-    }
-}
-
 fn extract_genre(tagged_file: &impl TaggedFileExt) -> Option<String> {
     let mut genres = Vec::new();
     let mut seen = HashSet::new();
