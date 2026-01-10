@@ -1,10 +1,10 @@
 #![allow(dead_code)]
 
 use crate::ui::message::{PlaybackMessage, UiMessage};
-use crate::ui::state::{progress_ratio, PlaybackState, RepeatMode};
+use crate::ui::state::{PlaybackState, RepeatMode};
 use crate::ui::style;
 use iced::font::Weight;
-use iced::widget::{button, column, container, image, row, slider, text};
+use iced::widget::{button, column, container, image, progress_bar, row, slider, text};
 use iced::{Alignment, Element, Length};
 
 #[derive(Debug, Clone)]
@@ -172,14 +172,8 @@ impl PlayerBar {
 
         let elapsed = format_duration(playback.position);
         let duration = format_duration(playback.duration);
-        let progress_value = progress_ratio(playback.position, playback.duration);
-        let progress = container(
-            slider(0.0..=1.0, progress_value, |value| {
-                UiMessage::Playback(PlaybackMessage::SeekToRatio(value))
-            })
-            .height(Length::Fixed(6.0)),
-        )
-        .width(Length::Fill);
+        let progress =
+            container(progress_bar(0.0..=1.0, playback.animated_progress)).width(Length::Fill);
         let progress_row = row![
             text(elapsed)
                 .size(theme.size_accessible(12))
