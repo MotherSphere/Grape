@@ -294,6 +294,7 @@ pub struct PlaybackState {
     pub shuffle: bool,
     pub repeat: RepeatMode,
     pub animated_progress: f32,
+    pub scrub_position: Option<Duration>,
 }
 
 impl PlaybackState {
@@ -312,6 +313,12 @@ impl PlaybackState {
             PlaybackMessage::TogglePlayPause
             | PlaybackMessage::NextTrack
             | PlaybackMessage::PreviousTrack => {}
+            PlaybackMessage::SeekTo(position) => {
+                let clamped = position.min(self.duration);
+                self.position = clamped;
+                self.scrub_position = None;
+                self.animated_progress = progress_ratio(self.position, self.duration);
+            }
         }
     }
 
@@ -580,6 +587,11 @@ impl UiState {
             }
             UiMessage::Playback(message) => {
                 self.playback.update(message);
+            }
+            UiMessage::PlaybackScrubbed(position) => {
+                let clamped = position.min(self.playback.duration);
+                self.playback.scrub_position = Some(clamped);
+                self.playback.animated_progress = progress_ratio(clamped, self.playback.duration);
             }
             UiMessage::Search(message) => {
                 self.search.update(message);
