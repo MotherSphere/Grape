@@ -10,6 +10,8 @@ use crate::config::UserSettings;
 pub mod cache;
 mod metadata;
 
+pub use metadata::online::OnlineMetadata;
+
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Catalog {
     pub artists: Vec<Artist>,
@@ -88,6 +90,12 @@ pub struct EmbeddedCover {
 }
 
 const ROOT_ARTIST_NAME: &str = "Unknown Artist";
+
+#[derive(Debug, Clone, Copy, Default)]
+struct MetadataLocks {
+    genre: bool,
+    year: bool,
+}
 
 impl Catalog {
     pub fn empty() -> Self {
@@ -190,10 +198,20 @@ pub fn persist_album_metadata_override(
     metadata::online::store_user_metadata_override(root, artist, album, metadata_override)
 }
 
+pub fn fetch_album_online_metadata(
+    root: &Path,
+    settings: &UserSettings,
+    artist: &str,
+    album: &str,
+    force_refresh: bool,
+) -> io::Result<Option<OnlineMetadata>> {
+    metadata::online::fetch_album_metadata(root, settings, artist, album, force_refresh)
+}
+
 fn scan_library_with_cache(
     root: impl AsRef<Path>,
     use_cache: bool,
-    settings: &UserSettings,
+    _settings: &UserSettings,
 ) -> io::Result<Catalog> {
     let root = root.as_ref();
     let mut artists = Vec::new();
@@ -218,12 +236,9 @@ fn scan_library_with_cache(
         return Ok(Catalog::empty());
     }
 
-    let force_online_refresh = !use_cache;
     if let Some(album) = scan_root_album(
         root,
         use_cache,
-        settings,
-        force_online_refresh,
         &mut cache_index,
         &mut used_cache_keys,
         &mut used_track_keys,
@@ -257,8 +272,6 @@ fn scan_library_with_cache(
                 year,
                 title,
                 use_cache,
-                settings,
-                force_online_refresh,
                 &mut cache_index,
                 &mut used_cache_keys,
                 &mut used_track_keys,
@@ -348,13 +361,7 @@ fn scan_library_with_cache(
                 }
             };
 
-            apply_online_metadata(
-                root,
-                settings,
-                &artist_name,
-                &mut album,
-                force_online_refresh,
-            );
+            apply_user_metadata_override(root, &artist_name, &mut album);
 
             if !album.tracks.is_empty() {
                 if let Ok(key) = cache::store_album(root, &mut cache_index, &album_path, &album) {
@@ -423,8 +430,6 @@ fn scan_album_dir(
     year: u16,
     title: String,
     use_cache: bool,
-    settings: &UserSettings,
-    force_online_refresh: bool,
     cache_index: &mut cache::CacheIndex,
     used_cache_keys: &mut std::collections::HashSet<String>,
     used_track_keys: &mut std::collections::HashSet<String>,
@@ -494,13 +499,7 @@ fn scan_album_dir(
         }
     };
 
-    apply_online_metadata(
-        root,
-        settings,
-        artist_name,
-        &mut album,
-        force_online_refresh,
-    );
+    apply_user_metadata_override(root, artist_name, &mut album);
 
     if let Ok(key) = cache::store_album(root, cache_index, album_path, &album) {
         used_cache_keys.insert(key);
@@ -509,56 +508,49 @@ fn scan_album_dir(
     Ok(Some(album))
 }
 
-fn apply_online_metadata(
-    root: &Path,
-    settings: &UserSettings,
-    artist_name: &str,
-    album: &mut Album,
-    force_refresh: bool,
-) {
+fn apply_user_metadata_override(root: &Path, artist_name: &str, album: &mut Album) -> MetadataLocks {
     let user_override =
         metadata::online::load_user_metadata_override(root, artist_name, &album.title)
             .ok()
             .flatten();
-    let mut genre_locked = false;
-    let mut year_locked = false;
+    let mut locks = MetadataLocks::default();
     if let Some(metadata_override) = user_override {
         if metadata_override.genre_overridden {
-            genre_locked = true;
+            locks.genre = true;
             apply_album_genre(album, metadata_override.genre.clone());
         }
         if metadata_override.year_overridden {
             album.year = metadata_override.year.unwrap_or(0);
-            year_locked = true;
+            locks.year = true;
+        }
+    }
+    locks
+}
+
+pub fn merge_album_online_metadata(
+    root: &Path,
+    artist_name: &str,
+    album: &mut Album,
+    metadata: &OnlineMetadata,
+    enrichment_confirmed: bool,
+) {
+    let locks = apply_user_metadata_override(root, artist_name, album);
+    if !locks.genre {
+        let merged_genre =
+            metadata::merge_genre(album.genre.clone(), metadata.genre.clone(), enrichment_confirmed);
+        if let Some(genre) = merged_genre {
+            if enrichment_confirmed {
+                apply_album_genre(album, Some(genre));
+            } else if album.genre.is_none() {
+                apply_album_genre_if_missing(album, &genre);
+            }
         }
     }
 
-    let metadata = match metadata::online::fetch_album_metadata(
-        root,
-        settings,
-        artist_name,
-        &album.title,
-        force_refresh,
-    ) {
-        Ok(metadata) => metadata,
-        Err(error) => {
-            warn!(error = %error, "Unable to fetch online album metadata");
-            return;
-        }
-    };
-
-    let Some(metadata) = metadata else {
-        return;
-    };
-
-    if !genre_locked && album.genre.is_none() {
-        if let Some(genre) = metadata.genre {
-            apply_album_genre(album, Some(genre));
-        }
-    }
-    if !year_locked && album.year == 0 {
-        if let Some(year) = metadata.year {
-            album.year = year;
+    if !locks.year {
+        let merged_year = metadata::merge_year(album.year, metadata.year, enrichment_confirmed);
+        if merged_year > 0 {
+            album.year = merged_year;
         }
     }
 }
@@ -567,6 +559,15 @@ fn apply_album_genre(album: &mut Album, genre: Option<String>) {
     album.genre = genre.clone();
     for track in &mut album.tracks {
         track.genre = genre.clone();
+    }
+}
+
+fn apply_album_genre_if_missing(album: &mut Album, genre: &str) {
+    album.genre = Some(genre.to_string());
+    for track in &mut album.tracks {
+        if track.genre.is_none() {
+            track.genre = Some(genre.to_string());
+        }
     }
 }
 
@@ -889,8 +890,6 @@ fn record_track_ids(
 fn scan_root_album(
     root: &Path,
     use_cache: bool,
-    settings: &UserSettings,
-    force_online_refresh: bool,
     cache_index: &mut cache::CacheIndex,
     used_cache_keys: &mut std::collections::HashSet<String>,
     used_track_keys: &mut std::collections::HashSet<String>,
@@ -962,13 +961,7 @@ fn scan_root_album(
         }
     };
 
-    apply_online_metadata(
-        root,
-        settings,
-        ROOT_ARTIST_NAME,
-        &mut album,
-        force_online_refresh,
-    );
+    apply_user_metadata_override(root, ROOT_ARTIST_NAME, &mut album);
 
     if let Ok(key) = cache::store_album(root, cache_index, &album_path, &album) {
         used_cache_keys.insert(key);

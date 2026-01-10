@@ -110,6 +110,15 @@ impl SongsPanel {
                 .style(move |_: &iced::Theme, status| style::text_input_style(theme, status))
                 .on_input(UiMessage::AlbumYearChanged)
                 .padding([6, 10]);
+            let enrich_button = button(
+                text("Enrichir")
+                    .size(theme.size_accessible(12))
+                    .font(style::font_propo(Weight::Medium))
+                    .style(move |_| style::text_style_primary(theme)),
+            )
+            .style(move |_, status| style::button_style(theme, style::ButtonKind::Control, status))
+            .padding([6, 10])
+            .on_press(UiMessage::EnrichAlbumMetadata);
             let save_button = button(
                 text("Enregistrer")
                     .size(theme.size_accessible(12))
@@ -119,7 +128,7 @@ impl SongsPanel {
             .style(move |_, status| style::button_style(theme, style::ButtonKind::Control, status))
             .padding([6, 10])
             .on_press(UiMessage::SaveAlbumMetadata);
-            row![genre_input, year_input, save_button]
+            row![genre_input, year_input, enrich_button, save_button]
                 .spacing(8)
                 .align_y(Alignment::Center)
                 .into()

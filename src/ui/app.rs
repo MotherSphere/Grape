@@ -702,6 +702,40 @@ impl GrapeApp {
         self.ui.album_year_draft = draft.1;
     }
 
+    fn request_album_metadata(
+        &self,
+        album: &UiAlbum,
+        enrichment_confirmed: bool,
+        force_refresh: bool,
+    ) -> Task<UiMessage> {
+        let Some(root) = self.library_root() else {
+            return Task::none();
+        };
+        let settings = self.ui.settings.clone();
+        let artist = album.artist.clone();
+        let title = album.title.clone();
+        let album_id = album.id;
+        let artist_for_request = artist.clone();
+        Task::perform(
+            async move {
+                library::fetch_album_online_metadata(
+                    &root,
+                    &settings,
+                    &artist_for_request,
+                    &title,
+                    force_refresh,
+                )
+                .map_err(|err| err.to_string())
+            },
+            move |result| UiMessage::AlbumMetadataFetched {
+                album_id,
+                artist,
+                result,
+                enrichment_confirmed,
+            },
+        )
+    }
+
     fn folder_entry_by_id(
         &self,
         folder_id: usize,
@@ -3799,6 +3833,13 @@ impl GrapeApp {
 
     fn update(&mut self, message: UiMessage) -> Task<UiMessage> {
         let should_select_genre_album = matches!(message, UiMessage::SelectGenre(_));
+        let should_fetch_metadata = matches!(
+            message,
+            UiMessage::SelectArtist(_)
+                | UiMessage::SelectAlbum(_)
+                | UiMessage::SelectGenre(_)
+                | UiMessage::SelectFolder(_)
+        );
         let selected_artist = match &message {
             UiMessage::SelectArtist(artist) => Some(artist.clone()),
             _ => None,
@@ -3935,6 +3976,11 @@ impl GrapeApp {
             }
             UiMessage::SaveAlbumMetadata => {
                 self.handle_album_metadata_save();
+            }
+            UiMessage::EnrichAlbumMetadata => {
+                if let Some(album) = self.ui.selection.selected_album.clone() {
+                    task = self.request_album_metadata(&album, true, true);
+                }
             }
             UiMessage::CreatePlaylist => {
                 let (index, name) = self
@@ -4172,6 +4218,41 @@ impl GrapeApp {
             UiMessage::LoadMoreFolders => {
                 self.ui.list_limits.folders += 50;
             }
+            UiMessage::AlbumMetadataFetched {
+                album_id,
+                artist,
+                result,
+                enrichment_confirmed,
+            } => match result {
+                Ok(Some(metadata)) => {
+                    if let Some(root) = self.library_root() {
+                        if let Some(album) = self.album_entry_by_id_mut(*album_id) {
+                            library::merge_album_online_metadata(
+                                &root,
+                                artist,
+                                album,
+                                &metadata,
+                                *enrichment_confirmed,
+                            );
+                        }
+                        let selected_year = self
+                            .album_entry_by_id(*album_id)
+                            .map(|(_, album)| album.year)
+                            .filter(|year| *year > 0)
+                            .map(|year| year as u32);
+                        if let Some(selected_album) = self.ui.selection.selected_album.as_mut() {
+                            if selected_album.id == *album_id {
+                                selected_album.year = selected_year;
+                            }
+                        }
+                        self.refresh_album_metadata_drafts();
+                    }
+                }
+                Ok(None) => {}
+                Err(error) => {
+                    warn!(error = %error, "Failed to fetch online album metadata");
+                }
+            },
             _ => {}
         }
         self.ui.update(message);
@@ -4201,6 +4282,11 @@ impl GrapeApp {
             } else {
                 self.ui.selection.selected_album = None;
                 self.ui.selection.selected_track = None;
+            }
+        }
+        if should_fetch_metadata {
+            if let Some(album) = self.ui.selection.selected_album.clone() {
+                task = Task::batch([task, self.request_album_metadata(&album, false, false)]);
             }
         }
         if should_persist {
