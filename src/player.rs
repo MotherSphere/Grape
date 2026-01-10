@@ -5,7 +5,7 @@ use std::fs::File;
 
 use std::io;
 use std::path::{Path, PathBuf};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use biquad::{Biquad, Coefficients, DirectForm1, ToHertz, Type};
 use rodio::{Decoder, OutputStream, Sink, source::Source};
@@ -237,6 +237,7 @@ pub struct Player {
     state: PlaybackState,
     current_track: Option<PathBuf>,
     position: Duration,
+    started_at: Option<Instant>,
     options: AudioOptions,
     processing: AudioProcessingConfig,
     output_volume: f32,
@@ -263,6 +264,7 @@ impl Player {
             state: PlaybackState::Stopped,
             current_track: None,
             position: Duration::ZERO,
+            started_at: None,
             options: resolved_options,
             processing,
             output_volume,
@@ -285,6 +287,7 @@ impl Player {
         self.state = PlaybackState::Stopped;
         self.current_track = None;
         self.position = Duration::ZERO;
+        self.started_at = None;
         self.options = resolved_options;
         self.processing = processing;
         self.last_fallback = last_fallback;
@@ -338,6 +341,7 @@ impl Player {
         info!(path = %path.display(), "Loading track");
         self.current_track = Some(path.clone());
         self.position = Duration::ZERO;
+        self.started_at = None;
         self.sink.stop();
         self.sink = Sink::connect_new(self.stream.mixer());
         self.apply_output_volume();
@@ -353,12 +357,20 @@ impl Player {
 
     pub fn play(&mut self) {
         info!("Playback start");
+        if self.state != PlaybackState::Playing {
+            self.started_at = Some(Instant::now());
+        }
         self.sink.play();
         self.state = PlaybackState::Playing;
     }
 
     pub fn pause(&mut self) {
         info!("Playback pause");
+        if self.state == PlaybackState::Playing {
+            if let Some(started_at) = self.started_at.take() {
+                self.position = self.position.saturating_add(started_at.elapsed());
+            }
+        }
         self.sink.pause();
         self.state = PlaybackState::Paused;
     }
@@ -381,8 +393,14 @@ impl Player {
             })?;
         self.sink.append(source);
         match self.state {
-            PlaybackState::Playing => self.sink.play(),
-            _ => self.sink.pause(),
+            PlaybackState::Playing => {
+                self.started_at = Some(Instant::now());
+                self.sink.play();
+            }
+            _ => {
+                self.started_at = None;
+                self.sink.pause();
+            }
         }
         Ok(())
     }
@@ -392,6 +410,11 @@ impl Player {
     }
 
     pub fn position(&self) -> Duration {
+        if self.state == PlaybackState::Playing {
+            if let Some(started_at) = self.started_at {
+                return self.position.saturating_add(started_at.elapsed());
+            }
+        }
         self.position
     }
 
@@ -417,6 +440,7 @@ impl Player {
         let Some(path) = self.current_track.clone() else {
             self.state = PlaybackState::Stopped;
             self.position = Duration::ZERO;
+            self.started_at = None;
             return Ok(());
         };
         let position = self.position;
@@ -424,8 +448,14 @@ impl Player {
         let source = self.processed_source(&path, Some(position))?;
         self.sink.append(source);
         match state {
-            PlaybackState::Playing => self.sink.play(),
-            PlaybackState::Paused | PlaybackState::Stopped => self.sink.pause(),
+            PlaybackState::Playing => {
+                self.started_at = Some(Instant::now());
+                self.sink.play();
+            }
+            PlaybackState::Paused | PlaybackState::Stopped => {
+                self.started_at = None;
+                self.sink.pause();
+            }
         }
         Ok(())
     }
