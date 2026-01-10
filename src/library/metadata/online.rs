@@ -9,7 +9,7 @@ use tracing::warn;
 use crate::config::UserSettings;
 use crate::library::cache;
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct OnlineMetadata {
     pub genre: Option<String>,
     pub year: Option<u16>,
@@ -118,6 +118,10 @@ pub fn fetch_album_metadata(
             return Ok(cached.map(|entry| entry.metadata));
         }
     };
+
+    if metadata.genre.is_none() && metadata.year.is_none() {
+        return Ok(cached.map(|entry| entry.metadata));
+    }
 
     let payload = CachedOnlineMetadata {
         fetched_at: now_secs,
