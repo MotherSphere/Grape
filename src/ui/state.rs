@@ -865,7 +865,7 @@ impl UiState {
             UiMessage::CloseMenu => {
                 self.menu_open = false;
             }
-            UiMessage::PlaybackTick => {}
+            UiMessage::PlaybackTick | UiMessage::PlaybackSyncTick => {}
             UiMessage::StartInitialScan => {}
             UiMessage::ScanTick => {}
             UiMessage::LibraryScanCompleted(_) => {}
