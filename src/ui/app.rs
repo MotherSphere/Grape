@@ -3951,8 +3951,6 @@ impl GrapeApp {
                 | UiMessage::SetAudioDebugLogs(_)
         );
         let mut task = Task::none();
-        let mut did_sync_playback = false;
-        let mut did_update_animation = false;
         match &message {
             UiMessage::SelectTrack(track) => {
                 self.handle_track_selection(track);
@@ -3975,30 +3973,6 @@ impl GrapeApp {
             }
             UiMessage::Playback(playback_message) => {
                 self.handle_playback_message(playback_message);
-            }
-            UiMessage::PlaybackSyncTick => {
-                if self.ui.playback.is_playing {
-                    self.sync_playback_state();
-                    did_sync_playback = true;
-                }
-                if self.ui.settings.reduce_animations || self.ui.settings.accessibility_reduce_motion
-                {
-                    self.ui.playback.animated_progress =
-                        progress_ratio(self.ui.playback.position, self.ui.playback.duration);
-                } else {
-                    self.ui.playback.update_animated_progress();
-                }
-                did_update_animation = true;
-            }
-            UiMessage::PlaybackTick => {
-                if self.ui.settings.reduce_animations || self.ui.settings.accessibility_reduce_motion
-                {
-                    self.ui.playback.animated_progress =
-                        progress_ratio(self.ui.playback.position, self.ui.playback.duration);
-                } else {
-                    self.ui.playback.update_animated_progress();
-                }
-                did_update_animation = true;
             }
             UiMessage::SaveAlbumMetadata => {
                 self.handle_album_metadata_save();
@@ -4326,16 +4300,12 @@ impl GrapeApp {
         if should_refresh_preloads {
             self.refresh_cover_preloads();
         }
-        if !did_sync_playback {
-            self.sync_playback_state();
-        }
-        if !did_update_animation {
-            if self.ui.settings.reduce_animations || self.ui.settings.accessibility_reduce_motion {
-                self.ui.playback.animated_progress =
-                    progress_ratio(self.ui.playback.position, self.ui.playback.duration);
-            } else {
-                self.ui.playback.update_animated_progress();
-            }
+        self.sync_playback_state();
+        if self.ui.settings.reduce_animations || self.ui.settings.accessibility_reduce_motion {
+            self.ui.playback.animated_progress =
+                progress_ratio(self.ui.playback.position, self.ui.playback.duration);
+        } else {
+            self.ui.playback.update_animated_progress();
         }
         task
     }
@@ -4530,10 +4500,6 @@ impl GrapeApp {
         {
             subscriptions
                 .push(time::every(Duration::from_millis(33)).map(|_| UiMessage::PlaybackTick));
-        }
-        if self.ui.playback.is_playing {
-            subscriptions
-                .push(time::every(Duration::from_millis(200)).map(|_| UiMessage::PlaybackSyncTick));
         }
 
         Subscription::batch(subscriptions)
