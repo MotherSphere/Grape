@@ -151,7 +151,6 @@ pub enum PlaybackMessage {
     PreviousTrack,
     ToggleShuffle,
     CycleRepeat,
-    SeekToRatio(f32),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

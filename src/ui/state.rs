@@ -309,14 +309,6 @@ impl PlaybackState {
                     RepeatMode::One => RepeatMode::Off,
                 };
             }
-            PlaybackMessage::SeekToRatio(ratio) => {
-                let total = self.duration.as_secs_f32();
-                if total > 0.0 {
-                    let clamped = ratio.clamp(0.0, 1.0);
-                    self.position = Duration::from_secs_f32(total * clamped);
-                    self.animated_progress = clamped;
-                }
-            }
             PlaybackMessage::TogglePlayPause
             | PlaybackMessage::NextTrack
             | PlaybackMessage::PreviousTrack => {}
