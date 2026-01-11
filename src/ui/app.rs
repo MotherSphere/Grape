@@ -4374,11 +4374,6 @@ impl GrapeApp {
                                 *enrichment_confirmed,
                             );
                         }
-                        let selected_cover = self
-                            .album_entry_by_id(*album_id)
-                            .and_then(|(_, album)| {
-                                album.cover.as_ref().map(|cover| cover.cached_path.clone())
-                            });
                         let selected_year = self
                             .album_entry_by_id(*album_id)
                             .map(|(_, album)| album.year)
@@ -4387,11 +4382,9 @@ impl GrapeApp {
                         if let Some(selected_album) = self.ui.selection.selected_album.as_mut() {
                             if selected_album.id == *album_id {
                                 selected_album.year = selected_year;
-                                selected_album.cover_path = selected_cover.clone();
                             }
                         }
                         self.refresh_album_metadata_drafts();
-                        self.refresh_cover_preloads();
                     }
                 }
                 Ok(None) => {}

@@ -7,16 +7,12 @@ use serde::{Deserialize, Serialize};
 use tracing::warn;
 
 use crate::config::UserSettings;
-use crate::library::{CoverArt, cache};
+use crate::library::cache;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct OnlineMetadata {
     pub genre: Option<String>,
     pub year: Option<u16>,
-    #[serde(default)]
-    pub cover: Option<CoverArt>,
-    #[serde(default)]
-    pub cover_checked: bool,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -106,15 +102,7 @@ pub fn fetch_album_metadata(
     if !force_refresh {
         if let Some(entry) = &cached {
             if ttl_secs > 0 && now_secs.saturating_sub(entry.fetched_at) < ttl_secs {
-                let cover_ready = entry
-                    .metadata
-                    .cover
-                    .as_ref()
-                    .map(|cover| cover.cached_path.exists())
-                    .unwrap_or(false);
-                if (entry.metadata.cover.is_some() && cover_ready) || entry.metadata.cover_checked {
-                    return Ok(Some(entry.metadata.clone()));
-                }
+                return Ok(Some(entry.metadata.clone()));
             }
         }
     }
@@ -123,14 +111,7 @@ pub fn fetch_album_metadata(
         .as_ref()
         .map(|entry| entry.metadata.clone())
         .unwrap_or_default();
-    let metadata = match enrich_with_lastfm_metadata(
-        root,
-        base_metadata,
-        api_key,
-        artist,
-        album,
-        force_refresh,
-    ) {
+    let metadata = match enrich_with_lastfm_metadata(base_metadata, api_key, artist, album) {
         Ok(metadata) => metadata,
         Err(error) => {
             warn!(error = %error, "Failed to fetch online metadata");
@@ -152,45 +133,26 @@ pub fn fetch_album_metadata(
 }
 
 fn enrich_with_lastfm_metadata(
-    root: &Path,
     mut metadata: OnlineMetadata,
     api_key: &str,
     artist: &str,
     album: &str,
-    force_refresh: bool,
 ) -> Result<OnlineMetadata, reqwest::Error> {
     let lastfm_metadata = fetch_lastfm_metadata(api_key, artist, album)?;
     if metadata.genre.is_none() {
-        metadata.genre = lastfm_metadata.genre.clone();
+        metadata.genre = lastfm_metadata.genre;
     }
     if metadata.year.is_none() {
         metadata.year = lastfm_metadata.year;
     }
-    if should_update_cover(&metadata, force_refresh) {
-        if let Some(url) = lastfm_metadata.cover_url.as_deref() {
-            if let Ok(cover) =
-                download_cover_art(root, &metadata_cache_key(artist, album), url, force_refresh)
-            {
-                metadata.cover = cover;
-            }
-        }
-    }
-    metadata.cover_checked = true;
     Ok(metadata)
-}
-
-#[derive(Debug, Clone)]
-struct LastFmMetadata {
-    genre: Option<String>,
-    year: Option<u16>,
-    cover_url: Option<String>,
 }
 
 fn fetch_lastfm_metadata(
     api_key: &str,
     artist: &str,
     album: &str,
-) -> Result<LastFmMetadata, reqwest::Error> {
+) -> Result<OnlineMetadata, reqwest::Error> {
     let client = reqwest::blocking::Client::new();
     let response = client
         .get("https://ws.audioscrobbler.com/2.0/")
@@ -207,13 +169,8 @@ fn fetch_lastfm_metadata(
     let payload: serde_json::Value = response.json()?;
     let genre = extract_genre(&payload);
     let year = extract_year(&payload);
-    let cover_url = extract_cover_url(&payload);
 
-    Ok(LastFmMetadata {
-        genre,
-        year,
-        cover_url,
-    })
+    Ok(OnlineMetadata { genre, year })
 }
 
 fn extract_genre(payload: &serde_json::Value) -> Option<String> {
@@ -249,28 +206,6 @@ fn extract_year(payload: &serde_json::Value) -> Option<u16> {
     release.and_then(parse_year)
 }
 
-fn extract_cover_url(payload: &serde_json::Value) -> Option<String> {
-    let images = payload.pointer("/album/image")?;
-    let list = images.as_array()?;
-    let mut fallback = None;
-    for image in list {
-        let url = image.get("#text").and_then(|value| value.as_str());
-        let url = url.map(str::trim).filter(|url| !url.is_empty());
-        let size = image.get("size").and_then(|value| value.as_str());
-        if let Some(url) = url {
-            match size {
-                Some("mega") | Some("extralarge") => return Some(url.to_string()),
-                _ => {
-                    if fallback.is_none() {
-                        fallback = Some(url.to_string());
-                    }
-                }
-            }
-        }
-    }
-    fallback
-}
-
 fn parse_year(value: &str) -> Option<u16> {
     let mut digits = String::new();
     for ch in value.chars() {
@@ -289,58 +224,6 @@ fn parse_year(value: &str) -> Option<u16> {
         }
     }
     None
-}
-
-fn should_update_cover(metadata: &OnlineMetadata, force_refresh: bool) -> bool {
-    if force_refresh {
-        return true;
-    }
-    match metadata.cover.as_ref() {
-        Some(cover) => !cover.cached_path.exists(),
-        None => !metadata.cover_checked,
-    }
-}
-
-fn download_cover_art(
-    root: &Path,
-    cache_key: &str,
-    url: &str,
-    force_refresh: bool,
-) -> io::Result<Option<CoverArt>> {
-    let cache_dir = cache::ensure_cover_cache_dir(root)?;
-    let extension = cover_extension_from_url(url);
-    let cached_path = cache_dir.join(format!("online-{cache_key}.{extension}"));
-    if cached_path.exists() && !force_refresh {
-        return Ok(Some(CoverArt {
-            source_path: cached_path.clone(),
-            cached_path,
-            modified_secs: current_epoch_secs(),
-        }));
-    }
-    let client = reqwest::blocking::Client::new();
-    let response = client
-        .get(url)
-        .send()
-        .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?
-        .error_for_status()
-        .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
-    let bytes = response
-        .bytes()
-        .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
-    fs::write(&cached_path, &bytes)?;
-    Ok(Some(CoverArt {
-        source_path: cached_path.clone(),
-        cached_path,
-        modified_secs: current_epoch_secs(),
-    }))
-}
-
-fn cover_extension_from_url(url: &str) -> &str {
-    let trimmed = url.split('?').next().unwrap_or(url);
-    std::path::Path::new(trimmed)
-        .extension()
-        .and_then(|ext| ext.to_str())
-        .unwrap_or("jpg")
 }
 
 fn metadata_cache_key(artist: &str, album: &str) -> String {
