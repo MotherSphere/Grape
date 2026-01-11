@@ -25,10 +25,11 @@ Cette documentation couvre l'état actuel du projet, l'architecture et les choix
   - Cache covers + cache metadata locales + cache metadata (Last.fm).
   - Cache des pistes (signatures + métadonnées locales).
   - Invalidation par signature (taille + date de modification).
+  - Surcharges manuelles des métadonnées en ligne (par album) persistées dans `metadata/`.
 - **Lecture audio** : `src/player.rs`
   - Player `rodio` (load/play/pause/seek).
-  - Sortie audio configurable (périphérique + sample rate).
-  - Traitement EQ et normalisation de volume.
+  - Sortie audio configurable (périphérique + sample rate) + fallback automatique.
+  - Traitement EQ (3/5 bandes + presets) et normalisation de volume.
 - **Playlists & queue** : `src/playlist.rs`
   - Modèle de playlist + sérialisation JSON (`~/.config/grape/playlist.json`).
   - Queue de lecture (`PlaybackQueue`) basée sur la playlist active + vue dédiée.
@@ -37,9 +38,13 @@ Cette documentation couvre l'état actuel du projet, l'architecture et les choix
   - État UI centralisé (`UiState`).
   - Vues dédiées pour Artists/Albums/Genres/Folders + playlist.
 - **Préférences** : `src/config.rs`
-  - Paramètres persistés dans `~/.config/grape/preferences.json`.
-  - Actions locales (clear cache, clear history, reset audio, reindex) exposées dans l'UI.
+  - Paramètres persistés dans `~/.config/grape/preferences.json` (+ `history.json`, `logs/`).
+  - Sections General/Appearance/Accessibility/Audio avec options UI (thèmes, accents, densité, accessibilité, audio avancé).
+  - Actions locales (reindex, clear cache, reset audio) exposées dans l'UI.
   - Configuration du cache + TTL métadonnées + clé API Last.fm.
+  - Certaines options restent déclaratives (updates, privacy, performance).
+- **Égaliseur** : `src/eq.rs`
+  - Modèle 3 ou 5 bandes + presets et gains clampés.
 
 ## UI : layout et composants
 
@@ -62,6 +67,7 @@ Composants Iced :
 - `PlayerBar` (`src/ui/components/player_bar.rs`)
 - `PlaylistView` (`src/ui/components/playlist_view.rs`)
 - `QueueView` (`src/ui/components/queue_view.rs`)
+- `AudioSettings` (`src/ui/components/audio_settings.rs`) pour l'égaliseur
 
 ## État UI
 
@@ -78,7 +84,7 @@ Composants Iced :
 - Les métadonnées proviennent de `lofty` (durées, codec, bitrate, genre, année).
 - Les jaquettes embarquées sont prioritaires, sinon copie locale dans le cache.
 - Les onglets Genres/Folders sont alimentés par des résumés dérivés du catalogue.
-- L'enrichissement en ligne (Last.fm) est optionnel via clé API.
+- L'enrichissement en ligne (Last.fm) est optionnel via clé API + surcharges manuelles par album.
 
 ## Assets
 
@@ -89,6 +95,7 @@ Le dossier `assets/` est dédié aux éléments visuels (logos, fonts, captures,
 - Les genres restent « Unknown » si les tags audio sont absents.
 - L'égaliseur est limité aux bandes préconfigurées (3 ou 5) avec des gains entre -12 dB et +12 dB.
 - Si un périphérique audio sélectionné n'est pas disponible, la sortie repasse sur le système.
+- Certaines options Préférences sont uniquement déclaratives (updates, privacy, performance).
 
 ## Prochaines étapes suggérées
 

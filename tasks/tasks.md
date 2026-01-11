@@ -17,7 +17,11 @@
 - [x] Vue dédiée de la queue + actions (vider/réordonner/supprimer).
 - [x] Sortie audio configurable + EQ/normalisation.
 - [x] Écrans Préférences (General/Appearance/Accessibility/Audio).
+- [x] Thèmes multiples + accents + densité d'interface (Appearance).
+- [x] Accessibilité (taille de texte, contraste, réduction d'animations, sous-titres).
+- [x] Préférences audio avancées (output device, gapless/crossfade, EQ presets).
 - [x] Persistance des préférences (`~/.config/grape/preferences.json`).
+- [x] Préférences UI déclaratives (updates, privacy, notifications, performance).
 - [x] Playlists connectées (création/renommage/suppression + ajout de pistes).
 - [x] Édition de playlist (réordonnancement/suppression d'items).
 - [x] Persistance des playlists (`~/.config/grape/playlist.json`).
