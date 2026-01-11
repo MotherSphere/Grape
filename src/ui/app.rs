@@ -348,18 +348,13 @@ impl GrapeApp {
     }
 
     fn apply_artist_selection(&mut self, artist: UiArtist) {
-        let artist_name = artist.name.clone();
         self.ui.selection.selected_artist = Some(artist);
         self.ui.selection.selected_album = None;
         self.ui.selection.selected_genre = None;
         self.ui.selection.selected_folder = None;
         self.ui.selection.selected_track = None;
         self.ui.library_focus = LibraryFocus::Artists;
-        if let Some(album) = self
-            .filtered_albums_from_catalog()
-            .into_iter()
-            .find(|album| album.artist == artist_name)
-        {
+        if let Some(album) = self.filtered_albums_from_catalog().into_iter().next() {
             self.ui.selection.selected_album = Some(album.clone());
             self.ui.selection.selected_track =
                 self.album_entry_by_id(album.id)
@@ -550,6 +545,21 @@ impl GrapeApp {
                 matches
             });
         }
+        if self.ui.active_tab == ActiveTab::Artists {
+            if let Some(selected_artist) = self.ui.selection.selected_artist.as_ref() {
+                let normalized_artist = Self::normalize_text(selected_artist.name.trim());
+                albums.retain(|album| {
+                    self.album_entry_by_id(album.id)
+                        .map(|(artist, entry)| {
+                            entry.tracks.iter().any(|track| {
+                                let name = track.artist.as_deref().unwrap_or(&artist.name);
+                                Self::normalize_text(name) == normalized_artist
+                            })
+                        })
+                        .unwrap_or(false)
+                });
+            }
+        }
         if self.ui.active_tab == ActiveTab::Genres {
             if let Some(selected_genre) = self.ui.selection.selected_genre.as_ref() {
                 let normalized_genre = Self::normalize_text(selected_genre.name.trim());
@@ -629,14 +639,25 @@ impl GrapeApp {
     }
 
     fn artists_from_catalog(&self) -> Vec<UiArtist> {
-        self.catalog
-            .artists
-            .iter()
+        let mut seen = std::collections::HashSet::new();
+        let mut names = Vec::new();
+
+        for artist in &self.catalog.artists {
+            for album in &artist.albums {
+                for track in &album.tracks {
+                    let name = track.artist.as_deref().unwrap_or(&artist.name);
+                    if seen.insert(Self::normalize_text(name)) {
+                        names.push(name.to_string());
+                    }
+                }
+            }
+        }
+
+        names.sort_by(|a, b| Self::normalize_text(a).cmp(&Self::normalize_text(b)));
+        names
+            .into_iter()
             .enumerate()
-            .map(|(id, artist)| UiArtist {
-                id,
-                name: artist.name.clone(),
-            })
+            .map(|(id, name)| UiArtist { id, name })
             .collect()
     }
 
