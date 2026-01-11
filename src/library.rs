@@ -65,6 +65,8 @@ pub struct Track {
     pub codec: Option<String>,
     pub path: PathBuf,
     #[serde(default)]
+    pub track_artist: Option<String>,
+    #[serde(default)]
     pub artist: Option<String>,
     #[serde(default)]
     pub year: Option<u16>,
@@ -215,7 +217,6 @@ fn scan_library_with_cache(
 ) -> io::Result<Catalog> {
     let root = root.as_ref();
     let mut artists = Vec::new();
-    let mut root_artist_albums = Vec::new();
     let mut seen_artist_dirs = std::collections::HashSet::new();
     let mut cache_index = if use_cache {
         match cache::load_index(root) {
@@ -244,7 +245,8 @@ fn scan_library_with_cache(
         &mut used_track_keys,
         &mut used_track_ids,
     )? {
-        root_artist_albums.push(album);
+        let artist_name = artist_name_for_tracks(&album.tracks);
+        add_album_to_artists(&mut artists, artist_name, album);
     }
 
     for artist_entry in read_sorted_dirs(root)? {
@@ -268,7 +270,6 @@ fn scan_library_with_cache(
             if let Some(album) = scan_album_dir(
                 root,
                 &artist_path,
-                &artist_name,
                 year,
                 title,
                 use_cache,
@@ -277,12 +278,12 @@ fn scan_library_with_cache(
                 &mut used_track_keys,
                 &mut used_track_ids,
             )? {
-                root_artist_albums.push(album);
+                let artist_name = artist_name_for_tracks(&album.tracks);
+                add_album_to_artists(&mut artists, artist_name, album);
             }
             continue;
         }
 
-        let mut albums = Vec::new();
         let mut seen_album_dirs = std::collections::HashSet::new();
 
         for album_entry in read_sorted_dirs(&artist_path)? {
@@ -361,46 +362,16 @@ fn scan_library_with_cache(
                 }
             };
 
-            apply_user_metadata_override(root, &artist_name, &mut album);
+            let resolved_artist_name = artist_name_for_tracks(&album.tracks);
+            apply_user_metadata_override(root, &resolved_artist_name, &mut album);
 
             if !album.tracks.is_empty() {
                 if let Ok(key) = cache::store_album(root, &mut cache_index, &album_path, &album) {
                     used_cache_keys.insert(key);
                 }
-                albums.push(album);
+                add_album_to_artists(&mut artists, resolved_artist_name, album);
             }
         }
-
-        if !albums.is_empty() {
-            let genre = dominant_genre(
-                albums
-                    .iter()
-                    .flat_map(|album| album.tracks.iter())
-                    .flat_map(|track| track.genre.as_deref()),
-            );
-            artists.push(Artist {
-                name: artist_name,
-                albums,
-                genre,
-            });
-        }
-    }
-
-    if !root_artist_albums.is_empty() {
-        let genre = dominant_genre(
-            root_artist_albums
-                .iter()
-                .flat_map(|album| album.tracks.iter())
-                .flat_map(|track| track.genre.as_deref()),
-        );
-        artists.insert(
-            0,
-            Artist {
-                name: ROOT_ARTIST_NAME.to_string(),
-                albums: root_artist_albums,
-                genre,
-            },
-        );
     }
 
     let mut catalog = Catalog { artists };
@@ -426,7 +397,6 @@ fn scan_tracks(dir: &Path) -> io::Result<Vec<Track>> {
 fn scan_album_dir(
     root: &Path,
     album_path: &Path,
-    artist_name: &str,
     year: u16,
     title: String,
     use_cache: bool,
@@ -499,7 +469,8 @@ fn scan_album_dir(
         }
     };
 
-    apply_user_metadata_override(root, artist_name, &mut album);
+    let resolved_artist_name = artist_name_for_tracks(&album.tracks);
+    apply_user_metadata_override(root, &resolved_artist_name, &mut album);
 
     if let Ok(key) = cache::store_album(root, cache_index, album_path, &album) {
         used_cache_keys.insert(key);
@@ -508,7 +479,11 @@ fn scan_album_dir(
     Ok(Some(album))
 }
 
-fn apply_user_metadata_override(root: &Path, artist_name: &str, album: &mut Album) -> MetadataLocks {
+fn apply_user_metadata_override(
+    root: &Path,
+    artist_name: &str,
+    album: &mut Album,
+) -> MetadataLocks {
     let user_override =
         metadata::online::load_user_metadata_override(root, artist_name, &album.title)
             .ok()
@@ -536,8 +511,11 @@ pub fn merge_album_online_metadata(
 ) {
     let locks = apply_user_metadata_override(root, artist_name, album);
     if !locks.genre {
-        let merged_genre =
-            metadata::merge_genre(album.genre.clone(), metadata.genre.clone(), enrichment_confirmed);
+        let merged_genre = metadata::merge_genre(
+            album.genre.clone(),
+            metadata.genre.clone(),
+            enrichment_confirmed,
+        );
         if let Some(genre) = merged_genre {
             if enrichment_confirmed {
                 apply_album_genre(album, Some(genre));
@@ -700,6 +678,7 @@ fn scan_tracks_in_dir(dir: &Path, warn_on_dirs: bool) -> io::Result<Vec<Track>> 
             bitrate_kbps: metadata.bitrate_kbps,
             codec: metadata.codec,
             path,
+            track_artist: metadata.track_artist,
             artist: metadata.artist,
             year: metadata.year,
             genre: metadata.genre,
@@ -788,6 +767,7 @@ fn scan_tracks_with_cache_in_dir(
         let mut duration_millis = None;
         let mut bitrate_kbps = None;
         let mut codec = None;
+        let mut track_artist = None;
         let mut artist = None;
         let mut year = None;
         let mut genre = None;
@@ -808,6 +788,7 @@ fn scan_tracks_with_cache_in_dir(
                         duration_millis = cached_track.duration_millis;
                         bitrate_kbps = cached_track.bitrate_kbps;
                         codec = cached_track.codec;
+                        track_artist = cached_track.track_artist;
                         artist = cached_track.artist;
                         year = cached_track.year;
                         genre = cached_track.genre;
@@ -821,6 +802,7 @@ fn scan_tracks_with_cache_in_dir(
                     duration_millis = cached_track.duration_millis;
                     bitrate_kbps = cached_track.bitrate_kbps;
                     codec = cached_track.codec.clone();
+                    track_artist = cached_track.track_artist.clone();
                     artist = cached_track.artist.clone();
                     year = cached_track.year;
                     genre = cached_track.genre.clone();
@@ -836,6 +818,7 @@ fn scan_tracks_with_cache_in_dir(
             duration_millis = metadata.duration_millis;
             bitrate_kbps = metadata.bitrate_kbps;
             codec = metadata.codec;
+            track_artist = metadata.track_artist;
             artist = metadata.artist;
             year = metadata.year;
             genre = metadata.genre;
@@ -856,6 +839,7 @@ fn scan_tracks_with_cache_in_dir(
             bitrate_kbps,
             codec,
             path,
+            track_artist,
             artist,
             year,
             genre,
@@ -961,7 +945,8 @@ fn scan_root_album(
         }
     };
 
-    apply_user_metadata_override(root, ROOT_ARTIST_NAME, &mut album);
+    let resolved_artist_name = artist_name_for_tracks(&album.tracks);
+    apply_user_metadata_override(root, &resolved_artist_name, &mut album);
 
     if let Ok(key) = cache::store_album(root, cache_index, &album_path, &album) {
         used_cache_keys.insert(key);
@@ -1206,6 +1191,47 @@ fn dominant_genre<'a>(genres: impl Iterator<Item = &'a str>) -> Option<String> {
         .map(|(genre, _)| genre.to_string())
 }
 
+fn dominant_track_artist(tracks: &[Track]) -> Option<String> {
+    let mut counts: std::collections::HashMap<String, (String, usize)> =
+        std::collections::HashMap::new();
+    for track in tracks {
+        let Some(artist) = track.track_artist.as_ref() else {
+            continue;
+        };
+        let key = artist.to_lowercase();
+        let entry = counts.entry(key).or_insert_with(|| (artist.clone(), 0));
+        entry.1 += 1;
+    }
+    counts
+        .into_values()
+        .max_by_key(|(_, count)| *count)
+        .map(|(name, _)| name)
+}
+
+fn artist_name_for_tracks(tracks: &[Track]) -> String {
+    dominant_track_artist(tracks).unwrap_or_else(|| ROOT_ARTIST_NAME.to_string())
+}
+
+fn add_album_to_artists(artists: &mut Vec<Artist>, artist_name: String, album: Album) {
+    if let Some(artist) = artists.iter_mut().find(|artist| artist.name == artist_name) {
+        artist.albums.push(album);
+        artist.genre = dominant_genre(
+            artist
+                .albums
+                .iter()
+                .flat_map(|album| album.tracks.iter())
+                .flat_map(|track| track.genre.as_deref()),
+        );
+    } else {
+        let genre = dominant_genre(album.tracks.iter().flat_map(|track| track.genre.as_deref()));
+        artists.push(Artist {
+            name: artist_name,
+            albums: vec![album],
+            genre,
+        });
+    }
+}
+
 fn split_genre_field(value: &str) -> impl Iterator<Item = &str> {
     value
         .split(|ch| matches!(ch, ';' | '/' | '\\' | ',' | '|'))
@@ -1312,6 +1338,8 @@ fn parse_track_filename(name: &str) -> (Option<u8>, String) {
 mod tests {
     use super::*;
     use crate::config::UserSettings;
+    use lofty::config::WriteOptions;
+    use lofty::tag::{ItemKey, Tag, TagExt, TagType};
     use std::fs::File;
     use std::io::Write;
     use tempfile::tempdir;
@@ -1345,6 +1373,21 @@ mod tests {
         Ok(())
     }
 
+    fn write_tagged_wav(
+        path: &Path,
+        duration_secs: u32,
+        track_artist: Option<&str>,
+    ) -> io::Result<()> {
+        write_wav(path, duration_secs)?;
+        if let Some(artist) = track_artist {
+            let mut tag = Tag::new(TagType::RiffInfo);
+            tag.insert_text(ItemKey::TrackArtist, artist.to_string());
+            tag.save_to_path(path, WriteOptions::default())
+                .map_err(|error| io::Error::new(io::ErrorKind::Other, error))?;
+        }
+        Ok(())
+    }
+
     #[test]
     fn parse_track_filename_extracts_number_and_title() {
         let (number, title) = parse_track_filename("01 - Lumiere");
@@ -1367,8 +1410,10 @@ mod tests {
         let album_dir = artist_dir.join("2022 - Album");
         fs::create_dir_all(&album_dir).expect("create album dirs");
 
-        File::create(album_dir.join("01 - Intro.mp3")).expect("create track");
-        File::create(album_dir.join("02 - Suite.flac")).expect("create track");
+        write_tagged_wav(&album_dir.join("01 - Intro.wav"), 1, Some("Artiste; Autre"))
+            .expect("create track");
+        write_tagged_wav(&album_dir.join("02 - Suite.wav"), 1, Some("Artiste; Autre"))
+            .expect("create track");
         File::create(album_dir.join("notes.txt")).expect("create note");
 
         let catalog = scan_library(dir.path(), &UserSettings::default()).expect("scan library");
@@ -1382,6 +1427,21 @@ mod tests {
         assert_eq!(album.tracks.len(), 2);
         assert_eq!(album.tracks[0].title, "Intro");
         assert_eq!(album.tracks[1].number, 2);
+    }
+
+    #[test]
+    fn scan_library_falls_back_to_unknown_artist_without_track_artist() {
+        let dir = tempdir().expect("tempdir");
+        let artist_dir = dir.path().join("Artiste");
+        let album_dir = artist_dir.join("Album sans artiste");
+        fs::create_dir_all(&album_dir).expect("create album dirs");
+
+        write_tagged_wav(&album_dir.join("01 - Intro.wav"), 1, None).expect("create track");
+
+        let catalog = scan_library(dir.path(), &UserSettings::default()).expect("scan library");
+        assert_eq!(catalog.artists.len(), 1);
+        let artist = &catalog.artists[0];
+        assert_eq!(artist.name, ROOT_ARTIST_NAME);
     }
 
     #[test]
