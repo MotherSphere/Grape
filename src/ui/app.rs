@@ -491,14 +491,6 @@ impl GrapeApp {
         }
     }
 
-    fn cover_display_path(cover: &crate::library::CoverArt) -> PathBuf {
-        if cover.cached_path.exists() {
-            cover.cached_path.clone()
-        } else {
-            cover.source_path.clone()
-        }
-    }
-
     fn albums_from_catalog(&self) -> Vec<UiAlbum> {
         let mut albums = Vec::new();
         let mut id = 0usize;
@@ -515,7 +507,7 @@ impl GrapeApp {
                         Some(album.year as u32)
                     },
                     total_duration: Duration::from_secs(album.total_duration_secs as u64),
-                    cover_path: album.cover.as_ref().map(Self::cover_display_path),
+                    cover_path: album.cover.as_ref().map(|cover| cover.cached_path.clone()),
                 });
                 id += 1;
             }
@@ -807,7 +799,7 @@ impl GrapeApp {
                 track_number: Some(track.number as u32),
                 duration: std::time::Duration::from_secs(track.duration_secs as u64),
                 path: track.path.clone(),
-                cover_path: album.cover.as_ref().map(Self::cover_display_path),
+                cover_path: album.cover.as_ref().map(|cover| cover.cached_path.clone()),
             })
             .collect()
     }
@@ -1473,7 +1465,7 @@ impl GrapeApp {
                             track_number: Some(track.number as u32),
                             duration: Duration::from_secs(track.duration_secs as u64),
                             path: track.path.clone(),
-                            cover_path: album.cover.as_ref().map(Self::cover_display_path),
+                            cover_path: album.cover.as_ref().map(|cover| cover.cached_path.clone()),
                         };
                     }
                 }
@@ -1506,17 +1498,17 @@ impl GrapeApp {
                                     .as_deref()
                                     .unwrap_or(&artist.name)
                                     .to_string(),
-                            track_number: Some(track.number as u32),
-                            duration: Duration::from_secs(track.duration_secs as u64),
-                            path: track.path.clone(),
-                            cover_path: album
-                                .cover
-                                .as_ref()
-                                .map(Self::cover_display_path),
-                        };
+                                track_number: Some(track.number as u32),
+                                duration: Duration::from_secs(track.duration_secs as u64),
+                                path: track.path.clone(),
+                                cover_path: album
+                                    .cover
+                                    .as_ref()
+                                    .map(|cover| cover.cached_path.clone()),
+                            };
+                        }
                     }
                 }
-            }
             }
         }
         UiTrack {
