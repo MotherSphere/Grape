@@ -112,7 +112,12 @@ impl ArtistsPanel {
                         .font(style::font_propo(Weight::Medium))
                         .style(move |_| style::text_style_primary(theme))
                         .size(theme.size(14));
-                    let row_content = row![avatar, label]
+                    let row_content = row![
+                        avatar,
+                        container(label)
+                            .width(Length::Fill)
+                            .align_x(Alignment::End)
+                    ]
                         .spacing(10)
                         .align_y(Alignment::Center)
                         .width(Length::Fill);
@@ -200,7 +205,7 @@ impl ArtistsPanel {
                 .get(row)
                 .map(|letter| letter.to_string())
                 .unwrap_or_else(|| " ".to_string());
-            lines.push(format!("{:<24} {}", name, index));
+            lines.push(format!("{index:<2} {name:>22}"));
         }
 
         lines.join("\n")
