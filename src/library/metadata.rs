@@ -18,6 +18,7 @@ pub struct TrackMetadata {
     pub codec: Option<String>,
     pub title: Option<String>,
     pub track_number: Option<u8>,
+    pub track_artist: Option<String>,
     pub artist: Option<String>,
     #[allow(dead_code)]
     pub album: Option<String>,
@@ -51,11 +52,9 @@ pub fn track_metadata(path: &Path) -> TrackMetadata {
 
     let title = extract_first_string(&tagged_file, &[ItemKey::TrackTitle]);
     let track_number = extract_track_number(&tagged_file);
-    let track_artist = extract_first_string(
-        &tagged_file,
-        &[ItemKey::TrackArtist, ItemKey::TrackArtists],
-    )
-    .and_then(|value| split_artist_field(&value));
+    let track_artist =
+        extract_first_string(&tagged_file, &[ItemKey::TrackArtist, ItemKey::TrackArtists])
+            .and_then(|value| split_artist_field(&value));
     let album_artist = extract_first_string(&tagged_file, &[ItemKey::AlbumArtist])
         .and_then(|value| split_artist_field(&value));
     let artist = match (track_artist.as_deref(), album_artist.as_deref()) {
@@ -94,6 +93,7 @@ pub fn track_metadata(path: &Path) -> TrackMetadata {
         codec,
         title,
         track_number,
+        track_artist,
         artist,
         album,
         genre,
