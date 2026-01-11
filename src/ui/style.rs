@@ -1,8 +1,8 @@
 use iced::font::{Family, Weight};
-use iced::widget::{button, container, text, text_input};
+use iced::widget::{button, container, progress_bar, text, text_input};
 use iced::{Background, Border, Color, Font, Shadow};
 
-use crate::config::{ThemeMode, UserSettings};
+use crate::config::{AccentColor, ThemeMode, UserSettings};
 
 pub const FONT_PROPO: &str = "JetBrainsMono Nerd Font Propo";
 pub const FONT_MONO: &str = "JetBrainsMono Nerd Font Mono";
@@ -20,6 +20,15 @@ pub fn font_mono(weight: Weight) -> Font {
         family: Family::Name(FONT_MONO),
         weight,
         ..Font::DEFAULT
+    }
+}
+
+pub fn accent_color_value(accent: AccentColor) -> Color {
+    match accent {
+        AccentColor::Blue => Color::from_rgb8(0x3d, 0x7c, 0xff),
+        AccentColor::Violet => Color::from_rgb8(0xa0, 0x6c, 0xff),
+        AccentColor::Green => Color::from_rgb8(0x2f, 0xd0, 0x8c),
+        AccentColor::Amber => Color::from_rgb8(0xf2, 0xb3, 0x47),
     }
 }
 
@@ -357,13 +366,17 @@ impl ThemeTokens {
         let focus_ring = settings.highlight_keyboard_focus;
         let scale = settings.text_scale.scale();
         let accessible_scale = settings.accessible_text_size.scale();
-        Self::new(
+        let mut tokens = Self::new(
             settings.theme_mode,
             scale,
             accessible_scale,
             high_contrast,
             focus_ring,
-        )
+        );
+        if !settings.accent_auto {
+            tokens.palette.accent = accent_color_value(settings.accent_color);
+        }
+        tokens
     }
 
     pub fn size(&self, base: u16) -> u32 {
@@ -412,6 +425,19 @@ pub fn accent_alpha(theme: ThemeTokens, alpha: f32) -> Color {
     Color {
         a: alpha,
         ..theme.palette.accent
+    }
+}
+
+pub fn progress_bar_style(theme: ThemeTokens) -> progress_bar::Style {
+    let palette = theme.palette;
+    progress_bar::Style {
+        background: Background::Color(mix(palette.text_primary, palette.background, 0.08)),
+        bar: Background::Color(palette.accent),
+        border: Border {
+            radius: 6.0.into(),
+            width: 0.0,
+            color: Color::TRANSPARENT,
+        },
     }
 }
 

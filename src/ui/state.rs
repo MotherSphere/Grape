@@ -647,6 +647,7 @@ impl UiState {
             }
             UiMessage::SetAccentColor(color) => {
                 self.settings.accent_color = color;
+                self.settings.accent_auto = false;
             }
             UiMessage::SetAccentAuto(enabled) => {
                 self.settings.accent_auto = enabled;
