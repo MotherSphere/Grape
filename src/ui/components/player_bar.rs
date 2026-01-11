@@ -175,7 +175,11 @@ impl PlayerBar {
         let elapsed = format_duration(playback.position);
         let duration = format_duration(playback.duration);
         let progress = seek_area(
-            container(progress_bar(0.0..=1.0, playback.animated_progress)).width(Length::Fill),
+            container(
+                progress_bar(0.0..=1.0, playback.animated_progress)
+                    .style(move |_| style::progress_bar_style(theme)),
+            )
+            .width(Length::Fill),
         )
         .interaction(mouse::Interaction::Pointer)
         .on_press(|ratio| UiMessage::Playback(PlaybackMessage::SeekToRatio(ratio)));
