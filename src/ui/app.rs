@@ -1165,8 +1165,11 @@ impl GrapeApp {
         let stage_label = match status.stage {
             ScanStage::Indexing => "Indexation en cours",
         };
-        let progress =
-            container(progress_bar(0.0..=1.0, status.progress)).height(Length::Fixed(6.0));
+        let progress = container(
+            progress_bar(0.0..=1.0, status.progress)
+                .style(move |_| style::progress_bar_style(theme)),
+        )
+        .height(Length::Fixed(6.0));
         let content = column![
             text(stage_label)
                 .size(theme.size(14))
@@ -2715,19 +2718,15 @@ impl GrapeApp {
         )
         .height(Length::Fill);
 
-        let accent_color_value = |accent: AccentColor| match accent {
-            AccentColor::Blue => Color::from_rgb8(0x3d, 0x7c, 0xff),
-            AccentColor::Violet => Color::from_rgb8(0xa0, 0x6c, 0xff),
-            AccentColor::Green => Color::from_rgb8(0x2f, 0xd0, 0x8c),
-            AccentColor::Amber => Color::from_rgb8(0xf2, 0xb3, 0x47),
-        };
         let accent_button = |accent: AccentColor| {
             let selected = self.ui.settings.accent_color == accent;
             button(
                 row![
                     text("●")
                         .size(theme.size(14))
-                        .style(move |_| style::text_style(accent_color_value(accent))),
+                        .style(move |_| {
+                            style::text_style(style::accent_color_value(accent))
+                        }),
                     text(accent.label())
                         .size(theme.size(12))
                         .font(style::font_propo(Weight::Medium))
