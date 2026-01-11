@@ -14,7 +14,6 @@ const INDEX_FILENAME: &str = "index.json";
 const FOLDERS_DIRNAME: &str = "folders";
 const TRACKS_DIRNAME: &str = "tracks";
 const COVER_DIRNAME: &str = "covers";
-const COVER_OVERRIDE_DIRNAME: &str = "overrides";
 const METADATA_DIRNAME: &str = "metadata";
 const CACHE_VERSION: u32 = 5;
 
@@ -270,12 +269,6 @@ pub fn finalize(
 
 pub fn ensure_cover_cache_dir(root: &Path) -> io::Result<PathBuf> {
     let dir = root.join(CACHE_DIRNAME).join(COVER_DIRNAME);
-    fs::create_dir_all(&dir)?;
-    Ok(dir)
-}
-
-pub fn ensure_cover_override_dir(root: &Path) -> io::Result<PathBuf> {
-    let dir = ensure_cover_cache_dir(root)?.join(COVER_OVERRIDE_DIRNAME);
     fs::create_dir_all(&dir)?;
     Ok(dir)
 }
