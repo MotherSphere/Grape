@@ -34,7 +34,7 @@ La vue Préférences remplace la grille principale quand elle est ouverte :
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ Préférences                                                                   │
 │ - Onglets : Général | Apparence | Accessibilité | Audio                       │
-│ - Sections accordéon (startup, langue, stockage, etc.)                        │
+│ - Sections accordéon (startup, langue, updates, privacy, storage, etc.)       │
 │ - Contrôles toggles/sliders + actions (cache, logs, reset)                    │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -56,6 +56,7 @@ La vue Queue remplace la grille principale quand elle est ouverte :
 - **Playlist view** : `PlaylistView` (`src/ui/components/playlist_view.rs`)
 - **Queue view** : `QueueView` (`src/ui/components/queue_view.rs`)
 - **Préférences** : `preferences_view` (`src/ui/app.rs`)
+- **Equalizer** : `audio_settings` (`src/ui/components/audio_settings.rs`)
 - **Artists** : `ArtistsPanel` (`src/ui/components/artists_panel.rs`)
 - **Genres** : `GenresPanel` (`src/ui/components/genres_panel.rs`)
 - **Albums grid** : `AlbumsGrid` (`src/ui/components/albums_grid.rs`)
@@ -74,6 +75,7 @@ La vue Queue remplace la grille principale quand elle est ouverte :
 - Lecture : `PlaybackState` (position, durée, shuffle, repeat)
 - Recherche : `SearchState` (query + tri)
 - Préférences : `UserSettings` (thème, audio, accessibilité, stockage)
+- Sections Préférences : `PreferencesSection` (startup, updates, privacy, notifications, audio...)
 
 ## Données affichées
 

@@ -5,16 +5,18 @@ expérience rapide et claire pour explorer une bibliothèque locale et lancer la
 
 ## État actuel
 
-- **UI desktop Iced** : layout complet (top bar, colonnes, player bar) avec navigation et états.
-- **Scan local** : lecture de dossiers `Artiste/Album` (ou albums à la racine) + construction d'un catalogue.
-- **Métadonnées audio** : durée, bitrate, codec, année, genre et covers embarquées via `lofty`.
-- **Cache local** : index piste + cache album/covers + cache de métadonnées (locales & en ligne) dans le dossier configurable (par défaut `.grape_cache/`).
+- **UI desktop Iced** : layout complet (top bar, colonnes, player bar) + vues Playlist/Queue/Préférences.
+- **Scan local** : dossier bibliothèque configurable (préférences ou argument CLI) + lecture `Artiste/Album` (ou albums à la racine) + construction du catalogue.
+- **Métadonnées audio** : durée, bitrate, codec, année, genre et covers embarquées via `lofty` + parsing des noms de dossiers/fichiers.
+- **Cache local** : index piste + cache album/pistes/covers + cache de métadonnées (locales & en ligne) dans un dossier configurable (par défaut `.grape_cache/`).
 - **Jaquettes** : priorité aux covers embarquées, fallback sur images locales mises en cache.
-- **Métadonnées en ligne** : enrichissement optionnel via Last.fm (API key + TTL) + surcharge manuelle en UI.
-- **Lecture audio** : module `player` basé sur `rodio`, EQ 3/5 bandes, normalisation, sortie audio configurable.
-- **File de lecture** : queue basée sur la playlist active + vue dédiée + actions Next/Previous.
+- **Métadonnées en ligne** : enrichissement optionnel via Last.fm (API key + TTL) + surcharges manuelles par album.
+- **Lecture audio** : module `player` basé sur `rodio`, sortie audio configurable (périphérique + sample rate) + options gapless/crossfade/automix.
+- **Égaliseur** : 3 ou 5 bandes, presets (Flat/Bass/Treble/Vocal) + mode custom.
+- **Volume** : normalisation + niveaux (Quiet/Normal/Loud) + volume par défaut configurable.
+- **File de lecture** : queue basée sur la playlist active + vue dédiée + actions Next/Previous + réordonnancement.
 - **Navigation enrichie** : onglets Genres/Folders + recherche/tri appliqués aux listes.
-- **Préférences UI** : écrans General/Appearance/Accessibility/Audio avec persistance locale.
+- **Préférences UI** : écrans General/Appearance/Accessibility/Audio avec sections accordéon + persistance locale (certaines options restent déclaratives).
 - **Playlists** : création/renommage/suppression + ajout de pistes + réordonnancement/suppression d'items, persistance JSON locale.
 
 ## Stack technique
@@ -37,7 +39,8 @@ expérience rapide et claire pour explorer une bibliothèque locale et lancer la
 cargo run -- /chemin/vers/ma/library
 ```
 
-Si aucun chemin n'est fourni, Grape utilise `./library`.
+Si aucun chemin n'est fourni, Grape utilise le dossier configuré dans les préférences
+(par défaut `~/Music`).
 
 ### Structure attendue de la bibliothèque
 
