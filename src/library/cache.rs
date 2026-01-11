@@ -67,8 +67,6 @@ pub struct TrackMetadata {
     #[serde(default)]
     codec: Option<String>,
     #[serde(default)]
-    track_artist: Option<String>,
-    #[serde(default)]
     artist: Option<String>,
     #[serde(default)]
     year: Option<u16>,
@@ -433,7 +431,6 @@ impl TrackMetadata {
             duration_millis: track.duration_millis,
             bitrate_kbps: track.bitrate_kbps,
             codec: track.codec.clone(),
-            track_artist: track.track_artist.clone(),
             artist: track.artist.clone(),
             year: track.year,
             genre: track.genre.clone(),
@@ -450,7 +447,6 @@ impl TrackMetadata {
             bitrate_kbps: self.bitrate_kbps,
             codec: self.codec,
             path,
-            track_artist: self.track_artist,
             artist: self.artist,
             year: self.year,
             genre: self.genre,
