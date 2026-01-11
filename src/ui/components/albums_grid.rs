@@ -27,7 +27,7 @@ impl AlbumsGrid {
             selected_album_id: None,
             total_count,
             load_more_message: None,
-            columns: 3,
+            columns: 2,
             scroll_offset: 0,
             viewport_rows: 3,
         }
