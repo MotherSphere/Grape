@@ -971,24 +971,30 @@ fn scan_root_album(
 }
 
 fn scan_cover_art(root: &Path, album_dir: &Path) -> io::Result<Option<CoverArt>> {
-    let Some(source_path) = find_cover_file(album_dir)? else {
-        return Ok(None);
-    };
+    if let Some(source_path) = find_cover_file(album_dir)? {
+        return Ok(Some(cache_cover_art(root, &source_path)?));
+    }
+    if let Some(override_path) = find_cover_override(root, album_dir)? {
+        return Ok(Some(cover_from_override(&override_path)?));
+    }
+    Ok(None)
+}
 
-    let modified_secs = file_modified_secs(&source_path)?;
+fn cache_cover_art(root: &Path, source_path: &Path) -> io::Result<CoverArt> {
+    let modified_secs = file_modified_secs(source_path)?;
     let cache_dir = cache::ensure_cover_cache_dir(root)?;
-    let cache_filename = cache_cover_filename(&source_path, modified_secs);
+    let cache_filename = cache_cover_filename(source_path, modified_secs);
     let cached_path = cache_dir.join(cache_filename);
 
     if !cached_path.exists() {
-        fs::copy(&source_path, &cached_path)?;
+        fs::copy(source_path, &cached_path)?;
     }
 
-    Ok(Some(CoverArt {
-        source_path,
+    Ok(CoverArt {
+        source_path: source_path.to_path_buf(),
         cached_path,
         modified_secs,
-    }))
+    })
 }
 
 fn find_cover_file(album_dir: &Path) -> io::Result<Option<PathBuf>> {
@@ -1025,7 +1031,7 @@ fn find_cover_file(album_dir: &Path) -> io::Result<Option<PathBuf>> {
             continue;
         };
         let extension = extension.to_lowercase();
-        if !matches!(extension.as_str(), "jpg" | "jpeg" | "png" | "webp") {
+        if !is_supported_cover_extension(&extension) {
             continue;
         }
         let stem = path
@@ -1041,6 +1047,42 @@ fn find_cover_file(album_dir: &Path) -> io::Result<Option<PathBuf>> {
     });
 
     Ok(candidates.into_iter().map(|(_, path)| path).next())
+}
+
+fn find_cover_override(root: &Path, album_dir: &Path) -> io::Result<Option<PathBuf>> {
+    let override_root = cache::ensure_cover_override_dir(root)?;
+    let relative_base = album_dir.strip_prefix(root).unwrap_or(album_dir);
+    let mut relative = PathBuf::new();
+    for component in relative_base.components() {
+        if let std::path::Component::Normal(value) = component {
+            relative.push(value);
+        }
+    }
+    let base_path = override_root.join(relative);
+    for extension in cover_extensions() {
+        let candidate = base_path.with_extension(extension);
+        if candidate.is_file() {
+            return Ok(Some(candidate));
+        }
+    }
+    Ok(None)
+}
+
+fn cover_from_override(path: &Path) -> io::Result<CoverArt> {
+    let modified_secs = file_modified_secs(path)?;
+    Ok(CoverArt {
+        source_path: path.to_path_buf(),
+        cached_path: path.to_path_buf(),
+        modified_secs,
+    })
+}
+
+fn cover_extensions() -> [&'static str; 4] {
+    ["jpg", "jpeg", "png", "webp"]
+}
+
+fn is_supported_cover_extension(extension: &str) -> bool {
+    cover_extensions().contains(&extension)
 }
 
 fn cover_priority(stem: &str) -> usize {
