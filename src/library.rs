@@ -74,7 +74,7 @@ pub struct Track {
     pub embedded_cover: Option<EmbeddedCover>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CoverArt {
     pub source_path: PathBuf,
     pub cached_path: PathBuf,
@@ -552,6 +552,10 @@ pub fn merge_album_online_metadata(
         if merged_year > 0 {
             album.year = merged_year;
         }
+    }
+
+    if (album.cover.is_none() || enrichment_confirmed) && metadata.cover.is_some() {
+        album.cover = metadata.cover.clone();
     }
 }
 
